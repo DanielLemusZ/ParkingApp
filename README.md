@@ -48,11 +48,28 @@ Proyecto del curso Ingeniería de Software II. Grupo **ParkingApp**.
 | **Por hacer** | Está en el sprint y nadie la ha empezado |
 | **En desarrollo** | Alguien la tiene asignada y su rama existe |
 | **En revisión** | Su pull request está abierto, esperando aprobación |
-| **Terminado** | Cumple la definición de terminado (sección 6) |
+| **Terminado** | Cumple la definición de terminado (sección 7) |
 
 ---
 
-## 3. Trabajar una historia, paso a paso
+## 3. Estimación
+
+Las historias se estiman en **puntos de historia** con Planning Poker, comparando su tamaño con el de otras historias. Las horas son solo una guía para calibrar: el esfuerzo total de la historia, incluidas las pruebas y la revisión.
+
+| Puntos | Tamaño | Horas aproximadas |
+|---|---|---|
+| 1 | Un cambio puntual y conocido: un texto o una validación simple | Hasta 2 |
+| 2 | Una pieza pequeña sin dudas: una regla con sus pruebas | 2 a 4 |
+| 3 | Una regla o pantalla sencilla, con algo por aprender | 4 a 6 |
+| 5 | Toca varias capas (dominio, datos y pantalla), sin grandes dudas | 6 a 10 |
+| 8 | Varias capas con reglas complejas o algo nuevo para el equipo | 10 a 16 |
+| 13 | Grande o con mucha incertidumbre | 16 a 24 |
+
+Si una historia vale más de 13, se divide.
+
+---
+
+## 4. Trabajar una historia, paso a paso
 
 1. **Asígnate el issue** y muévelo a **En desarrollo**.
 2. **Crea tu rama** desde `develop` actualizado:
@@ -63,7 +80,7 @@ Proyecto del curso Ingeniería de Software II. Grupo **ParkingApp**.
    git checkout -b feature/12-ingreso-por-placa
    ```
 
-3. **Trabaja y haz commits pequeños** (formato en la sección 4):
+3. **Trabaja y haz commits pequeños** (formato en la sección 5):
 
    ```bash
    git add .
@@ -88,13 +105,13 @@ Proyecto del curso Ingeniería de Software II. Grupo **ParkingApp**.
    git push -u origin feature/12-ingreso-por-placa
    ```
 
-6. **Abre el pull request** en GitHub, hacia `develop` (sección 5), y mueve el issue a **En revisión**.
+6. **Abre el pull request** en GitHub, hacia `develop` (sección 6), y mueve el issue a **En revisión**.
 7. **Cuando lo aprueben**, intégralo con **Create a merge commit** y luego **Delete branch**. El issue se cierra solo y pasa a **Terminado**.
 8. **Deja la evidencia** en el issue.
 
 ---
 
-## 4. Commits
+## 5. Commits
 
 Usamos **Conventional Commits**:
 
@@ -131,7 +148,7 @@ refactor(cobros): extraer el calculo de la franja a su propia clase (#21)
 
 ---
 
-## 5. Pull requests y revisión
+## 6. Pull requests y revisión
 
 **Al abrirlo:**
 
@@ -160,14 +177,14 @@ refactor(cobros): extraer el calculo de la franja a su propia clase (#21)
 **Al revisar:**
 
 1. Abre **Files changed** y lee el código.
-2. Verifica la definición de terminado (sección 6).
+2. Verifica la definición de terminado (sección 7).
 3. Ve a **Review changes** y elige **Approve**, o **Request changes** con comentarios concretos.
 
 **Al integrar:** lo integra quien abrió el pull request, después de la aprobación, siempre con **Create a merge commit** (no *squash*). Así se conservan los commits de cada integrante.
 
 ---
 
-## 6. Definición de terminado (DoD)
+## 7. Definición de terminado (DoD)
 
 Una historia está terminada cuando:
 
@@ -182,7 +199,7 @@ Una historia está terminada cuando:
 
 ---
 
-## 7. Versiones, release y hotfix
+## 8. Versiones, release y hotfix
 
 Usamos **versionado semántico**: `MAYOR.MENOR.PARCHE`. La entrega del MVP es la versión `v1.0.0`.
 
@@ -211,7 +228,7 @@ Usamos **versionado semántico**: `MAYOR.MENOR.PARCHE`. La entrega del MVP es la
 
 ---
 
-## 8. Configuración y secretos
+## 9. Configuración y secretos
 
 - Las credenciales y cadenas de conexión van en un archivo `.env`, que **nunca se sube** al repositorio.
 - En el repositorio solo va `.env.example`, con las mismas variables y valores de ejemplo. Se crea cuando montemos el entorno con Docker.

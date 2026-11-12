@@ -113,7 +113,9 @@ Si una historia vale más de 13, se divide.
 
 ## 5. Commits
 
-Usamos **Conventional Commits**:
+**Lo obligatorio:** que el mensaje diga qué cambió y, si pertenece a una historia, que incluya el número del issue (`#<n>`), para que GitHub lo enlace.
+
+**Lo recomendado:** el formato de **Conventional Commits**:
 
 ```
 <tipo>(<módulo>): <descripción> (#<n>)
@@ -132,18 +134,19 @@ Usamos **Conventional Commits**:
 | `chore` | Tareas de mantenimiento que no encajan arriba |
 
 - **Módulos:** `accesos`, `cobros`, `pagos`, `configuracion`, `reportes`, `identidad`, `web`, `infra`, `docs`.
-- **Descripción:** en minúscula, en imperativo ("agregar", no "agregado"), sin punto final y con un máximo de unos 72 caracteres.
+- **Descripción:** con tus propias palabras, siempre que se entienda qué se hizo. Mejor si no pasa de unos 72 caracteres, porque GitHub corta lo que sigue.
 - **`(#<n>)`:** el número del issue de la historia. GitHub enlaza el commit con el issue.
-- **Cambios generales que no pertenecen a una historia** (por ejemplo, la configuración inicial del repositorio) pueden omitir el módulo y el `(#<n>)`: `docs: agregar guia de trabajo del equipo`.
+- **Cambios generales que no pertenecen a una historia** pueden omitir el módulo y el `(#<n>)`: `docs: Se agrega README.md con guia de trabajo del equipo`.
 - **Un commit es un cambio lógico.** Mejor varios commits pequeños que uno gigante.
+- **Al revisar**, el estilo del mensaje no es motivo para rechazar un pull request. Sí lo es que no se entienda qué cambió o que falte el número del issue.
 
-Ejemplos:
+Ejemplos válidos:
 
 ```
 feat(accesos): registrar ingreso por placa (#12)
+fix(pagos): Se rechaza la referencia de pago duplicada (#18)
 test(cobros): cubrir tarifa nocturna a las 05:50 (#15)
-fix(pagos): rechazar referencia de pago duplicada (#18)
-refactor(cobros): extraer el calculo de la franja a su propia clase (#21)
+docs: Se agrega escala de estimación en el README.md (#1)
 ```
 
 ---

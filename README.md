@@ -23,6 +23,38 @@ Proyecto del curso Ingeniería de Software II. Grupo **ParkingApp**.
 - **Pruebas:** xUnit v3, solo pruebas unitarias (mínimo 20).
 - **Arquitectura:** monolito modular con arquitectura hexagonal. Las reglas de negocio viven en un dominio que no depende de la base de datos, la web ni el hardware.
 
+## Estructura de la solución
+
+| Proyecto | Qué contiene | Puede usar |
+|---|---|---|
+| `src/ParkingApp.Dominio` | Reglas del negocio | Nada: no depende de la base de datos, la web ni el hardware |
+| `src/ParkingApp.Aplicacion` | Casos de uso y las interfaces que necesitan | Dominio |
+| `src/ParkingApp.Infraestructura` | Base de datos y servicios externos | Aplicación |
+| `src/ParkingApp.Web` | API (Controllers y Swagger) y pantallas (Blazor con MudBlazor) | Aplicación e Infraestructura |
+| `tests/ParkingApp.Pruebas` | Pruebas unitarias | Dominio y Aplicación |
+
+- **Nombres en español**, sin tildes (`Configuracion`). Las palabras del framework siguen en inglés (`Controller`, `DbContext`).
+- **Dentro de cada proyecto, el código va por módulo:** `Accesos`, `Cobros`, `Pagos`, `Configuracion`, `Reportes` e `Identidad`.
+- **Documentación XML:** en el dominio y la aplicación, todo lo público lleva comentario. Si falta, la compilación muestra una advertencia.
+
+## Cómo ejecutar
+
+**Requisitos:** el SDK de .NET 10 o uno posterior. Para correr las pruebas desde un editor: Visual Studio 2026, VS Code con C# Dev Kit o Rider.
+
+```powershell
+dotnet tool restore                        # instala dotnet-ef en la versión del repositorio
+dotnet build                               # compila; debe terminar con 0 advertencias
+dotnet test                                # corre las pruebas unitarias
+dotnet test --output Detailed              # lo mismo, con el nombre de cada prueba
+dotnet format                              # corrige el formato según .editorconfig
+dotnet run --project src/ParkingApp.Web    # levanta la aplicación
+```
+
+**Dirección de la aplicación:** la terminal la muestra en la línea `Now listening on`. Swagger está en esa misma dirección, terminada en `/swagger`.
+
+- Con `dotnet run`, o con el perfil **http** de Visual Studio, es <http://localhost:5288>. El perfil **https** también abre <https://localhost:7083>.
+- En Visual Studio, elige el perfil **http** o **https** junto al botón de ejecutar. Si Visual Studio agrega un perfil *IIS Express*, no lo subas: usa un puerto distinto en cada equipo.
+
 ---
 
 ## 1. Ramas

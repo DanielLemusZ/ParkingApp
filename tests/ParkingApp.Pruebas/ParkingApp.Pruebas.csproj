@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- xUnit v3 compila las pruebas como un ejecutable de Microsoft Testing Platform (ver global.json). -->
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ParkingApp.Dominio\ParkingApp.Dominio.csproj" />
+    <ProjectReference Include="..\..\src\ParkingApp.Aplicacion\ParkingApp.Aplicacion.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
+  </ItemGroup>
+
+</Project>

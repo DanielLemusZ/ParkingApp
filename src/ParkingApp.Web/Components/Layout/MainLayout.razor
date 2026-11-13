@@ -1,0 +1,21 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudText Typo="Typo.h6">ParkingApp</MudText>
+    </MudAppBar>
+    <MudMainContent Class="pt-16 px-4">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Ocurrió un error inesperado.
+    <a href="." class="reload">Recargar</a>
+    <span class="dismiss">🗙</span>
+</div>

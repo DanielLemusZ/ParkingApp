@@ -54,7 +54,7 @@ Proyecto del curso Ingeniería de Software II. Grupo **ParkingApp**.
 
 ## 3. Estimación
 
-Las historias se estiman en **puntos de historia** con Planning Poker, comparando su tamaño con el de otras historias. Las horas son solo una guía para calibrar: el esfuerzo total de la historia, incluidas las pruebas y la revisión.
+Las historias se estiman en **puntos de historia**. El responsable de cada historia propone su estimación con la escala de abajo, y los dos integrantes con más experiencia en el stack (Daniel y Brayan) la revisan y la ajustan si hace falta, en revisión cruzada: ninguno aprueba solo su propia estimación. Las horas son solo una guía para calibrar: el esfuerzo total de la historia, incluidas las pruebas y la revisión.
 
 | Puntos | Tamaño | Horas aproximadas |
 |---|---|---|

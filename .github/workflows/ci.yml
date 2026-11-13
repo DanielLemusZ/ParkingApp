@@ -1,0 +1,46 @@
+name: Integración continua
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+# Si llega un commit nuevo al pull request, se cancela la ejecución anterior.
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Compilar, probar y revisar formato
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v7
+
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restaurar paquetes
+        run: |
+          dotnet --version
+          dotnet restore
+
+      # Las advertencias hacen fallar la compilación, como pide la definición de terminado.
+      # Las alertas de seguridad de NuGet (NU1901 a NU1904) se muestran, pero no bloquean.
+      - name: Compilar
+        run: dotnet build --no-restore -warnaserror -warnnotaserror:NU1901,NU1902,NU1903,NU1904
+
+      - name: Ejecutar las pruebas
+        run: dotnet test --no-build --output Detailed
+
+      - name: Revisar el formato
+        run: dotnet format --verify-no-changes --no-restore

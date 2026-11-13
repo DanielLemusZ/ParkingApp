@@ -211,9 +211,10 @@ docs: Se agrega escala de estimación en el README.md (#1)
 
 **Al revisar:**
 
-1. Abre **Files changed** y lee el código.
-2. Verifica la definición de terminado (sección 7).
-3. Ve a **Review changes** y elige **Approve**, o **Request changes** con comentarios concretos.
+1. Revisa que la verificación automática **Compilar, probar y revisar formato** esté en verde. Si está en rojo, en **Details** se ve qué paso falló.
+2. Abre **Files changed** y lee el código.
+3. Verifica la definición de terminado (sección 7).
+4. Ve a **Review changes** y elige **Approve**, o **Request changes** con comentarios concretos.
 
 **Al integrar:** lo integra quien abrió el pull request, después de la aprobación, siempre con **Create a merge commit** (no *squash*). Así se conservan los commits de cada integrante.
 
@@ -227,6 +228,7 @@ Una historia está terminada cuando:
 - [ ] sus pruebas de éxito y de error se ejecutaron, y la evidencia quedó en el issue;
 - [ ] las reglas que toca tienen pruebas unitarias y `dotnet test` pasa completo;
 - [ ] compila sin errores ni advertencias nuevas;
+- [ ] la verificación automática del pull request está en verde;
 - [ ] otro integrante revisó y aprobó el pull request;
 - [ ] está integrada en `develop` y el issue quedó en **Terminado**;
 - [ ] no hay secretos en el código (las credenciales van solo en `.env`);

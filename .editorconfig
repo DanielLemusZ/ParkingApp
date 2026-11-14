@@ -366,3 +366,7 @@ dotnet_naming_style.s_camelcase.capitalization = camel_case
 # Pruebas: los nombres describen el escenario en español, separado con guiones bajos.
 [tests/**.cs]
 dotnet_diagnostic.CA1707.severity = none
+
+# Migraciones: código generado por dotnet ef. Ni los analizadores ni dotnet format las revisan.
+[src/ParkingApp.Infraestructura/Persistencia/Migraciones/**.cs]
+generated_code = true

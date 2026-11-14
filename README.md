@@ -29,7 +29,7 @@ Proyecto del curso Ingeniería de Software II. Grupo **ParkingApp**.
 |---|---|---|
 | `src/ParkingApp.Dominio` | Reglas del negocio | Nada: no depende de la base de datos, la web ni el hardware |
 | `src/ParkingApp.Aplicacion` | Casos de uso y las interfaces que necesitan | Dominio |
-| `src/ParkingApp.Infraestructura` | Base de datos y servicios externos | Aplicación |
+| `src/ParkingApp.Infraestructura` | Base de datos y servicios externos | Dominio y Aplicación |
 | `src/ParkingApp.Web` | API (Controllers y Swagger) y pantallas (Blazor con MudBlazor) | Aplicación e Infraestructura |
 | `tests/ParkingApp.Pruebas` | Pruebas unitarias | Dominio y Aplicación |
 
@@ -49,6 +49,8 @@ dotnet test --output Detailed              # lo mismo, con el nombre de cada pru
 dotnet format                              # corrige el formato según .editorconfig
 dotnet run --project src/ParkingApp.Web    # levanta la aplicación
 ```
+
+**La aplicación necesita la base de datos** (ver abajo). Si no puede conectarse, no arranca y explica por qué. Si hay migraciones sin aplicar, avisa con el comando para aplicarlas.
 
 **Dirección de la aplicación:** la terminal la muestra en la línea `Now listening on`. Swagger está en esa misma dirección, terminada en `/swagger`.
 
@@ -75,10 +77,25 @@ dotnet run --project src/ParkingApp.Web    # levanta la aplicación
 
    El último comando usa el usuario y la base de `.env.example`. Si los cambiaste, usa los tuyos.
 
-3. **Detener:** `docker compose stop` o `docker compose down`. Los dos conservan los datos.
-4. **Recrear desde cero:** `docker compose down -v` borra el volumen **y todos los datos**. Después, `docker compose up -d`.
+3. **Crear o actualizar las tablas** (la primera vez y cada vez que lleguen migraciones nuevas):
 
-**Si falta una variable en `.env`**, Compose no arranca y dice cuál falta.
+   ```powershell
+   dotnet ef database update --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web
+   ```
+
+4. **Detener:** `docker compose stop` o `docker compose down`. Los dos conservan los datos.
+5. **Recrear desde cero:** `docker compose down -v` borra el volumen **y todos los datos**. Después, `docker compose up -d` y el paso 3.
+
+**Si falta una variable en `.env`**, Compose y la aplicación no arrancan y dicen cuál falta. La aplicación lee el mismo `.env`. `POSTGRES_HOST` es opcional: si no está, usa `localhost`.
+
+**Migraciones** (código en `src/ParkingApp.Infraestructura/Persistencia/Migraciones`):
+
+```powershell
+# Crear una migración después de agregar o cambiar una entidad:
+dotnet ef migrations add <Nombre> --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web --output-dir Persistencia/Migraciones
+# Generar el script SQL completo, que se puede ejecutar varias veces sin duplicar nada (no lo subas al repositorio):
+dotnet ef migrations script --idempotent --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web --output script.sql
+```
 
 **Sin Docker:** instala PostgreSQL 18.7 nativo, con el mismo puerto, usuario, contraseña y base de tu `.env`.
 

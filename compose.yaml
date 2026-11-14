@@ -1,0 +1,23 @@
+name: parkingapp
+
+services:
+  postgres:
+    image: postgres:18.7
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en .env (copia .env.example como .env)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env (copia .env.example como .env)}
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en .env (copia .env.example como .env)}
+    ports:
+      # Solo se publica en este equipo, no en la red.
+      - "127.0.0.1:${POSTGRES_PORT:?Falta POSTGRES_PORT en .env (copia .env.example como .env)}:5432"
+    volumes:
+      # Desde PostgreSQL 18, los datos van en /var/lib/postgresql (no en /var/lib/postgresql/data).
+      - datos-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  datos-postgres:

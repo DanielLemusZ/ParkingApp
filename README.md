@@ -55,6 +55,33 @@ dotnet run --project src/ParkingApp.Web    # levanta la aplicación
 - Con `dotnet run`, o con el perfil **http** de Visual Studio, es <http://localhost:5288>. El perfil **https** también abre <https://localhost:7083>.
 - En Visual Studio, elige el perfil **http** o **https** junto al botón de ejecutar. Si Visual Studio agrega un perfil *IIS Express*, no lo subas: usa un puerto distinto en cada equipo.
 
+### Base de datos (PostgreSQL 18.7 con Docker)
+
+**Requisito:** Docker Desktop abierto (en Windows, con WSL 2).
+
+1. **La primera vez:** copia `.env.example` como `.env` y cambia la contraseña. Si en tu equipo ya usas el puerto 5432, cambia también `POSTGRES_PORT`.
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+2. **Levantar, revisar y conectarse:**
+
+   ```powershell
+   docker compose up -d       # levanta PostgreSQL en segundo plano
+   docker compose ps          # debe decir "healthy"
+   docker compose exec postgres psql -U parkingapp -d parkingapp -c "select version();"
+   ```
+
+   El último comando usa el usuario y la base de `.env.example`. Si los cambiaste, usa los tuyos.
+
+3. **Detener:** `docker compose stop` o `docker compose down`. Los dos conservan los datos.
+4. **Recrear desde cero:** `docker compose down -v` borra el volumen **y todos los datos**. Después, `docker compose up -d`.
+
+**Si falta una variable en `.env`**, Compose no arranca y dice cuál falta.
+
+**Sin Docker:** instala PostgreSQL 18.7 nativo, con el mismo puerto, usuario, contraseña y base de tu `.env`.
+
 ---
 
 ## 1. Ramas
@@ -268,5 +295,5 @@ Usamos **versionado semántico**: `MAYOR.MENOR.PARCHE`. La entrega del MVP es la
 ## 9. Configuración y secretos
 
 - Las credenciales y cadenas de conexión van en un archivo `.env`, que **nunca se sube** al repositorio.
-- En el repositorio solo va `.env.example`, con las mismas variables y valores de ejemplo. Se crea cuando montemos el entorno con Docker.
+- En el repositorio solo va `.env.example`, con las mismas variables, valores de ejemplo y una línea que explica cada una. Si agregas una variable a `.env`, agrégala también a `.env.example`.
 - Si subiste un secreto por error, avísale al Scrum Master: hay que cambiar esa clave, aunque luego se borre del repositorio.

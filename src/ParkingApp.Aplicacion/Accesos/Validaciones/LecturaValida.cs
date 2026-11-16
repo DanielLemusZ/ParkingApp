@@ -17,6 +17,7 @@ public sealed class LecturaValida : ValidacionDeIngreso
     /// </summary>
     public const string ConfianzaFueraDeRango = "La confianza debe estar entre 0 y 100";
 
+    /// <inheritdoc />
     protected override Task<ResultadoDeValidacion> RevisarAsync(SolicitudDeIngreso solicitud, CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(solicitud);

@@ -7,15 +7,24 @@ using Microsoft.Extensions.Logging;
 
 using Npgsql;
 
+using ParkingApp.Aplicacion.Accesos;
+using ParkingApp.Aplicacion.Configuracion;
+using ParkingApp.Infraestructura.Configuracion;
+using ParkingApp.Infraestructura.Persistencia.Repositorios;
+
 namespace ParkingApp.Infraestructura.Persistencia;
 
 /// <summary>
 /// Registro de la base de datos PostgreSQL y verificación de la conexión al arrancar.
 /// </summary>
-public static partial class BaseDeDatos
+public static class BaseDeDatos
 {
+    private const string ComandoParaActualizar =
+        "dotnet ef database update --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web";
+
     /// <summary>
-    /// Registra el contexto de EF Core. La cadena de conexión se arma con las variables <c>POSTGRES_*</c> de <c>.env</c>.
+    /// Registra el contexto de EF Core, los repositorios y la sede del nodo.
+    /// La cadena de conexión se arma con las variables <c>POSTGRES_*</c> de <c>.env</c>.
     /// </summary>
     /// <param name="servicios">Contenedor de servicios de la aplicación.</param>
     /// <param name="configuracion">Configuración, con las variables de entorno ya cargadas.</param>
@@ -31,13 +40,17 @@ public static partial class BaseDeDatos
 
         servicios.AddDbContext<ParkingAppDbContext>(opciones =>
         {
-            opciones.UseNpgsql(cadenaDeConexion).UseSnakeCaseNamingConvention();
+            opciones.UseNpgsql(cadenaDeConexion);
+            opciones.UseSnakeCaseNamingConvention();
 
             if (esDesarrollo)
             {
                 opciones.EnableDetailedErrors();
             }
         });
+
+        servicios.AddScoped<IRepositorioEventosDeAcceso, RepositorioEventosDeAcceso>();
+        servicios.AddSingleton<ISedeActual, SedeDelNodo>();
 
         return servicios;
     }
@@ -59,39 +72,35 @@ public static partial class BaseDeDatos
         {
             // Abrir la conexión primero distingue una base inexistente de una base sin migraciones.
             await contexto.Database.OpenConnectionAsync();
-            var pendientes = (await contexto.Database.GetPendingMigrationsAsync()).ToList();
+            var migracionesPendientes = await contexto.Database.GetPendingMigrationsAsync();
+            var pendientes = migracionesPendientes.ToList();
             await contexto.Database.CloseConnectionAsync();
 
             if (pendientes.Count > 0)
             {
-                MigracionesPendientes(registro, pendientes.Count, string.Join(", ", pendientes));
+                registro.LogWarning(
+                    "Hay migraciones sin aplicar en la base de datos ({Cantidad}): {Migraciones}. Ejecuta: {Comando}",
+                    pendientes.Count,
+                    string.Join(", ", pendientes),
+                    ComandoParaActualizar);
             }
 
             return true;
         }
-        catch (Exception error) when (ErrorDeNpgsql(error) is { } errorDeNpgsql)
+        catch (Exception error)
         {
-            switch (errorDeNpgsql)
+            var errorDeNpgsql = BuscarErrorDeNpgsql(error);
+
+            if (errorDeNpgsql == null)
             {
-                case PostgresException { SqlState: PostgresErrorCodes.InvalidPassword }:
-                    ContrasenaIncorrecta(registro, destino.Host, destino.Port, destino.Database, destino.Username);
-                    break;
-                case PostgresException { SqlState: PostgresErrorCodes.InvalidCatalogName }:
-                    BaseInexistente(registro, destino.Host, destino.Port, destino.Database);
-                    break;
-                default:
-                    BaseNoDisponible(registro, destino.Host, destino.Port);
-                    break;
+                // No es un problema de conexión con PostgreSQL: se deja pasar el error original.
+                throw;
             }
+
+            ExplicarFallaDeConexion(errorDeNpgsql, destino, registro);
+            return false;
         }
-
-        return false;
     }
-
-    // Npgsql envuelve los fallos de red (por ejemplo, la base apagada) en una InvalidOperationException
-    // de "falla transitoria"; el error real queda adentro.
-    private static NpgsqlException? ErrorDeNpgsql(Exception error) =>
-        error as NpgsqlException ?? error.InnerException as NpgsqlException;
 
     /// <summary>
     /// Arma la cadena de conexión con <c>POSTGRES_HOST</c> (por defecto <c>localhost</c>), <c>POSTGRES_PORT</c>,
@@ -99,41 +108,93 @@ public static partial class BaseDeDatos
     /// </summary>
     internal static NpgsqlConnectionStringBuilder CrearCadenaDeConexion(IConfiguration configuracion)
     {
-        var puerto = Obligatoria(configuracion, "POSTGRES_PORT");
+        var host = configuracion["POSTGRES_HOST"];
+
+        if (string.IsNullOrEmpty(host))
+        {
+            host = "localhost";
+        }
+
+        var puerto = LeerObligatoria(configuracion, "POSTGRES_PORT");
 
         if (!int.TryParse(puerto, NumberStyles.None, CultureInfo.InvariantCulture, out var numeroDePuerto))
         {
             throw new InvalidOperationException($"POSTGRES_PORT debe ser un número de puerto, y en .env dice '{puerto}'.");
         }
 
-        return new NpgsqlConnectionStringBuilder
-        {
-            Host = configuracion["POSTGRES_HOST"] is { Length: > 0 } host ? host : "localhost",
-            Port = numeroDePuerto,
-            Database = Obligatoria(configuracion, "POSTGRES_DB"),
-            Username = Obligatoria(configuracion, "POSTGRES_USER"),
-            Password = Obligatoria(configuracion, "POSTGRES_PASSWORD"),
-        };
+        var cadena = new NpgsqlConnectionStringBuilder();
+        cadena.Host = host;
+        cadena.Port = numeroDePuerto;
+        cadena.Database = LeerObligatoria(configuracion, "POSTGRES_DB");
+        cadena.Username = LeerObligatoria(configuracion, "POSTGRES_USER");
+        cadena.Password = LeerObligatoria(configuracion, "POSTGRES_PASSWORD");
+
+        return cadena;
     }
 
-    private static string Obligatoria(IConfiguration configuracion, string variable) =>
-        configuracion[variable] is { Length: > 0 } valor
-            ? valor
-            : throw new InvalidOperationException($"Falta la variable {variable} en .env (copia .env.example como .env).");
+    private static string LeerObligatoria(IConfiguration configuracion, string variable)
+    {
+        var valor = configuracion[variable];
 
-    [LoggerMessage(Level = LogLevel.Critical, Message =
-        "No se pudo conectar a PostgreSQL en {Host}:{Puerto} (base {Base}, usuario {Usuario}): la contraseña no es correcta. Revisa POSTGRES_PASSWORD en .env.")]
-    private static partial void ContrasenaIncorrecta(ILogger registro, string? host, int puerto, string? @base, string? usuario);
+        if (string.IsNullOrEmpty(valor))
+        {
+            throw new InvalidOperationException($"Falta la variable {variable} en .env (copia .env.example como .env).");
+        }
 
-    [LoggerMessage(Level = LogLevel.Critical, Message =
-        "PostgreSQL responde en {Host}:{Puerto}, pero la base {Base} no existe. Revisa POSTGRES_DB en .env, o créala con: dotnet ef database update --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web")]
-    private static partial void BaseInexistente(ILogger registro, string? host, int puerto, string? @base);
+        return valor;
+    }
 
-    [LoggerMessage(Level = LogLevel.Critical, Message =
-        "PostgreSQL no está disponible en {Host}:{Puerto}. ¿Levantaste el contenedor? Ejecuta: docker compose up -d")]
-    private static partial void BaseNoDisponible(ILogger registro, string? host, int puerto);
+    // Npgsql envuelve los fallos de red (por ejemplo, la base apagada) en una InvalidOperationException
+    // de "falla transitoria"; el error real queda adentro.
+    private static NpgsqlException? BuscarErrorDeNpgsql(Exception error)
+    {
+        if (error is NpgsqlException errorDirecto)
+        {
+            return errorDirecto;
+        }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message =
-        "Hay migraciones sin aplicar en la base de datos ({Cantidad}): {Migraciones}. Ejecuta: dotnet ef database update --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web")]
-    private static partial void MigracionesPendientes(ILogger registro, int cantidad, string migraciones);
+        if (error.InnerException is NpgsqlException errorInterno)
+        {
+            return errorInterno;
+        }
+
+        return null;
+    }
+
+    private static void ExplicarFallaDeConexion(NpgsqlException error, NpgsqlConnectionStringBuilder destino, ILogger registro)
+    {
+        // Los errores que responde PostgreSQL traen un código (SqlState). Los de red, como la base apagada, no.
+        var codigo = string.Empty;
+
+        if (error is PostgresException errorDePostgres)
+        {
+            codigo = errorDePostgres.SqlState;
+        }
+
+        if (codigo == PostgresErrorCodes.InvalidPassword)
+        {
+            registro.LogCritical(
+                "No se pudo conectar a PostgreSQL en {Host}:{Puerto} (base {Base}, usuario {Usuario}): la contraseña no es correcta. Revisa POSTGRES_PASSWORD en .env.",
+                destino.Host,
+                destino.Port,
+                destino.Database,
+                destino.Username);
+        }
+        else if (codigo == PostgresErrorCodes.InvalidCatalogName)
+        {
+            registro.LogCritical(
+                "PostgreSQL responde en {Host}:{Puerto}, pero la base {Base} no existe. Revisa POSTGRES_DB en .env, o créala con: {Comando}",
+                destino.Host,
+                destino.Port,
+                destino.Database,
+                ComandoParaActualizar);
+        }
+        else
+        {
+            registro.LogCritical(
+                "PostgreSQL no está disponible en {Host}:{Puerto}. ¿Levantaste el contenedor? Ejecuta: docker compose up -d",
+                destino.Host,
+                destino.Port);
+        }
+    }
 }

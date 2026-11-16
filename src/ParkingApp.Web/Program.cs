@@ -2,6 +2,7 @@ using DotNetEnv;
 
 using MudBlazor.Services;
 
+using ParkingApp.Aplicacion;
 using ParkingApp.Infraestructura.Persistencia;
 using ParkingApp.Web.Components;
 
@@ -15,6 +16,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
+builder.Services.AgregarAplicacion();
 builder.Services.AgregarBaseDeDatos(builder.Configuration, builder.Environment.IsDevelopment());
 
 var app = builder.Build();

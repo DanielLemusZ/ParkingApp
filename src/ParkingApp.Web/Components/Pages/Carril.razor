@@ -1,0 +1,89 @@
+@page "/carril"
+@using System.Globalization
+@using ParkingApp.Aplicacion.Accesos
+@using ParkingApp.Dominio.Accesos
+@inject IServiceScopeFactory FabricaDeAlcances
+
+<PageTitle>Carril</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Carril</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Placa entrada</MudText>
+
+            <MudSelect T="int" Label="Carril de entrada" @bind-Value="carril">
+                <MudSelectItem T="int" Value="1">Carril 1</MudSelectItem>
+                <MudSelectItem T="int" Value="2">Carril 2</MudSelectItem>
+            </MudSelect>
+            <MudTextField T="string" Label="Placa" @bind-Value="placa" Immediate="true" />
+            <MudNumericField T="int" Label="Confianza de la lectura (0 a 100)" @bind-Value="confianza" Immediate="true"
+                             Min="EventoDeAcceso.ConfianzaMinima" Max="EventoDeAcceso.ConfianzaMaxima" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
+                       Disabled="registrando" OnClick="RegistrarIngresoAsync">
+                Registrar ingreso
+            </MudButton>
+
+            @if (resultado != null)
+            {
+                @if (resultado.AbreBarrera)
+                {
+                    <MudAlert Class="mt-4" Severity="Severity.Success" Icon="@Icons.Material.Filled.LockOpen">
+                        <b>Barrera abierta</b>: @resultado.Motivo
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Class="mt-4" Severity="Severity.Error" Icon="@Icons.Material.Filled.Lock">
+                        <b>Barrera cerrada</b>: @resultado.Motivo
+                    </MudAlert>
+                }
+
+                @if (resultado.Ingreso != null)
+                {
+                    <MudSimpleTable Dense="true" Class="mt-2">
+                        <tbody>
+                            <tr><td>Placa</td><td>@resultado.Ingreso.Placa</td></tr>
+                            <tr><td>Fecha y hora</td><td>@FormatearFecha(resultado.Ingreso.FechaHora)</td></tr>
+                            <tr><td>Carril</td><td>@resultado.Ingreso.Carril</td></tr>
+                            <tr><td>Confianza</td><td>@resultado.Ingreso.Confianza</td></tr>
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private int carril = 1;
+    private string? placa;
+    private int confianza = 95;
+    private bool registrando;
+    private ResultadoDeIngreso? resultado;
+
+    private async Task RegistrarIngresoAsync()
+    {
+        registrando = true;
+
+        try
+        {
+            // Cada registro usa su propio alcance: en Blazor Server la página vive mucho tiempo,
+            // y el contexto de la base de datos no debe acumular datos entre un registro y otro.
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var registrarIngreso = alcance.ServiceProvider.GetRequiredService<RegistrarIngreso>();
+            resultado = await registrarIngreso.EjecutarAsync(placa, confianza, carril);
+        }
+        finally
+        {
+            registrando = false;
+        }
+    }
+
+    private static string FormatearFecha(DateTimeOffset fechaHora)
+    {
+        return fechaHora.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+}

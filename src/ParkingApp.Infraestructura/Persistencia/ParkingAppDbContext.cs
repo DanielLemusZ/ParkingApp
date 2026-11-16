@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using ParkingApp.Dominio.Accesos;
 using ParkingApp.Dominio.Configuracion;
 
 namespace ParkingApp.Infraestructura.Persistencia;
@@ -7,12 +8,26 @@ namespace ParkingApp.Infraestructura.Persistencia;
 /// <summary>
 /// Contexto de EF Core de la base de datos del MVP.
 /// </summary>
-public sealed class ParkingAppDbContext(DbContextOptions<ParkingAppDbContext> opciones) : DbContext(opciones)
+public sealed class ParkingAppDbContext : DbContext
 {
+    /// <summary>
+    /// Crea el contexto con las opciones registradas al arrancar (cadena de conexión y PostgreSQL).
+    /// </summary>
+    /// <param name="opciones">Opciones de EF Core.</param>
+    public ParkingAppDbContext(DbContextOptions<ParkingAppDbContext> opciones)
+        : base(opciones)
+    {
+    }
+
     /// <summary>
     /// Sedes del parqueadero.
     /// </summary>
     public DbSet<Sede> Sedes => Set<Sede>();
+
+    /// <summary>
+    /// Ingresos y salidas de los vehículos.
+    /// </summary>
+    public DbSet<EventoDeAcceso> EventosDeAcceso => Set<EventoDeAcceso>();
 
     /// <inheritdoc />
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -24,6 +39,9 @@ public sealed class ParkingAppDbContext(DbContextOptions<ParkingAppDbContext> op
     }
 
     /// <inheritdoc />
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // Aplica todas las clases de la carpeta Configuraciones (una por entidad).
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ParkingAppDbContext).Assembly);
+    }
 }

@@ -22,6 +22,57 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ParkingApp.Dominio.Accesos.EventoDeAcceso", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Carril")
+                        .HasColumnType("integer")
+                        .HasColumnName("carril");
+
+                    b.Property<int>("Confianza")
+                        .HasColumnType("integer")
+                        .HasColumnName("confianza");
+
+                    b.Property<DateTimeOffset>("FechaHora")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_hora");
+
+                    b.Property<string>("Placa")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("placa");
+
+                    b.Property<Guid>("SedeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sede_id");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("tipo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_eventos_de_acceso");
+
+                    b.HasIndex("SedeId")
+                        .HasDatabaseName("ix_eventos_de_acceso_sede_id");
+
+                    b.HasIndex("Placa", "FechaHora")
+                        .HasDatabaseName("ix_eventos_de_acceso_placa_fecha_hora");
+
+                    b.ToTable("eventos_de_acceso", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_eventos_de_acceso_carril", "carril > 0");
+
+                            t.HasCheckConstraint("ck_eventos_de_acceso_confianza", "confianza BETWEEN 0 AND 100");
+                        });
+                });
+
             modelBuilder.Entity("ParkingApp.Dominio.Configuracion.Sede", b =>
                 {
                     b.Property<Guid>("Id")
@@ -52,6 +103,16 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                             Nombre = "Sede principal UAM",
                             ZonaHoraria = "America/Bogota"
                         });
+                });
+
+            modelBuilder.Entity("ParkingApp.Dominio.Accesos.EventoDeAcceso", b =>
+                {
+                    b.HasOne("ParkingApp.Dominio.Configuracion.Sede", null)
+                        .WithMany()
+                        .HasForeignKey("SedeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_eventos_de_acceso_sedes_sede_id");
                 });
 #pragma warning restore 612, 618
         }

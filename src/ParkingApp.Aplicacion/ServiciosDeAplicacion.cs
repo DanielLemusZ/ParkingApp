@@ -1,0 +1,43 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+using ParkingApp.Aplicacion.Accesos;
+using ParkingApp.Aplicacion.Accesos.Validaciones;
+
+namespace ParkingApp.Aplicacion;
+
+/// <summary>
+/// Registro de los casos de uso de la aplicación.
+/// </summary>
+public static class ServiciosDeAplicacion
+{
+    /// <summary>
+    /// Registra los casos de uso, la cadena de validaciones del carril y el reloj del sistema.
+    /// </summary>
+    /// <param name="servicios">Contenedor de servicios de la aplicación.</param>
+    /// <returns>El mismo contenedor de servicios.</returns>
+    public static IServiceCollection AgregarAplicacion(this IServiceCollection servicios)
+    {
+        servicios.TryAddSingleton(TimeProvider.System);
+
+        // La cadena se arma de nuevo en cada alcance, porque cada eslabón guarda cuál es el siguiente.
+        servicios.AddScoped(CrearCadenaDeIngreso);
+
+        servicios.AddScoped<RegistrarIngreso>();
+
+        return servicios;
+    }
+
+    /// <summary>
+    /// Arma la cadena de validaciones del carril de entrada.
+    /// Orden: lectura válida → umbral de confianza → formato → cupo → cobro o pase vigente.
+    /// Cada historia agrega su eslabón en su lugar de la lista.
+    /// </summary>
+    /// <param name="proveedor">Proveedor de servicios, para los eslabones que necesiten consultar algo.</param>
+    /// <returns>El primer eslabón de la cadena.</returns>
+    private static ValidacionDeIngreso CrearCadenaDeIngreso(IServiceProvider proveedor)
+    {
+        return CadenaDeValidacionesDeIngreso.Crear(
+            new LecturaValida());
+    }
+}

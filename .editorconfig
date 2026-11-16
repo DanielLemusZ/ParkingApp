@@ -370,3 +370,8 @@ dotnet_diagnostic.CA1707.severity = none
 # Migraciones: código generado por dotnet ef. Ni los analizadores ni dotnet format las revisan.
 [src/ParkingApp.Infraestructura/Persistencia/Migraciones/**.cs]
 generated_code = true
+
+# Registro: se usa logger.LogWarning("mensaje {Dato}", dato), que es más fácil de leer.
+# CA1848 pide delegados LoggerMessage por rendimiento, que aquí no hace falta.
+[*.cs]
+dotnet_diagnostic.CA1848.severity = none

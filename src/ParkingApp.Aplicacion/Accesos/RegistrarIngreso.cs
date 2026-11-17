@@ -63,13 +63,14 @@ public sealed class RegistrarIngreso
 
         // 2. Se registra el ingreso con la hora actual en UTC.
         var placaNormalizada = Placa.Crear(solicitud.Placa);
+        var tipoDeVehiculo = ClasificadorDeVehiculo.Clasificar(placaNormalizada)!.Value;
         var ahoraEnUtc = reloj.GetUtcNow();
-        var ingreso = EventoDeAcceso.RegistrarIngreso(placaNormalizada, sede.Id, carril, confianza, ahoraEnUtc);
+        var ingreso = EventoDeAcceso.RegistrarIngreso(placaNormalizada, tipoDeVehiculo, sede.Id, carril, confianza, ahoraEnUtc);
         await repositorio.AgregarAsync(ingreso, cancelacion);
 
         // 3. Se responde con la hora de la sede, que es la que ve el operador.
         var horaDeLaSede = TimeZoneInfo.ConvertTime(ingreso.FechaHora, sede.ZonaHoraria);
-        var registrado = new IngresoRegistrado(ingreso.Id, ingreso.Placa.Valor, horaDeLaSede, ingreso.Carril, ingreso.Confianza);
+        var registrado = new IngresoRegistrado(ingreso.Id, ingreso.Placa.Valor, horaDeLaSede, ingreso.Carril, ingreso.Confianza, ingreso.TipoDeVehiculo);
 
         return new ResultadoDeIngreso(true, IngresoAceptado, registrado);
     }

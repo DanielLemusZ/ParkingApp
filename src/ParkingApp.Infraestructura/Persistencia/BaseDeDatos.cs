@@ -163,6 +163,11 @@ public static class BaseDeDatos
 
     private static void ExplicarFallaDeConexion(NpgsqlException error, NpgsqlConnectionStringBuilder destino, ILogger registro)
     {
+        if (!registro.IsEnabled(LogLevel.Critical))
+        {
+            return;
+        }
+
         // Los errores que responde PostgreSQL traen un código (SqlState). Los de red, como la base apagada, no.
         var codigo = string.Empty;
 

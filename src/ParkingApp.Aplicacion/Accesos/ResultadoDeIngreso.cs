@@ -16,4 +16,5 @@ public sealed record ResultadoDeIngreso(bool AbreBarrera, string Motivo, Ingreso
 /// <param name="FechaHora">Fecha y hora del ingreso, en la hora de la sede.</param>
 /// <param name="Carril">Número del carril.</param>
 /// <param name="Confianza">Confianza de la lectura.</param>
-public sealed record IngresoRegistrado(Guid Id, string Placa, DateTimeOffset FechaHora, int Carril, int Confianza);
+/// <param name="TipoDeVehiculo">Tipo de vehículo identificado por la placa.</param>
+public sealed record IngresoRegistrado(Guid Id, string Placa, DateTimeOffset FechaHora, int Carril, int Confianza, ParkingApp.Dominio.Accesos.TipoDeVehiculo TipoDeVehiculo);

@@ -26,6 +26,7 @@ internal sealed class EventoDeAccesoConfiguracion : IEntityTypeConfiguration<Eve
         builder.Property(evento => evento.Id).ValueGeneratedNever();
         // El tipo se guarda como texto ("Ingreso" o "Salida"), para que se entienda al consultar la tabla.
         builder.Property(evento => evento.Tipo).HasConversion<string>().HasMaxLength(10);
+        builder.Property(evento => evento.TipoDeVehiculo).HasConversion<string>().HasMaxLength(20);
 
         // La placa se guarda como texto: al guardar se usa placa.Valor, y al leer se vuelve a crear la Placa.
         builder.Property(evento => evento.Placa)

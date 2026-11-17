@@ -56,6 +56,12 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .HasColumnType("character varying(10)")
                         .HasColumnName("tipo");
 
+                    b.Property<string>("TipoDeVehiculo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_de_vehiculo");
+
                     b.HasKey("Id")
                         .HasName("pk_eventos_de_acceso");
 

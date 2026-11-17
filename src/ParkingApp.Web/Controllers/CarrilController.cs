@@ -54,7 +54,7 @@ public sealed class CarrilController : ControllerBase
 public sealed class SolicitudDeIngresoHttp
 {
     /// <summary>
-    /// Placa leída, por ejemplo <c>ABC123</c>.
+    /// Placa leída, por ejemplo <c>ABC123</c> (carro) o <c>XYZ12D</c> (moto).
     /// </summary>
     [Required(ErrorMessage = "La placa es obligatoria")]
     public string? Placa { get; init; }

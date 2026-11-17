@@ -26,6 +26,7 @@ public class RegistrarIngresoTests
 
         var ingreso = Assert.Single(repositorio.Eventos);
         Assert.Equal(TipoDeEvento.Ingreso, ingreso.Tipo);
+        Assert.Equal(TipoDeVehiculo.Carro, ingreso.TipoDeVehiculo);
         Assert.Equal("ABC123", ingreso.Placa.Valor);
         Assert.Equal(sede.Id, ingreso.SedeId);
         Assert.Equal(1, ingreso.Carril);
@@ -37,6 +38,33 @@ public class RegistrarIngresoTests
         Assert.NotNull(resultado.Ingreso);
         Assert.Equal(new DateTime(2026, 11, 16, 8, 0, 0), resultado.Ingreso.FechaHora.DateTime);
         Assert.Equal(TimeSpan.FromHours(-5), resultado.Ingreso.FechaHora.Offset);
+        Assert.Equal(TipoDeVehiculo.Carro, resultado.Ingreso.TipoDeVehiculo);
+    }
+
+    [Fact]
+    public async Task Una_placa_de_moto_se_clasifica_y_guarda_como_moto()
+    {
+        var resultado = await CrearCasoDeUso().EjecutarAsync("xyz-12d", 97, 1, TestContext.Current.CancellationToken);
+
+        Assert.True(resultado.AbreBarrera);
+        var ingreso = Assert.Single(repositorio.Eventos);
+        Assert.Equal("XYZ12D", ingreso.Placa.Valor);
+        Assert.Equal(TipoDeVehiculo.Moto, ingreso.TipoDeVehiculo);
+        Assert.Equal(TipoDeVehiculo.Moto, resultado.Ingreso?.TipoDeVehiculo);
+    }
+
+    [Theory]
+    [InlineData("ABC1234")]
+    [InlineData("123ABC")]
+    [InlineData("ABC12")]
+    public async Task Una_placa_sin_formato_reconocido_se_rechaza_sin_guardarse(string placa)
+    {
+        var resultado = await CrearCasoDeUso().EjecutarAsync(placa, 97, 1, TestContext.Current.CancellationToken);
+
+        Assert.False(resultado.AbreBarrera);
+        Assert.Equal(ClasificacionDeVehiculoValida.FormatoNoReconocido, resultado.Motivo);
+        Assert.Null(resultado.Ingreso);
+        Assert.Empty(repositorio.Eventos);
     }
 
     [Fact]

@@ -30,7 +30,7 @@ public static class ServiciosDeAplicacion
 
     /// <summary>
     /// Arma la cadena de validaciones del carril de entrada.
-    /// Orden: lectura válida → umbral de confianza → formato → cupo → cobro o pase vigente.
+    /// Orden: lectura válida → clasificación por formato → umbral de confianza → cupo → cobro o pase vigente.
     /// Cada historia agrega su eslabón en su lugar de la lista.
     /// </summary>
     /// <param name="proveedor">Proveedor de servicios, para los eslabones que necesiten consultar algo.</param>
@@ -38,6 +38,7 @@ public static class ServiciosDeAplicacion
     private static ValidacionDeIngreso CrearCadenaDeIngreso(IServiceProvider proveedor)
     {
         return CadenaDeValidacionesDeIngreso.Crear(
-            new LecturaValida());
+            new LecturaValida(),
+            new ClasificacionDeVehiculoValida());
     }
 }

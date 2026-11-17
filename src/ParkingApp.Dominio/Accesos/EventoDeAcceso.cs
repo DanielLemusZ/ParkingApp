@@ -15,10 +15,11 @@ public sealed class EventoDeAcceso
     /// </summary>
     public const int ConfianzaMaxima = 100;
 
-    private EventoDeAcceso(TipoDeEvento tipo, Placa placa, Guid sedeId, int carril, int confianza, DateTimeOffset fechaHora)
+    private EventoDeAcceso(TipoDeEvento tipo, TipoDeVehiculo tipoDeVehiculo, Placa placa, Guid sedeId, int carril, int confianza, DateTimeOffset fechaHora)
     {
         Id = Guid.CreateVersion7();
         Tipo = tipo;
+        TipoDeVehiculo = tipoDeVehiculo;
         Placa = placa;
         SedeId = sedeId;
         Carril = carril;
@@ -40,6 +41,11 @@ public sealed class EventoDeAcceso
     /// Si el vehículo entró o salió.
     /// </summary>
     public TipoDeEvento Tipo { get; private set; }
+
+    /// <summary>
+    /// Tipo de vehículo clasificado por el formato de su placa.
+    /// </summary>
+    public TipoDeVehiculo TipoDeVehiculo { get; private set; }
 
     /// <summary>
     /// Placa leída, ya normalizada.
@@ -72,16 +78,23 @@ public sealed class EventoDeAcceso
     /// Registra el ingreso de un vehículo por un carril de entrada.
     /// </summary>
     /// <param name="placa">Placa leída.</param>
+    /// <param name="tipoDeVehiculo">Tipo de vehículo identificado por el formato de la placa.</param>
     /// <param name="sedeId">Sede del carril.</param>
     /// <param name="carril">Número del carril, desde 1.</param>
     /// <param name="confianza">Confianza de la lectura, de 0 a 100.</param>
     /// <param name="fechaHora">Fecha y hora del ingreso, en UTC.</param>
     /// <returns>El evento de ingreso.</returns>
     /// <exception cref="ArgumentOutOfRangeException">El carril o la confianza están fuera de rango.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">El tipo de vehículo no se puede asignar a un ingreso nuevo.</exception>
     /// <exception cref="ArgumentException">La fecha y la hora no están en UTC.</exception>
-    public static EventoDeAcceso RegistrarIngreso(Placa placa, Guid sedeId, int carril, int confianza, DateTimeOffset fechaHora)
+    public static EventoDeAcceso RegistrarIngreso(Placa placa, TipoDeVehiculo tipoDeVehiculo, Guid sedeId, int carril, int confianza, DateTimeOffset fechaHora)
     {
         ArgumentNullException.ThrowIfNull(placa);
+
+        if (tipoDeVehiculo is not TipoDeVehiculo.Carro and not TipoDeVehiculo.Moto)
+        {
+            throw new ArgumentOutOfRangeException(nameof(tipoDeVehiculo), tipoDeVehiculo, "El ingreso necesita un tipo de vehículo reconocido");
+        }
 
         if (carril < 1)
         {
@@ -98,6 +111,6 @@ public sealed class EventoDeAcceso
             throw new ArgumentException("La fecha y la hora deben estar en UTC", nameof(fechaHora));
         }
 
-        return new EventoDeAcceso(TipoDeEvento.Ingreso, placa, sedeId, carril, confianza, fechaHora);
+        return new EventoDeAcceso(TipoDeEvento.Ingreso, tipoDeVehiculo, placa, sedeId, carril, confianza, fechaHora);
     }
 }

@@ -105,7 +105,9 @@ public class RegistrarIngresoTests
 
     private RegistrarIngreso CrearCasoDeUso()
     {
-        var validaciones = CadenaDeValidacionesDeIngreso.Crear(new LecturaValida());
+        var validaciones = CadenaDeValidacionesDeIngreso.Crear(
+            new LecturaValida(),
+            new ClasificacionDeVehiculoValida());
         return new RegistrarIngreso(validaciones, repositorio, sede, reloj);
     }
 }

@@ -111,6 +111,54 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("ParkingApp.Dominio.Configuracion.Tarifa", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Franja")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("franja");
+
+                    b.Property<string>("TipoDeVehiculo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_de_vehiculo");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor");
+
+                    b.Property<DateOnly>("VigenteDesde")
+                        .HasColumnType("date")
+                        .HasColumnName("vigente_desde");
+
+                    b.Property<DateOnly?>("VigenteHasta")
+                        .HasColumnType("date")
+                        .HasColumnName("vigente_hasta");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tarifas");
+
+                    b.HasIndex("TipoDeVehiculo", "Franja", "VigenteHasta")
+                        .HasDatabaseName("ix_tarifas_tipo_de_vehiculo_franja_vigente_hasta");
+
+                    b.HasIndex("TipoDeVehiculo", "Franja", "VigenteDesde")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tarifas_tipo_de_vehiculo_franja_vigente_desde");
+
+                    b.ToTable("tarifas", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_tarifas_valor_no_negativo", "valor >= 0");
+
+                            t.HasCheckConstraint("ck_tarifas_vigencia", "vigente_hasta IS NULL OR vigente_hasta >= vigente_desde");
+                        });
+                });
+
             modelBuilder.Entity("ParkingApp.Dominio.Accesos.EventoDeAcceso", b =>
                 {
                     b.HasOne("ParkingApp.Dominio.Configuracion.Sede", null)

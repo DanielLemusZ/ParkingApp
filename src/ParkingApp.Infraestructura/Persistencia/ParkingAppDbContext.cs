@@ -29,6 +29,11 @@ public sealed class ParkingAppDbContext : DbContext
     /// </summary>
     public DbSet<EventoDeAcceso> EventosDeAcceso => Set<EventoDeAcceso>();
 
+    /// <summary>
+    /// Versiones históricas de las tarifas.
+    /// </summary>
+    public DbSet<Tarifa> Tarifas => Set<Tarifa>();
+
     /// <inheritdoc />
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

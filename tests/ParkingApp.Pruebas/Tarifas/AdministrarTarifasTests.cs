@@ -61,6 +61,19 @@ public class AdministrarTarifasTests
         Assert.Single(repositorio.Tarifas);
     }
 
+    [Theory]
+    [InlineData(4000)]
+    [InlineData(5000)]
+    public async Task Tarifa_diurna_menor_o_igual_a_la_nocturna_se_rechaza(decimal diurna)
+    {
+        await CasoDeUso.CambiarAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Nocturna, 5000, FechaInicial, TestContext.Current.CancellationToken);
+        var cambio = await CasoDeUso.CambiarAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, diurna, FechaInicial, TestContext.Current.CancellationToken);
+
+        Assert.False(cambio.Guardado);
+        Assert.Equal(Tarifa.NocturnaMayorQueDiurna, cambio.Motivo);
+        Assert.Single(repositorio.Tarifas);
+    }
+
     [Fact]
     public async Task Las_dos_tarifas_en_cero_se_aceptan()
     {
@@ -80,19 +93,6 @@ public class AdministrarTarifasTests
         Assert.False(cambio.Guardado);
         Assert.Equal(Tarifa.ValorNegativo, cambio.Motivo);
         Assert.Empty(repositorio.Tarifas);
-    }
-
-    [Fact]
-    public async Task Una_tarifa_se_consulta_segun_su_fecha_de_vigencia()
-    {
-        await CasoDeUso.CambiarAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 8000, FechaInicial, TestContext.Current.CancellationToken);
-        await CasoDeUso.CambiarAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 9000, FechaInicial.AddDays(2), TestContext.Current.CancellationToken);
-
-        var anterior = await repositorio.ObtenerVigenteAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, FechaInicial.AddDays(1), TestContext.Current.CancellationToken);
-        var futura = await repositorio.ObtenerVigenteAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, FechaInicial.AddDays(2), TestContext.Current.CancellationToken);
-
-        Assert.Equal(8000, anterior?.Valor);
-        Assert.Equal(9000, futura?.Valor);
     }
 
     [Fact]

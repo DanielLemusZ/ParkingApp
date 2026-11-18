@@ -18,6 +18,8 @@ public partial class SembrarTarifasIniciales : Migration
         migrationBuilder.InsertData(
             table: "tarifas",
             columns: new[] { "id", "tipo_de_vehiculo", "franja", "valor", "vigente_desde", "vigente_hasta" },
+            // Sin el archivo de diseño de la migración, EF necesita los tipos de columna para insertar los datos.
+            columnTypes: new[] { "uuid", "character varying(20)", "character varying(10)", "numeric(12,2)", "date", "date" },
             values: new object[,]
             {
                 { new Guid("019a9000-0000-7000-8000-000000000001"), "Carro", "Diurna", 8000m, new DateOnly(2026, 11, 1), null },
@@ -33,6 +35,7 @@ public partial class SembrarTarifasIniciales : Migration
         migrationBuilder.DeleteData(
             table: "tarifas",
             keyColumn: "id",
+            keyColumnType: "uuid",
             keyValues: new object[]
             {
                 new Guid("019a9000-0000-7000-8000-000000000001"),

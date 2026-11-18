@@ -113,4 +113,29 @@ public sealed class EventoDeAcceso
 
         return new EventoDeAcceso(TipoDeEvento.Ingreso, tipoDeVehiculo, placa, sedeId, carril, confianza, fechaHora);
     }
+
+    /// <summary>
+    /// Registra la salida de un vehículo.
+    /// </summary>
+    public static EventoDeAcceso RegistrarSalida(Placa placa, TipoDeVehiculo tipoDeVehiculo, Guid sedeId, int carril, int confianza, DateTimeOffset fechaHora)
+    {
+        ArgumentNullException.ThrowIfNull(placa);
+
+        if (carril < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(carril), carril, "El carril debe ser 1 o mayor");
+        }
+
+        if (confianza < ConfianzaMinima || confianza > ConfianzaMaxima)
+        {
+            throw new ArgumentOutOfRangeException(nameof(confianza), confianza, "La confianza debe estar entre 0 y 100");
+        }
+
+        if (fechaHora.Offset != TimeSpan.Zero)
+        {
+            throw new ArgumentException("La fecha y la hora deben estar en UTC", nameof(fechaHora));
+        }
+
+        return new EventoDeAcceso(TipoDeEvento.Salida, tipoDeVehiculo, placa, sedeId, carril, confianza, fechaHora);
+    }
 }

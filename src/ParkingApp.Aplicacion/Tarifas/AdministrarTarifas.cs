@@ -1,3 +1,4 @@
+using ParkingApp.Aplicacion.Configuracion;
 using ParkingApp.Dominio.Accesos;
 using ParkingApp.Dominio.Configuracion;
 
@@ -9,24 +10,35 @@ namespace ParkingApp.Aplicacion.Tarifas;
 public sealed class AdministrarTarifas
 {
     /// <summary>
-    /// Motivo cuando el valor de una tarifa es negativo.
+    /// Motivo cuando la fecha ya fue añadida por otra solicitud concurrente.
     /// </summary>
-    public const string ValorNegativo = "El valor no puede ser negativo.";
-
-    /// <summary>
-    /// Motivo cuando la tarifa nocturna supera la diurna.
-    /// </summary>
-    public const string NocturnaMayorQueDiurna = "La tarifa nocturna debe ser menor que la diurna.";
+    public const string FechaDeTarifaDuplicada = "Ya existe una tarifa para esa fecha. Recarga la página e inténtalo de nuevo.";
 
     private readonly IRepositorioTarifas repositorio;
+    private readonly ISedeActual sede;
+    private readonly TimeProvider reloj;
 
     /// <summary>
     /// Crea el caso de uso con el repositorio de tarifas.
     /// </summary>
     /// <param name="repositorio">Repositorio de versiones de tarifas.</param>
-    public AdministrarTarifas(IRepositorioTarifas repositorio)
+    /// <param name="sede">Sede cuya zona horaria determina el día actual.</param>
+    /// <param name="reloj">Reloj del sistema, sustituible en las pruebas.</param>
+    public AdministrarTarifas(IRepositorioTarifas repositorio, ISedeActual sede, TimeProvider reloj)
     {
         this.repositorio = repositorio;
+        this.sede = sede;
+        this.reloj = reloj;
+    }
+
+    /// <summary>
+    /// Obtiene la fecha actual según la zona horaria de la sede.
+    /// </summary>
+    /// <returns>Fecha local de la sede.</returns>
+    public DateOnly FechaActualSede()
+    {
+        var ahoraEnLaSede = TimeZoneInfo.ConvertTime(reloj.GetUtcNow(), sede.ZonaHoraria);
+        return DateOnly.FromDateTime(ahoraEnLaSede.DateTime);
     }
 
     /// <summary>
@@ -56,30 +68,52 @@ public sealed class AdministrarTarifas
         DateOnly vigenteDesde,
         CancellationToken cancelacion = default)
     {
-        if (valor < 0)
-        {
-            return new ResultadoDeCambioDeTarifa(false, ValorNegativo, null);
-        }
-
         var otraFranja = franja == FranjaTarifaria.Diurna ? FranjaTarifaria.Nocturna : FranjaTarifaria.Diurna;
         var tarifaComplementaria = await repositorio.ObtenerVigenteAsync(tipoDeVehiculo, otraFranja, vigenteDesde, cancelacion);
+        var motivo = Tarifa.ValidarValor(franja, valor, tarifaComplementaria);
 
-        if (franja == FranjaTarifaria.Nocturna &&
-            tarifaComplementaria is not null &&
-            (valor > tarifaComplementaria.Valor || (valor == tarifaComplementaria.Valor && valor != 0)))
+        if (motivo is not null)
         {
-            return new ResultadoDeCambioDeTarifa(false, NocturnaMayorQueDiurna, null);
+            return new ResultadoDeCambioDeTarifa(false, motivo, null);
         }
 
-        if (franja == FranjaTarifaria.Diurna &&
-            tarifaComplementaria is not null &&
-            (tarifaComplementaria.Valor > valor || (tarifaComplementaria.Valor == valor && valor != 0)))
+        var tarifaConLaMismaFecha = await repositorio.ObtenerIniciadaAsync(tipoDeVehiculo, franja, vigenteDesde, cancelacion);
+
+        if (tarifaConLaMismaFecha is not null)
         {
-            return new ResultadoDeCambioDeTarifa(false, NocturnaMayorQueDiurna, null);
+            tarifaConLaMismaFecha.CambiarValor(valor, tarifaComplementaria);
+            await repositorio.GuardarCambiosAsync(tarifaConLaMismaFecha, cancelacion);
+            return new ResultadoDeCambioDeTarifa(true, string.Empty, tarifaConLaMismaFecha);
         }
 
+        Tarifa? tarifaAnterior = null;
+
+        if (vigenteDesde > DateOnly.MinValue)
+        {
+            tarifaAnterior = await repositorio.ObtenerVigenteAsync(
+                tipoDeVehiculo,
+                franja,
+                vigenteDesde.AddDays(-1),
+                cancelacion);
+        }
+
+        var tarifaSiguiente = await repositorio.ObtenerSiguienteAsync(tipoDeVehiculo, franja, vigenteDesde, cancelacion);
         var tarifa = new Tarifa(tipoDeVehiculo, franja, valor, vigenteDesde);
-        await repositorio.AgregarVersionAsync(tarifa, cancelacion);
+
+        if (tarifaAnterior is not null)
+        {
+            tarifaAnterior.FinalizarVigencia(vigenteDesde.AddDays(-1));
+        }
+
+        if (tarifaSiguiente is not null)
+        {
+            tarifa.FinalizarVigencia(tarifaSiguiente.VigenteDesde.AddDays(-1));
+        }
+
+        if (!await repositorio.AgregarAsync(tarifa, cancelacion))
+        {
+            return new ResultadoDeCambioDeTarifa(false, FechaDeTarifaDuplicada, null);
+        }
 
         return new ResultadoDeCambioDeTarifa(true, string.Empty, tarifa);
     }

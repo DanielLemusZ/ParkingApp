@@ -157,6 +157,44 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
 
                             t.HasCheckConstraint("ck_tarifas_vigencia", "vigente_hasta IS NULL OR vigente_hasta >= vigente_desde");
                         });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("019a9000-0000-7000-8000-000000000001"),
+                            TipoDeVehiculo = "Carro",
+                            Franja = "Diurna",
+                            Valor = 8000m,
+                            VigenteDesde = new DateOnly(2026, 11, 1),
+                            VigenteHasta = (DateOnly?)null
+                        },
+                        new
+                        {
+                            Id = new Guid("019a9000-0000-7000-8000-000000000002"),
+                            TipoDeVehiculo = "Carro",
+                            Franja = "Nocturna",
+                            Valor = 5000m,
+                            VigenteDesde = new DateOnly(2026, 11, 1),
+                            VigenteHasta = (DateOnly?)null
+                        },
+                        new
+                        {
+                            Id = new Guid("019a9000-0000-7000-8000-000000000003"),
+                            TipoDeVehiculo = "Moto",
+                            Franja = "Diurna",
+                            Valor = 0m,
+                            VigenteDesde = new DateOnly(2026, 11, 1),
+                            VigenteHasta = (DateOnly?)null
+                        },
+                        new
+                        {
+                            Id = new Guid("019a9000-0000-7000-8000-000000000004"),
+                            TipoDeVehiculo = "Moto",
+                            Franja = "Nocturna",
+                            Valor = 0m,
+                            VigenteDesde = new DateOnly(2026, 11, 1),
+                            VigenteHasta = (DateOnly?)null
+                        });
                 });
 
             modelBuilder.Entity("ParkingApp.Dominio.Accesos.EventoDeAcceso", b =>

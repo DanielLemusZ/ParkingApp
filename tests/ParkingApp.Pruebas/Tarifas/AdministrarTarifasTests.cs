@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Time.Testing;
+
 using ParkingApp.Aplicacion.Tarifas;
 using ParkingApp.Dominio.Accesos;
 using ParkingApp.Dominio.Configuracion;
@@ -10,7 +12,10 @@ public class AdministrarTarifasTests
     private static readonly DateOnly FechaInicial = new DateOnly(2026, 11, 18);
 
     private readonly RepositorioTarifasEnMemoria repositorio = new RepositorioTarifasEnMemoria();
-    private AdministrarTarifas CasoDeUso => new AdministrarTarifas(repositorio);
+    private readonly FakeTimeProvider reloj = new FakeTimeProvider(
+        new DateTimeOffset(2026, 11, 18, 2, 0, 0, TimeSpan.Zero));
+
+    private AdministrarTarifas CasoDeUso => new AdministrarTarifas(repositorio, new SedeActualDePrueba(), reloj);
 
     [Fact]
     public async Task Cambiar_tarifa_crea_una_version_y_conserva_la_anterior()
@@ -25,6 +30,24 @@ public class AdministrarTarifasTests
         Assert.Equal(FechaInicial, repositorio.Tarifas[0].VigenteHasta);
     }
 
+    [Fact]
+    public async Task Cambiar_tarifa_con_la_misma_fecha_actualiza_la_version_existente()
+    {
+        await CasoDeUso.CambiarAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 1000, FechaInicial, TestContext.Current.CancellationToken);
+
+        var cambio = await CasoDeUso.CambiarAsync(
+            TipoDeVehiculo.Carro,
+            FranjaTarifaria.Diurna,
+            1200,
+            FechaInicial,
+            TestContext.Current.CancellationToken);
+
+        Assert.True(cambio.Guardado);
+        var tarifaUnica = Assert.Single(repositorio.Tarifas);
+        Assert.Equal(1200, tarifaUnica.Valor);
+        Assert.Null(tarifaUnica.VigenteHasta);
+    }
+
     [Theory]
     [InlineData(9000)]
     [InlineData(8000)]
@@ -34,7 +57,7 @@ public class AdministrarTarifasTests
         var cambio = await CasoDeUso.CambiarAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Nocturna, nocturna, FechaInicial, TestContext.Current.CancellationToken);
 
         Assert.False(cambio.Guardado);
-        Assert.Equal(AdministrarTarifas.NocturnaMayorQueDiurna, cambio.Motivo);
+        Assert.Equal(Tarifa.NocturnaMayorQueDiurna, cambio.Motivo);
         Assert.Single(repositorio.Tarifas);
     }
 
@@ -55,7 +78,7 @@ public class AdministrarTarifasTests
         var cambio = await CasoDeUso.CambiarAsync(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, -1, FechaInicial, TestContext.Current.CancellationToken);
 
         Assert.False(cambio.Guardado);
-        Assert.Equal(AdministrarTarifas.ValorNegativo, cambio.Motivo);
+        Assert.Equal(Tarifa.ValorNegativo, cambio.Motivo);
         Assert.Empty(repositorio.Tarifas);
     }
 
@@ -70,5 +93,11 @@ public class AdministrarTarifasTests
 
         Assert.Equal(8000, anterior?.Valor);
         Assert.Equal(9000, futura?.Valor);
+    }
+
+    [Fact]
+    public void La_fecha_actual_se_calcula_en_la_zona_horaria_de_la_sede()
+    {
+        Assert.Equal(new DateOnly(2026, 11, 17), CasoDeUso.FechaActualSede());
     }
 }

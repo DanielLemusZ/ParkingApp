@@ -30,28 +30,46 @@ internal sealed class RepositorioTarifasEnMemoria : IRepositorioTarifas
         return Task.FromResult(tarifa);
     }
 
-    public Task AgregarVersionAsync(Tarifa tarifa, CancellationToken cancelacion = default)
+    public Task<Tarifa?> ObtenerIniciadaAsync(
+        TipoDeVehiculo tipoDeVehiculo,
+        FranjaTarifaria franja,
+        DateOnly fecha,
+        CancellationToken cancelacion = default)
     {
-        var siguiente = tarifas
-            .Where(actual => actual.TipoDeVehiculo == tarifa.TipoDeVehiculo &&
-                actual.Franja == tarifa.Franja &&
-                actual.VigenteDesde > tarifa.VigenteDesde)
+        var tarifa = tarifas.SingleOrDefault(actual =>
+            actual.TipoDeVehiculo == tipoDeVehiculo && actual.Franja == franja && actual.VigenteDesde == fecha);
+        return Task.FromResult(tarifa);
+    }
+
+    public Task<Tarifa?> ObtenerSiguienteAsync(
+        TipoDeVehiculo tipoDeVehiculo,
+        FranjaTarifaria franja,
+        DateOnly fecha,
+        CancellationToken cancelacion = default)
+    {
+        var tarifa = tarifas
+            .Where(actual => actual.TipoDeVehiculo == tipoDeVehiculo &&
+                actual.Franja == franja &&
+                actual.VigenteDesde > fecha)
             .MinBy(actual => actual.VigenteDesde);
-        var anterior = tarifas
-            .Where(actual => actual.TipoDeVehiculo == tarifa.TipoDeVehiculo &&
-                actual.Franja == tarifa.Franja &&
-                actual.VigenteDesde < tarifa.VigenteDesde &&
-                actual.EstaVigenteEn(tarifa.VigenteDesde))
-            .MaxBy(actual => actual.VigenteDesde);
+        return Task.FromResult(tarifa);
+    }
 
-        anterior?.FinalizarVigencia(tarifa.VigenteDesde.AddDays(-1));
-
-        if (siguiente is not null)
+    public Task<bool> AgregarAsync(Tarifa tarifa, CancellationToken cancelacion = default)
+    {
+        if (tarifas.Any(actual => actual.TipoDeVehiculo == tarifa.TipoDeVehiculo &&
+            actual.Franja == tarifa.Franja &&
+            actual.VigenteDesde == tarifa.VigenteDesde))
         {
-            tarifa.FinalizarVigencia(siguiente.VigenteDesde.AddDays(-1));
+            return Task.FromResult(false);
         }
 
         tarifas.Add(tarifa);
+        return Task.FromResult(true);
+    }
+
+    public Task GuardarCambiosAsync(Tarifa tarifa, CancellationToken cancelacion = default)
+    {
         return Task.CompletedTask;
     }
 }

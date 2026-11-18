@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
+using Npgsql;
+
 using ParkingApp.Aplicacion.Tarifas;
 using ParkingApp.Dominio.Accesos;
 using ParkingApp.Dominio.Configuracion;
@@ -35,7 +37,6 @@ internal sealed class RepositorioTarifas : IRepositorioTarifas
         CancellationToken cancelacion = default)
     {
         return contexto.Tarifas
-            .AsNoTracking()
             .SingleOrDefaultAsync(
                 tarifa => tarifa.TipoDeVehiculo == tipoDeVehiculo &&
                     tarifa.Franja == franja &&
@@ -44,36 +45,61 @@ internal sealed class RepositorioTarifas : IRepositorioTarifas
                 cancelacion);
     }
 
-    public async Task AgregarVersionAsync(Tarifa tarifa, CancellationToken cancelacion = default)
+    public Task<Tarifa?> ObtenerIniciadaAsync(
+        TipoDeVehiculo tipoDeVehiculo,
+        FranjaTarifaria franja,
+        DateOnly fecha,
+        CancellationToken cancelacion = default)
+    {
+        return contexto.Tarifas.SingleOrDefaultAsync(
+            tarifa => tarifa.TipoDeVehiculo == tipoDeVehiculo &&
+                tarifa.Franja == franja &&
+                tarifa.VigenteDesde == fecha,
+            cancelacion);
+    }
+
+    public Task<Tarifa?> ObtenerSiguienteAsync(
+        TipoDeVehiculo tipoDeVehiculo,
+        FranjaTarifaria franja,
+        DateOnly fecha,
+        CancellationToken cancelacion = default)
+    {
+        return contexto.Tarifas
+            .Where(tarifa => tarifa.TipoDeVehiculo == tipoDeVehiculo &&
+                tarifa.Franja == franja &&
+                tarifa.VigenteDesde > fecha)
+            .OrderBy(tarifa => tarifa.VigenteDesde)
+            .FirstOrDefaultAsync(cancelacion);
+    }
+
+    public async Task<bool> AgregarAsync(Tarifa tarifa, CancellationToken cancelacion = default)
     {
         await using var transaccion = await contexto.Database.BeginTransactionAsync(cancelacion);
-        var anteriores = await contexto.Tarifas
-            .Where(actual => actual.TipoDeVehiculo == tarifa.TipoDeVehiculo &&
-                actual.Franja == tarifa.Franja &&
-                actual.VigenteDesde < tarifa.VigenteDesde &&
-                (actual.VigenteHasta == null || actual.VigenteHasta >= tarifa.VigenteDesde))
-            .OrderByDescending(actual => actual.VigenteDesde)
-            .ToListAsync(cancelacion);
-
-        var siguiente = await contexto.Tarifas
-            .Where(actual => actual.TipoDeVehiculo == tarifa.TipoDeVehiculo &&
-                actual.Franja == tarifa.Franja &&
-                actual.VigenteDesde > tarifa.VigenteDesde)
-            .OrderBy(actual => actual.VigenteDesde)
-            .FirstOrDefaultAsync(cancelacion);
-
-        if (anteriores.Count > 0)
-        {
-            anteriores[0].FinalizarVigencia(tarifa.VigenteDesde.AddDays(-1));
-        }
-
-        if (siguiente is not null)
-        {
-            tarifa.FinalizarVigencia(siguiente.VigenteDesde.AddDays(-1));
-        }
-
         contexto.Tarifas.Add(tarifa);
+
+        try
+        {
+            await contexto.SaveChangesAsync(cancelacion);
+            await transaccion.CommitAsync(cancelacion);
+            return true;
+        }
+        catch (DbUpdateException error) when (EsFechaDuplicada(error))
+        {
+            await transaccion.RollbackAsync(cancelacion);
+            contexto.Entry(tarifa).State = EntityState.Detached;
+            return false;
+        }
+    }
+
+    public async Task GuardarCambiosAsync(Tarifa tarifa, CancellationToken cancelacion = default)
+    {
         await contexto.SaveChangesAsync(cancelacion);
-        await transaccion.CommitAsync(cancelacion);
+    }
+
+    private static bool EsFechaDuplicada(DbUpdateException error)
+    {
+        return error.InnerException is PostgresException postgres &&
+            postgres.SqlState == PostgresErrorCodes.UniqueViolation &&
+            postgres.ConstraintName == "ix_tarifas_tipo_de_vehiculo_franja_vigente_desde";
     }
 }

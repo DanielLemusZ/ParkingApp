@@ -8,6 +8,16 @@ namespace ParkingApp.Dominio.Configuracion;
 public sealed class Tarifa
 {
     /// <summary>
+    /// Motivo cuando el valor de una tarifa es negativo.
+    /// </summary>
+    public const string ValorNegativo = "El valor no puede ser negativo.";
+
+    /// <summary>
+    /// Motivo cuando la tarifa nocturna no es menor que la diurna.
+    /// </summary>
+    public const string NocturnaMayorQueDiurna = "La tarifa nocturna debe ser menor que la diurna.";
+
+    /// <summary>
     /// Crea una versión nueva de una tarifa.
     /// </summary>
     /// <param name="tipoDeVehiculo">Tipo de vehículo al que aplica.</param>
@@ -29,7 +39,7 @@ public sealed class Tarifa
 
         if (valor < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(valor), valor, "El valor no puede ser negativo.");
+            throw new ArgumentOutOfRangeException(nameof(valor), valor, ValorNegativo);
         }
 
         Id = Guid.CreateVersion7();
@@ -82,6 +92,59 @@ public sealed class Tarifa
     public bool EstaVigenteEn(DateOnly fecha)
     {
         return fecha >= VigenteDesde && (VigenteHasta is null || fecha <= VigenteHasta.Value);
+    }
+
+    /// <summary>
+    /// Valida el valor respecto a la tarifa vigente de la otra franja para el mismo vehículo.
+    /// </summary>
+    /// <param name="franja">Franja de la tarifa que se desea guardar.</param>
+    /// <param name="valor">Valor que se desea guardar.</param>
+    /// <param name="tarifaComplementaria">Tarifa vigente para la otra franja, si existe.</param>
+    /// <returns>El motivo de rechazo o <see langword="null"/> cuando el valor es válido.</returns>
+    public static string? ValidarValor(FranjaTarifaria franja, decimal valor, Tarifa? tarifaComplementaria)
+    {
+        if (valor < 0)
+        {
+            return ValorNegativo;
+        }
+
+        if (tarifaComplementaria is null || (valor == 0 && tarifaComplementaria.Valor == 0))
+        {
+            return null;
+        }
+
+        var infringeRelacion = franja switch
+        {
+            FranjaTarifaria.Nocturna => valor >= tarifaComplementaria.Valor,
+            FranjaTarifaria.Diurna => tarifaComplementaria.Valor >= valor,
+            _ => true,
+        };
+
+        return infringeRelacion ? NocturnaMayorQueDiurna : null;
+    }
+
+    /// <summary>
+    /// Cambia el valor de esta versión después de validar la relación entre franjas.
+    /// </summary>
+    /// <param name="valor">Nuevo valor.</param>
+    /// <param name="tarifaComplementaria">Tarifa vigente de la otra franja, si existe.</param>
+    /// <exception cref="ArgumentOutOfRangeException">El valor es negativo.</exception>
+    /// <exception cref="InvalidOperationException">El valor incumple la regla entre franjas.</exception>
+    public void CambiarValor(decimal valor, Tarifa? tarifaComplementaria)
+    {
+        var motivo = ValidarValor(Franja, valor, tarifaComplementaria);
+
+        if (motivo == ValorNegativo)
+        {
+            throw new ArgumentOutOfRangeException(nameof(valor), valor, motivo);
+        }
+
+        if (motivo is not null)
+        {
+            throw new InvalidOperationException(motivo);
+        }
+
+        Valor = valor;
     }
 
     /// <summary>

@@ -45,7 +45,7 @@
                 <MudSelectItem Value="FranjaTarifaria.Diurna">Diurna</MudSelectItem>
                 <MudSelectItem Value="FranjaTarifaria.Nocturna">Nocturna</MudSelectItem>
             </MudSelect>
-            <MudNumericField T="decimal" Label="Valor en pesos" @bind-Value="valor" />
+            <MudNumericField T="decimal" Label="Valor en pesos" Min="0" @bind-Value="valor" />
             <MudText Class="mt-3">Vigente desde</MudText>
             <InputDate TValue="DateOnly" @bind-Value="vigenteDesde" class="mud-input-root mud-input-root-outlined" />
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
@@ -65,14 +65,17 @@
     private TipoDeVehiculo tipoDeVehiculo = TipoDeVehiculo.Carro;
     private FranjaTarifaria franja = FranjaTarifaria.Diurna;
     private decimal valor;
-    private DateOnly vigenteDesde = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly vigenteDesde;
     private string mensaje = string.Empty;
     private bool guardado;
     private bool guardando;
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarTarifasAsync();
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var administrarTarifas = alcance.ServiceProvider.GetRequiredService<AdministrarTarifas>();
+        vigenteDesde = administrarTarifas.FechaActualSede();
+        tarifas = await administrarTarifas.ConsultarVigentesAsync(vigenteDesde);
     }
 
     private async Task GuardarAsync()
@@ -103,7 +106,7 @@
     {
         await using var alcance = FabricaDeAlcances.CreateAsyncScope();
         var administrarTarifas = alcance.ServiceProvider.GetRequiredService<AdministrarTarifas>();
-        tarifas = await administrarTarifas.ConsultarVigentesAsync(DateOnly.FromDateTime(DateTime.Today));
+        tarifas = await administrarTarifas.ConsultarVigentesAsync(administrarTarifas.FechaActualSede());
     }
 
     private static string NombreVehiculo(TipoDeVehiculo tipo)

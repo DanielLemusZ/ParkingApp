@@ -1,0 +1,101 @@
+@page "/consultas"
+@rendermode InteractiveServer
+@using ParkingApp.Aplicacion.Reportes
+@inject IServicioConsultas ServicioConsultas
+@* @attribute [Authorize(Roles = "Administrador")] *@
+
+<MudText Typo="Typo.h4" GutterBottom="true">Consultar Ingresos, Salidas y Cobros</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="3">
+    <MudGrid>
+        <MudItem xs="12" sm="3">
+            <MudTextField @bind-Value="Filtros.Placa" Label="Placa" Variant="Variant.Outlined" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudDatePicker @bind-Date="Filtros.FechaInicio" Label="Fecha Inicial" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudDatePicker @bind-Date="Filtros.FechaFin" Label="Fecha Final" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudSelect T="string" @bind-Value="Filtros.EstadoCobro" Label="Estado del Cobro" Variant="Variant.Outlined" Clearable="true">
+                <MudSelectItem Value="@("Pendiente")" />
+                <MudSelectItem Value="@("Pagado")" />
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="BuscarDatos">Filtrar</MudButton>
+            @if (!string.IsNullOrEmpty(MensajeError))
+            {
+                <MudText Color="Color.Error" Class="ml-4">@MensajeError</MudText>
+            }
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-6">
+    <MudTabPanel Text="Accesos (Ingresos/Salidas)">
+        <MudDataGrid Items="@ListaAccesos" Dense="true" Hover="true">
+            <Columns>
+                <PropertyColumn Property="x => x.Placa" Title="Placa" />
+                <PropertyColumn Property="x => x.TipoVehiculo" Title="Tipo Vehículo" />
+                <PropertyColumn Property="x => x.TipoEvento" Title="Evento" />
+                <PropertyColumn Property="x => x.FechaHora" Title="Fecha y Hora" />
+                <PropertyColumn Property="x => x.Carril" Title="Carril" />
+                <PropertyColumn Property="x => x.EsLecturaManual" Title="Lectura Manual" />
+            </Columns>
+            <NoRecordsContent>
+                <MudText>No hay resultados</MudText>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudDataGridPager T="EventoAccesoDto" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Cobros">
+        <MudDataGrid Items="@ListaCobros" Dense="true" Hover="true">
+            <Columns>
+                <PropertyColumn Property="x => x.Placa" Title="Placa" />
+                <PropertyColumn Property="x => x.DiaOperativo.ToShortDateString()" Title="Día Operativo" />
+                <PropertyColumn Property="x => x.Franja" Title="Franja" />
+                <PropertyColumn Property="x => x.Valor" Title="Valor" Format="C" />
+                <PropertyColumn Property="x => x.Estado" Title="Estado" />
+            </Columns>
+            <NoRecordsContent>
+                <MudText>No hay resultados</MudText>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudDataGridPager T="CobroConsultaDto" />
+            </PagerContent>
+        </MudDataGrid>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private FiltrosConsultaDto Filtros = new FiltrosConsultaDto();
+    private List<EventoAccesoDto> ListaAccesos = new();
+    private List<CobroConsultaDto> ListaCobros = new();
+    private string MensajeError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await BuscarDatos();
+    }
+
+    private async Task BuscarDatos()
+    {
+        MensajeError = string.Empty;
+
+        if (Filtros.FechaInicio.HasValue && Filtros.FechaFin.HasValue && Filtros.FechaInicio.Value > Filtros.FechaFin.Value)
+        {
+            MensajeError = "La fecha inicial debe ser anterior a la final";
+            ListaAccesos.Clear();
+            ListaCobros.Clear();
+            return;
+        }
+
+        ListaAccesos = await ServicioConsultas.ConsultarAccesosAsync(Filtros);
+        ListaCobros = await ServicioConsultas.ConsultarCobrosAsync(Filtros);
+    }
+}

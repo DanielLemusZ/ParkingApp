@@ -3,7 +3,9 @@ using DotNetEnv;
 using MudBlazor.Services;
 
 using ParkingApp.Aplicacion;
+using ParkingApp.Aplicacion.Reportes;
 using ParkingApp.Infraestructura.Persistencia;
+using ParkingApp.Infraestructura.Persistencia.Consultas;
 using ParkingApp.Web.Components;
 
 // Carga el .env de la raíz del repositorio. Si una variable ya existe en el entorno (por ejemplo, en Docker), se respeta.
@@ -18,6 +20,7 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AgregarAplicacion();
 builder.Services.AgregarBaseDeDatos(builder.Configuration, builder.Environment.IsDevelopment());
+builder.Services.AddScoped<IServicioConsultas, ServicioConsultas>();
 
 var app = builder.Build();
 

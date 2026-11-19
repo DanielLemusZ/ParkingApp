@@ -3,7 +3,6 @@ using DotNetEnv;
 using MudBlazor.Services;
 
 using ParkingApp.Aplicacion;
-using ParkingApp.Aplicacion.Pagos;
 using ParkingApp.Infraestructura.Persistencia;
 using ParkingApp.Infraestructura.ServiciosExternos;
 using ParkingApp.Web.Components;
@@ -20,7 +19,7 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AgregarAplicacion();
 builder.Services.AgregarBaseDeDatos(builder.Configuration, builder.Environment.IsDevelopment());
-builder.Services.AddScoped<IFacturacionElectronica, AdaptadorFacturacionSimulado>();
+builder.Services.AgregarServiciosExternos(); // <--- Aquí registramos los servicios externos de forma limpia
 
 var app = builder.Build();
 

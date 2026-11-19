@@ -8,10 +8,11 @@ namespace ParkingApp.Aplicacion.Accesos;
 public class ProcesarSalidaUseCase
 {
     private readonly ISalidaRepository _repositorio;
-    
-    // Umbral de confianza configurado
-    private const double UmbralConfianza = 80.0; 
 
+    // Umbral de confianza configurado
+    private const double UmbralConfianza = 80.0;
+
+    /// <inheritdoc/>
     public ProcesarSalidaUseCase(ISalidaRepository repositorio)
     {
         _repositorio = repositorio;
@@ -58,10 +59,10 @@ public class ProcesarSalidaUseCase
         // 5. Criterio de éxito: Registrar la salida porque la barrera va a abrir
         // Usamos la variable correcta _repositorio
         await _repositorio.RegistrarSalidaAsync(
-            placa, 
-            DateTimeOffset.UtcNow, 
-            sedeId, 
-            carril, 
+            placa,
+            DateTimeOffset.UtcNow,
+            sedeId,
+            carril,
             (int)confianza
         );
 

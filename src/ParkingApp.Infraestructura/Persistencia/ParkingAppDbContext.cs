@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 
 using ParkingApp.Dominio.Accesos;
-using ParkingApp.Dominio.Configuracion;
 using ParkingApp.Dominio.Cobros;
+using ParkingApp.Dominio.Configuracion;
 
 namespace ParkingApp.Infraestructura.Persistencia;
 
@@ -23,7 +23,7 @@ public sealed class ParkingAppDbContext : DbContext
     /// Cobros generados por los vehículos.
     /// </summary>
     public DbSet<Cobro> Cobros => Set<Cobro>();
-    
+
     /// <summary>
     /// Sedes del parqueadero.
     /// </summary>

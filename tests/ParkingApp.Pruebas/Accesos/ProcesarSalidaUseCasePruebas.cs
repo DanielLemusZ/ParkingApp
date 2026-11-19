@@ -1,19 +1,20 @@
-using Xunit;
 using ParkingApp.Aplicacion.Accesos;
+
+using Xunit;
 
 namespace ParkingApp.Pruebas.Accesos;
 
 public class ProcesarSalidaUseCasePruebas
 {
     // Clase falsa (Fake) para simular la base de datos en las pruebas
-    private class FakeSalidaRepository : ISalidaRepository
+    private sealed class FakeSalidaRepository : ISalidaRepository
     {
         public decimal? ValorPendiente { get; set; }
         public bool CobroPagado { get; set; }
         public bool SalidaRegistrada { get; private set; }
 
         public Task<decimal?> ObtenerValorCobroPendienteAsync(string placa) => Task.FromResult(ValorPendiente);
-        
+
         public Task<bool> TieneCobroPagadoHoyAsync(string placa) => Task.FromResult(CobroPagado);
 
         public Task RegistrarSalidaAsync(string placa, DateTimeOffset fechaHora, Guid sedeId, int carril, int confianza)
@@ -31,7 +32,7 @@ public class ProcesarSalidaUseCasePruebas
         var casoDeUso = new ProcesarSalidaUseCase(repoFalso);
 
         // Act & Assert
-        var excepcion = await Assert.ThrowsAsync<ArgumentException>(() => 
+        var excepcion = await Assert.ThrowsAsync<ArgumentException>(() =>
             casoDeUso.EjecutarAsync("", 90.0, Guid.NewGuid(), 1));
 
         Assert.Equal("La placa no puede estar vacía.", excepcion.Message);

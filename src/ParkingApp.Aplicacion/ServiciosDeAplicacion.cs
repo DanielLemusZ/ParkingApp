@@ -19,7 +19,7 @@ public static class ServiciosDeAplicacion
     public static IServiceCollection AgregarAplicacion(this IServiceCollection servicios)
     {
         servicios.AddScoped<ProcesarSalidaUseCase>();
-        
+
         servicios.TryAddSingleton(TimeProvider.System);
 
         // La cadena se arma de nuevo en cada alcance, porque cada eslabón guarda cuál es el siguiente.

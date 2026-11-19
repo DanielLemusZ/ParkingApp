@@ -24,8 +24,9 @@ public interface ISalidaRepository
     /// </summary>
     /// <param name="placa">Placa del vehículo que sale.</param>
     /// <param name="fechaHora">Fecha y hora exacta de la salida.</param>
-    /// <param name="sede">Nombre de la sede.</param>
+    /// <param name="sedeId"></param>
     /// <param name="carril">Nombre o identificador del carril.</param>
+    /// <param name="confianza"></param>
     /// <returns>Tarea que representa la operación asíncrona.</returns>
     Task RegistrarSalidaAsync(string placa, DateTimeOffset fechaHora, Guid sedeId, int carril, int confianza);
 }

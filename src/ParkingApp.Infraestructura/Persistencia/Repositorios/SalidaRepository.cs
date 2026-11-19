@@ -1,23 +1,30 @@
 using Microsoft.EntityFrameworkCore;
+
 using ParkingApp.Aplicacion.Accesos;
-// Importa el espacio de nombres de tu DbContext y Entidades
-// using ParkingApp.Dominio.Cobros; (Si RegistroSalida y EstadoCobro están allí)
+using ParkingApp.Dominio.Accesos;
+using ParkingApp.Dominio.Cobros;
 
 namespace ParkingApp.Infraestructura.Persistencia.Repositorios;
 
+/// <summary>
+/// Implementación de persistencia para las operaciones de salida y consulta de cobros.
+/// </summary>
 public class SalidaRepository : ISalidaRepository
 {
     private readonly ParkingAppDbContext _contexto;
 
+    /// <summary>
+    /// Inicializa una nueva instancia del repositorio de salidas.
+    /// </summary>
+    /// <param name="contexto">Contexto de base de datos de la aplicación.</param>
     public SalidaRepository(ParkingAppDbContext contexto)
     {
         _contexto = contexto;
     }
 
+    /// <inheritdoc />
     public async Task<decimal?> ObtenerValorCobroPendienteAsync(string placa)
     {
-        // Busca cualquier cobro en estado Pendiente para esa placa
-        // Ajusta "EstadoCobro.Pendiente" según cómo lo tengan definido en el dominio
         var cobro = await _contexto.Cobros
             .Where(c => c.Placa == placa && c.Estado == EstadoCobro.Pendiente)
             .FirstOrDefaultAsync();
@@ -25,30 +32,26 @@ public class SalidaRepository : ISalidaRepository
         return cobro?.Valor;
     }
 
+    /// <inheritdoc />
     public async Task<bool> TieneCobroPagadoHoyAsync(string placa)
     {
-        // Obtiene la fecha actual (ajustar si manejan zonas horarias específicas)
         var hoy = DateTime.Today;
 
         return await _contexto.Cobros
-            .AnyAsync(c => c.Placa == placa && 
-                           c.Estado == EstadoCobro.Pagado && 
+            .AnyAsync(c => c.Placa == placa &&
+                           c.Estado == EstadoCobro.Pagado &&
                            c.FechaCreacion.Date == hoy);
     }
 
-public async Task RegistrarSalidaAsync(string placa, DateTimeOffset fechaHora, Guid sedeId, int carril, int confianza)
+    /// <inheritdoc />
+    public async Task RegistrarSalidaAsync(string placa, DateTimeOffset fechaHora, Guid sedeId, int carril, int confianza)
     {
-        // 1. Convertir el string primitivo al ValueObject "Placa" de tu dominio.
-        // Asumo que tu equipo creó un método como Placa.Crear(placa) o new Placa(placa). Ajusta esta línea a como lo tengan:
-        var placaObjeto = Placa.DeTexto(placa); // <- ¡Ojo! Revisa cómo se instancian las placas en tu proyecto.
+        var placaObjeto = Placa.Crear(placa);
+        var tipoVehiculo = TipoDeVehiculo.Carro;
 
-        // 2. Determinar tipo de vehículo (Asumimos Desconocido o similar porque salió manual, ajusta según tu Enum)
-        var tipoVehiculo = TipoDeVehiculo.Carro; // <- Puedes buscar el ingreso previo en BD para saber si era Moto/Carro.
-
-        // 3. Crear el evento de salida usando el método de fábrica
         var eventoSalida = EventoDeAcceso.RegistrarSalida(
             placaObjeto,
-            tipoVehiculo, 
+            tipoVehiculo,
             sedeId,
             carril,
             confianza,

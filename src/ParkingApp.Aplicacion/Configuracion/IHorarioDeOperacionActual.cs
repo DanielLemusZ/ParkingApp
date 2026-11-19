@@ -3,12 +3,14 @@ using ParkingApp.Dominio.Configuracion;
 namespace ParkingApp.Aplicacion.Configuracion;
 
 /// <summary>
-/// Horario de operación vigente en la sede: inicio del día operativo y de la franja nocturna.
+/// Horario de operación vigente en la sede: el inicio de la franja diurna y el de la nocturna, que configura el administrador.
 /// </summary>
 public interface IHorarioDeOperacionActual
 {
     /// <summary>
-    /// Horario que se usa para calcular el día operativo y la franja de cada ingreso.
+    /// Obtiene el horario que se usa para calcular el día operativo y la franja de cada ingreso.
     /// </summary>
-    HorarioDeOperacion Horario { get; }
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>El horario vigente de la sede.</returns>
+    Task<HorarioDeOperacion> ObtenerAsync(CancellationToken cancelacion = default);
 }

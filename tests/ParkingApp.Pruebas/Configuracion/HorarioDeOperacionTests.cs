@@ -14,8 +14,8 @@ public class HorarioDeOperacionTests
         var antesDeLas6 = new DateTimeOffset(2026, 11, 19, 5, 59, 0, Bogota);
         var alasSeis = new DateTimeOffset(2026, 11, 19, 6, 0, 0, Bogota);
 
-        Assert.Equal(new DateOnly(2026, 11, 18), horario.DiaOperativo(antesDeLas6));
-        Assert.Equal(new DateOnly(2026, 11, 19), horario.DiaOperativo(alasSeis));
+        Assert.Equal(new DateOnly(2026, 11, 18), HorarioDeOperacion.DiaOperativo(antesDeLas6));
+        Assert.Equal(new DateOnly(2026, 11, 19), HorarioDeOperacion.DiaOperativo(alasSeis));
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public class HorarioDeOperacionTests
         var entrada = new DateTimeOffset(2026, 11, 16, 23, 0, 0, Bogota);
         var salida = new DateTimeOffset(2026, 11, 17, 1, 0, 0, Bogota);
 
-        Assert.Equal(horario.DiaOperativo(entrada), horario.DiaOperativo(salida));
+        Assert.Equal(HorarioDeOperacion.DiaOperativo(entrada), HorarioDeOperacion.DiaOperativo(salida));
     }
 
     [Theory]
@@ -45,5 +45,16 @@ public class HorarioDeOperacionTests
     public void Un_horario_con_las_dos_horas_iguales_se_rechaza()
     {
         Assert.Throws<ArgumentException>(() => new HorarioDeOperacion(new TimeOnly(6, 0), new TimeOnly(6, 0)));
+    }
+
+    [Fact]
+    public void Si_la_franja_diurna_empieza_a_las_0700_el_dia_operativo_sigue_empezando_a_las_0600()
+    {
+        // El administrador mueve las franjas, pero el día operativo no se configura (S-02).
+        var horarioCambiado = new HorarioDeOperacion(new TimeOnly(7, 0), new TimeOnly(19, 0));
+        var alasSeisYMedia = new DateTimeOffset(2026, 11, 19, 6, 30, 0, Bogota);
+
+        Assert.Equal(new DateOnly(2026, 11, 19), HorarioDeOperacion.DiaOperativo(alasSeisYMedia));
+        Assert.Equal(FranjaTarifaria.Nocturna, horarioCambiado.Franja(alasSeisYMedia));
     }
 }

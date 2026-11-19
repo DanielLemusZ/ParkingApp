@@ -23,16 +23,18 @@ public sealed class CalendarioOperativo
     }
 
     /// <summary>
-    /// Convierte un instante en UTC a la hora de la sede y calcula su día operativo y su franja.
+    /// Convierte un instante en UTC a la hora de la sede y calcula su día operativo y su franja,
+    /// con el horario que el administrador configuró.
     /// </summary>
     /// <param name="fechaHoraUtc">Instante en UTC.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
     /// <returns>La hora local, el día operativo y la franja.</returns>
-    public MomentoOperativo Ubicar(DateTimeOffset fechaHoraUtc)
+    public async Task<MomentoOperativo> UbicarAsync(DateTimeOffset fechaHoraUtc, CancellationToken cancelacion = default)
     {
         var horaLocal = TimeZoneInfo.ConvertTime(fechaHoraUtc, sede.ZonaHoraria);
-        var horarioActual = horario.Horario;
+        var horarioActual = await horario.ObtenerAsync(cancelacion);
 
-        return new MomentoOperativo(horaLocal, horarioActual.DiaOperativo(horaLocal), horarioActual.Franja(horaLocal));
+        return new MomentoOperativo(horaLocal, HorarioDeOperacion.DiaOperativo(horaLocal), horarioActual.Franja(horaLocal));
     }
 }
 

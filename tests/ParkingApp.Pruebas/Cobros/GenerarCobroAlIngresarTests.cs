@@ -114,6 +114,20 @@ public class GenerarCobroAlIngresarTests
     }
 
     [Fact]
+    public async Task Si_la_nocturna_empieza_a_las_1900_un_carro_que_entra_a_las_1830_paga_la_tarifa_diurna()
+    {
+        // Prueba de éxito del issue #21: el cambio de horario aplica a los ingresos nuevos.
+        // Lunes 16 de noviembre, 18:30 en Bogotá = 23:30 UTC.
+        var carril = new CarrilDeEntradaDePrueba(new DateTimeOffset(2026, 11, 16, 23, 30, 0, TimeSpan.Zero));
+        carril.Horario.Horario = new HorarioDeOperacion(new TimeOnly(6, 0), new TimeOnly(19, 0));
+
+        var resultado = await carril.IngresarAsync("ABC123");
+
+        Assert.Equal("Cobro diurno pendiente: $8.000", resultado.Motivo);
+        Assert.Equal(FranjaTarifaria.Diurna, Assert.Single(carril.Cobros.Cobros).Franja);
+    }
+
+    [Fact]
     public async Task Moto_con_tarifa_mayor_que_cero_genera_cobro()
     {
         // Si el administrador les pone tarifa a las motos, se cobra sin cambiar código (RN-01).

@@ -85,7 +85,7 @@ public sealed class RegistrarIngreso
 
         // 3. Se genera el cobro del día si la tarifa cobra y es el primer ingreso del día operativo.
         // El ingreso se guarda antes: si el cobro no se pudiera guardar, el paso del vehículo ya quedó registrado.
-        var momento = calendario.Ubicar(ahoraEnUtc);
+        var momento = await calendario.UbicarAsync(ahoraEnUtc, cancelacion);
         var (motivo, cobro) = await GenerarCobroAsync(placaNormalizada, tipoDeVehiculo, momento, ahoraEnUtc, cancelacion);
 
         // 4. Se responde con la hora de la sede, que es la que ve el operador.

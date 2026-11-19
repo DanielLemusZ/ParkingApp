@@ -22,7 +22,7 @@ public sealed class AdaptadorFacturacionSimulado : IFacturacionElectronica
     }
 
     /// <inheritdoc/>
-    public Task SolicitarFacturaAsync(decimal valor, DateTimeOffset fecha, string concepto, string referencia, CancellationToken cancellationToken)
+    public Task SolicitarFacturaAsync(decimal valor, DateTimeOffset fecha, string concepto, string referencia, CancellationToken cancelacion = default)
     {
         if (_logger.IsEnabled(LogLevel.Information))
         {

@@ -1,9 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+
 using ParkingApp.Aplicacion.Pagos;
 
 namespace ParkingApp.Infraestructura.ServiciosExternos;
 
-public static class ServiciosExternosExtensions
+public static class ServiciosExternos
 {
     public static IServiceCollection AgregarServiciosExternos(this IServiceCollection services)
     {

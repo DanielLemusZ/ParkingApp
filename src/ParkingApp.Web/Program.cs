@@ -19,7 +19,7 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AgregarAplicacion();
 builder.Services.AgregarBaseDeDatos(builder.Configuration, builder.Environment.IsDevelopment());
-builder.Services.AgregarServiciosExternos(); // <--- Aquí registramos los servicios externos de forma limpia
+builder.Services.AgregarServiciosExternos();
 
 var app = builder.Build();
 

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using ParkingApp.Dominio.Accesos;
 
 namespace ParkingApp.Aplicacion.Accesos;
@@ -45,10 +47,12 @@ public class ProcesarSalidaUseCase
 
         if (valorPendiente.HasValue)
         {
+            var valorFormateado = valorPendiente.Value.ToString("N0", CultureInfo.GetCultureInfo("es-CO"));
+
             return new ResultadoSalida
             {
                 AbreBarrera = false,
-                Mensaje = $"No abre: cobro pendiente de ${valorPendiente.Value:N0}" // Ej: $8.000
+                Mensaje = $"No abre: cobro pendiente de ${valorFormateado}"
             };
         }
 

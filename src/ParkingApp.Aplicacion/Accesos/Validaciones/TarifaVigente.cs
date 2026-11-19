@@ -32,7 +32,7 @@ public sealed class TarifaVigente : ValidacionDeIngreso
 
         // Los eslabones anteriores ya garantizan que la placa tiene un formato reconocido.
         var tipoDeVehiculo = ClasificadorDeVehiculo.Clasificar(Placa.Crear(solicitud.Placa))!.Value;
-        var momento = calendario.Ubicar(solicitud.FechaHora);
+        var momento = await calendario.UbicarAsync(solicitud.FechaHora, cancelacion);
         var tarifa = await tarifas.ObtenerVigenteAsync(tipoDeVehiculo, momento.Franja, momento.DiaOperativo, cancelacion);
 
         return tarifa is null

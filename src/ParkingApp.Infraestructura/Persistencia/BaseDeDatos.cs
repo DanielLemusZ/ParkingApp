@@ -54,8 +54,9 @@ public static class BaseDeDatos
         servicios.AddScoped<IRepositorioEventosDeAcceso, RepositorioEventosDeAcceso>();
         servicios.AddScoped<IRepositorioTarifas, RepositorioTarifas>();
         servicios.AddScoped<IRepositorioCobros, RepositorioCobros>();
+        servicios.AddScoped<IRepositorioSedes, RepositorioSedes>();
         servicios.AddSingleton<ISedeActual, SedeDelNodo>();
-        servicios.AddSingleton<IHorarioDeOperacionActual, HorarioDeOperacionInicial>();
+        servicios.AddScoped<IHorarioDeOperacionActual, HorarioDeOperacionDeLaSede>();
 
         return servicios;
     }

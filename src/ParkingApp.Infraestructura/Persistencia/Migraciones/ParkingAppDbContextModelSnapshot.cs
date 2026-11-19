@@ -153,11 +153,31 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int>("CupoCarros")
+                        .HasColumnType("integer")
+                        .HasColumnName("cupo_carros");
+
+                    b.Property<int>("CupoMotos")
+                        .HasColumnType("integer")
+                        .HasColumnName("cupo_motos");
+
+                    b.Property<TimeOnly>("InicioFranjaDiurna")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("inicio_franja_diurna");
+
+                    b.Property<TimeOnly>("InicioFranjaNocturna")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("inicio_franja_nocturna");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("nombre");
+
+                    b.Property<int>("UmbralConfianza")
+                        .HasColumnType("integer")
+                        .HasColumnName("umbral_confianza");
 
                     b.Property<string>("ZonaHoraria")
                         .IsRequired()
@@ -168,13 +188,25 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                     b.HasKey("Id")
                         .HasName("pk_sedes");
 
-                    b.ToTable("sedes", (string)null);
+                    b.ToTable("sedes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_sedes_cupos_no_negativos", "cupo_carros >= 0 AND cupo_motos >= 0");
+
+                            t.HasCheckConstraint("ck_sedes_franjas_distintas", "inicio_franja_diurna <> inicio_franja_nocturna");
+
+                            t.HasCheckConstraint("ck_sedes_umbral_confianza", "umbral_confianza BETWEEN 0 AND 100");
+                        });
 
                     b.HasData(
                         new
                         {
                             Id = new Guid("019a8000-0000-7000-8000-000000000001"),
+                            CupoCarros = 50,
+                            CupoMotos = 50,
+                            InicioFranjaDiurna = new TimeOnly(6, 0, 0),
+                            InicioFranjaNocturna = new TimeOnly(18, 0, 0),
                             Nombre = "Sede principal UAM",
+                            UmbralConfianza = 80,
                             ZonaHoraria = "America/Bogota"
                         });
                 });

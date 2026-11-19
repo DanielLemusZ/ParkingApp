@@ -21,13 +21,16 @@ public static class ServiciosDeAplicacion
     public static IServiceCollection AgregarAplicacion(this IServiceCollection servicios)
     {
         servicios.TryAddSingleton(TimeProvider.System);
-        servicios.AddSingleton<CalendarioOperativo>();
+
+        // Por alcance, porque el horario de la sede se lee de la base de datos.
+        servicios.AddScoped<CalendarioOperativo>();
 
         // La cadena se arma de nuevo en cada alcance, porque cada eslabón guarda cuál es el siguiente.
         servicios.AddScoped(CrearCadenaDeIngreso);
 
         servicios.AddScoped<RegistrarIngreso>();
         servicios.AddScoped<AdministrarTarifas>();
+        servicios.AddScoped<ConfigurarSede>();
 
         return servicios;
     }

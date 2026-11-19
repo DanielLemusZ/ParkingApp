@@ -19,7 +19,7 @@ internal sealed class CarrilDeEntradaDePrueba
     public CarrilDeEntradaDePrueba(DateTimeOffset ahoraEnUtc, bool conTarifasSemilla = true)
     {
         Reloj = new FakeTimeProvider(ahoraEnUtc);
-        Calendario = new CalendarioOperativo(Sede, new HorarioDeOperacionDePrueba());
+        Calendario = new CalendarioOperativo(Sede, Horario);
 
         if (conTarifasSemilla)
         {
@@ -37,6 +37,8 @@ internal sealed class CarrilDeEntradaDePrueba
     public RepositorioTarifasEnMemoria Tarifas { get; } = new RepositorioTarifasEnMemoria();
 
     public SedeActualDePrueba Sede { get; } = new SedeActualDePrueba();
+
+    public HorarioDeOperacionDePrueba Horario { get; } = new HorarioDeOperacionDePrueba();
 
     public CalendarioOperativo Calendario { get; }
 

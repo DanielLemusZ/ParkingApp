@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using ParkingApp.Dominio.Accesos;
+using ParkingApp.Dominio.Cobros;
 using ParkingApp.Dominio.Configuracion;
 
 namespace ParkingApp.Infraestructura.Persistencia;
@@ -33,6 +34,11 @@ public sealed class ParkingAppDbContext : DbContext
     /// Versiones históricas de las tarifas.
     /// </summary>
     public DbSet<Tarifa> Tarifas => Set<Tarifa>();
+
+    /// <summary>
+    /// Cobros de los vehículos, uno por placa, sede y día operativo.
+    /// </summary>
+    public DbSet<Cobro> Cobros => Set<Cobro>();
 
     /// <inheritdoc />
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -85,6 +85,11 @@ public sealed class Tarifa
     public DateOnly? VigenteHasta { get; private set; }
 
     /// <summary>
+    /// Indica si esta tarifa genera un cobro. Con valor $0 no se genera (RN-01): si el valor sube, se cobra sin cambiar código.
+    /// </summary>
+    public bool GeneraCobro => Valor > 0;
+
+    /// <summary>
     /// Indica si esta versión aplica en una fecha determinada.
     /// </summary>
     /// <param name="fecha">Fecha que se consulta.</param>

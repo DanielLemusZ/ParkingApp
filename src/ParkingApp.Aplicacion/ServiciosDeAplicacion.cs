@@ -21,6 +21,7 @@ public static class ServiciosDeAplicacion
     public static IServiceCollection AgregarAplicacion(this IServiceCollection servicios)
     {
         servicios.TryAddSingleton(TimeProvider.System);
+        servicios.AddSingleton<CalendarioOperativo>();
 
         // La cadena se arma de nuevo en cada alcance, porque cada eslabón guarda cuál es el siguiente.
         servicios.AddScoped(CrearCadenaDeIngreso);
@@ -43,6 +44,9 @@ public static class ServiciosDeAplicacion
     {
         return CadenaDeValidacionesDeIngreso.Crear(
             new LecturaValida(),
-            new ClasificacionDeVehiculoValida());
+            new ClasificacionDeVehiculoValida(),
+            new TarifaVigente(
+                proveedor.GetRequiredService<IRepositorioTarifas>(),
+                proveedor.GetRequiredService<CalendarioOperativo>()));
     }
 }

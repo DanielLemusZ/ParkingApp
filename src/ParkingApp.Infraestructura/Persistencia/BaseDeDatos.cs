@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 
 using ParkingApp.Aplicacion.Accesos;
+using ParkingApp.Aplicacion.Cobros;
 using ParkingApp.Aplicacion.Configuracion;
 using ParkingApp.Aplicacion.Tarifas;
 using ParkingApp.Infraestructura.Configuracion;
@@ -52,8 +53,10 @@ public static class BaseDeDatos
 
         servicios.AddScoped<IRepositorioEventosDeAcceso, RepositorioEventosDeAcceso>();
         servicios.AddScoped<IRepositorioTarifas, RepositorioTarifas>();
+        servicios.AddScoped<IRepositorioCobros, RepositorioCobros>();
         servicios.AddScoped<IRepositorioSedes, RepositorioSedes>();
         servicios.AddSingleton<ISedeActual, SedeDelNodo>();
+        servicios.AddSingleton<IHorarioDeOperacionActual, HorarioDeOperacionInicial>();
 
         return servicios;
     }

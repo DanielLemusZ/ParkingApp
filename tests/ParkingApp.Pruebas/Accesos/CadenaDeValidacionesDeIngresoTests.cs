@@ -4,7 +4,7 @@ namespace ParkingApp.Pruebas.Accesos;
 
 public class CadenaDeValidacionesDeIngresoTests
 {
-    private static readonly SolicitudDeIngreso Lectura = new SolicitudDeIngreso("ABC123", 97, 1);
+    private static readonly SolicitudDeIngreso Lectura = new SolicitudDeIngreso("ABC123", 97, 1, new DateTimeOffset(2026, 11, 16, 13, 0, 0, TimeSpan.Zero));
 
     [Fact]
     public async Task La_cadena_se_detiene_en_el_primer_eslabon_que_rechaza()

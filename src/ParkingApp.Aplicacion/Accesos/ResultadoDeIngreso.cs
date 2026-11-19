@@ -1,3 +1,7 @@
+using ParkingApp.Dominio.Accesos;
+using ParkingApp.Dominio.Cobros;
+using ParkingApp.Dominio.Configuracion;
+
 namespace ParkingApp.Aplicacion.Accesos;
 
 /// <summary>
@@ -17,4 +21,15 @@ public sealed record ResultadoDeIngreso(bool AbreBarrera, string Motivo, Ingreso
 /// <param name="Carril">Número del carril.</param>
 /// <param name="Confianza">Confianza de la lectura.</param>
 /// <param name="TipoDeVehiculo">Tipo de vehículo identificado por la placa.</param>
-public sealed record IngresoRegistrado(Guid Id, string Placa, DateTimeOffset FechaHora, int Carril, int Confianza, ParkingApp.Dominio.Accesos.TipoDeVehiculo TipoDeVehiculo);
+/// <param name="Cobro">El cobro generado en este ingreso, o nada si no se generó.</param>
+public sealed record IngresoRegistrado(Guid Id, string Placa, DateTimeOffset FechaHora, int Carril, int Confianza, TipoDeVehiculo TipoDeVehiculo, CobroGenerado? Cobro);
+
+/// <summary>
+/// Datos del cobro generado al ingresar, para mostrarlos en el carril.
+/// </summary>
+/// <param name="Id">Identificador del cobro.</param>
+/// <param name="Valor">Valor en pesos colombianos.</param>
+/// <param name="Franja">Franja del primer ingreso del día.</param>
+/// <param name="DiaOperativo">Día operativo que cubre el cobro.</param>
+/// <param name="Estado">Estado del cobro.</param>
+public sealed record CobroGenerado(Guid Id, decimal Valor, FranjaTarifaria Franja, DateOnly DiaOperativo, EstadoDeCobro Estado);

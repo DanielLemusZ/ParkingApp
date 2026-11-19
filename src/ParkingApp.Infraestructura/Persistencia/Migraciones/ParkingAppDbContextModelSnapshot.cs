@@ -79,6 +79,74 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("ParkingApp.Dominio.Cobros.Cobro", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("DiaOperativo")
+                        .HasColumnType("date")
+                        .HasColumnName("dia_operativo");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset>("FechaHora")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_hora");
+
+                    b.Property<string>("Franja")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("franja");
+
+                    b.Property<string>("Placa")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("placa");
+
+                    b.Property<Guid>("SedeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sede_id");
+
+                    b.Property<Guid>("TarifaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tarifa_id");
+
+                    b.Property<string>("TipoDeVehiculo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_de_vehiculo");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cobros");
+
+                    b.HasIndex("SedeId")
+                        .HasDatabaseName("ix_cobros_sede_id");
+
+                    b.HasIndex("TarifaId")
+                        .HasDatabaseName("ix_cobros_tarifa_id");
+
+                    b.HasIndex("Placa", "SedeId", "DiaOperativo")
+                        .HasDatabaseName("ix_cobros_placa_sede_id_dia_operativo");
+
+                    b.ToTable("cobros", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_cobros_valor_positivo", "valor > 0");
+                        });
+                });
+
             modelBuilder.Entity("ParkingApp.Dominio.Configuracion.Sede", b =>
                 {
                     b.Property<Guid>("Id")
@@ -144,12 +212,12 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                     b.HasKey("Id")
                         .HasName("pk_tarifas");
 
-                    b.HasIndex("TipoDeVehiculo", "Franja", "VigenteHasta")
-                        .HasDatabaseName("ix_tarifas_tipo_de_vehiculo_franja_vigente_hasta");
-
                     b.HasIndex("TipoDeVehiculo", "Franja", "VigenteDesde")
                         .IsUnique()
                         .HasDatabaseName("ix_tarifas_tipo_de_vehiculo_franja_vigente_desde");
+
+                    b.HasIndex("TipoDeVehiculo", "Franja", "VigenteHasta")
+                        .HasDatabaseName("ix_tarifas_tipo_de_vehiculo_franja_vigente_hasta");
 
                     b.ToTable("tarifas", null, t =>
                         {
@@ -162,38 +230,34 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         new
                         {
                             Id = new Guid("019a9000-0000-7000-8000-000000000001"),
-                            TipoDeVehiculo = "Carro",
                             Franja = "Diurna",
+                            TipoDeVehiculo = "Carro",
                             Valor = 8000m,
-                            VigenteDesde = new DateOnly(2026, 11, 1),
-                            VigenteHasta = (DateOnly?)null
+                            VigenteDesde = new DateOnly(2026, 11, 1)
                         },
                         new
                         {
                             Id = new Guid("019a9000-0000-7000-8000-000000000002"),
-                            TipoDeVehiculo = "Carro",
                             Franja = "Nocturna",
+                            TipoDeVehiculo = "Carro",
                             Valor = 5000m,
-                            VigenteDesde = new DateOnly(2026, 11, 1),
-                            VigenteHasta = (DateOnly?)null
+                            VigenteDesde = new DateOnly(2026, 11, 1)
                         },
                         new
                         {
                             Id = new Guid("019a9000-0000-7000-8000-000000000003"),
-                            TipoDeVehiculo = "Moto",
                             Franja = "Diurna",
+                            TipoDeVehiculo = "Moto",
                             Valor = 0m,
-                            VigenteDesde = new DateOnly(2026, 11, 1),
-                            VigenteHasta = (DateOnly?)null
+                            VigenteDesde = new DateOnly(2026, 11, 1)
                         },
                         new
                         {
                             Id = new Guid("019a9000-0000-7000-8000-000000000004"),
-                            TipoDeVehiculo = "Moto",
                             Franja = "Nocturna",
+                            TipoDeVehiculo = "Moto",
                             Valor = 0m,
-                            VigenteDesde = new DateOnly(2026, 11, 1),
-                            VigenteHasta = (DateOnly?)null
+                            VigenteDesde = new DateOnly(2026, 11, 1)
                         });
                 });
 
@@ -205,6 +269,23 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_eventos_de_acceso_sedes_sede_id");
+                });
+
+            modelBuilder.Entity("ParkingApp.Dominio.Cobros.Cobro", b =>
+                {
+                    b.HasOne("ParkingApp.Dominio.Configuracion.Sede", null)
+                        .WithMany()
+                        .HasForeignKey("SedeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cobros_sedes_sede_id");
+
+                    b.HasOne("ParkingApp.Dominio.Configuracion.Tarifa", null)
+                        .WithMany()
+                        .HasForeignKey("TarifaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_cobros_tarifas_tarifa_id");
                 });
 #pragma warning restore 612, 618
         }

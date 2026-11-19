@@ -52,6 +52,7 @@ public static class BaseDeDatos
 
         servicios.AddScoped<IRepositorioEventosDeAcceso, RepositorioEventosDeAcceso>();
         servicios.AddScoped<IRepositorioTarifas, RepositorioTarifas>();
+        servicios.AddScoped<IRepositorioSedes, RepositorioSedes>();
         servicios.AddSingleton<ISedeActual, SedeDelNodo>();
 
         return servicios;

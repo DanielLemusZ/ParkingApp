@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using ParkingApp.Aplicacion.Accesos;
 using ParkingApp.Aplicacion.Accesos.Validaciones;
+using ParkingApp.Aplicacion.Configuracion;
 using ParkingApp.Aplicacion.Tarifas;
 
 namespace ParkingApp.Aplicacion;
@@ -26,6 +27,7 @@ public static class ServiciosDeAplicacion
 
         servicios.AddScoped<RegistrarIngreso>();
         servicios.AddScoped<AdministrarTarifas>();
+        servicios.AddScoped<ConfigurarSede>();
 
         return servicios;
     }

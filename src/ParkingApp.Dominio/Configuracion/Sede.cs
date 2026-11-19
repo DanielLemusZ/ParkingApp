@@ -5,6 +5,15 @@ namespace ParkingApp.Dominio.Configuracion;
 /// </summary>
 public sealed class Sede
 {
+    /// <summary>Motivo de rechazo cuando ambas franjas comienzan a la misma hora.</summary>
+    public const string FranjasConMismoInicio = "Las franjas no pueden empezar a la misma hora.";
+
+    /// <summary>Motivo de rechazo para un cupo negativo.</summary>
+    public const string CupoNegativo = "El cupo debe ser un número entero mayor o igual a 0.";
+
+    /// <summary>Motivo de rechazo para una confianza fuera de 0 a 100.</summary>
+    public const string UmbralConfianzaFueraDeRango = "El umbral debe estar entre 0 y 100.";
+
     /// <summary>Hora de inicio de la franja diurna.</summary>
     public TimeOnly InicioFranjaDiurna { get; private set; } = new(6, 0);
 
@@ -52,9 +61,9 @@ public sealed class Sede
     /// <returns>Un mensaje de error, o <see langword="null"/> si se guardaron los cambios.</returns>
     public string? Configurar(TimeOnly inicioDiurno, TimeOnly inicioNocturno, int cupoCarros, int cupoMotos, int umbralConfianza)
     {
-        if (inicioDiurno == inicioNocturno) return "Las franjas no pueden empezar a la misma hora.";
-        if (cupoCarros < 0 || cupoMotos < 0) return "El cupo debe ser un número entero mayor o igual a 0.";
-        if (umbralConfianza is < 0 or > 100) return "El umbral debe estar entre 0 y 100.";
+        if (inicioDiurno == inicioNocturno) return FranjasConMismoInicio;
+        if (cupoCarros < 0 || cupoMotos < 0) return CupoNegativo;
+        if (umbralConfianza is < 0 or > 100) return UmbralConfianzaFueraDeRango;
         InicioFranjaDiurna = inicioDiurno;
         InicioFranjaNocturna = inicioNocturno;
         CupoCarros = cupoCarros;

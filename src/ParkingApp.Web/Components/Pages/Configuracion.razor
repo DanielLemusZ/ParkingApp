@@ -1,8 +1,5 @@
 @page "/configuracion"
-@using Microsoft.EntityFrameworkCore
-@using ParkingApp.Dominio.Accesos
-@using ParkingApp.Dominio.Configuracion
-@using ParkingApp.Infraestructura.Persistencia
+@using ParkingApp.Aplicacion.Configuracion
 @inject IServiceScopeFactory FabricaDeAlcances
 
 <PageTitle>Configuración</PageTitle>
@@ -52,16 +49,15 @@
     private async Task CargarAsync()
     {
         await using var scope = FabricaDeAlcances.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ParkingAppDbContext>();
-        var sede = await db.Sedes.SingleAsync();
-        inicioDiurno = sede.InicioFranjaDiurna.ToTimeSpan();
-        inicioNocturno = sede.InicioFranjaNocturna.ToTimeSpan();
-        cupoCarros = sede.CupoCarros;
-        cupoMotos = sede.CupoMotos;
-        umbral = sede.UmbralConfianza;
-        var eventos = await db.EventosDeAcceso.Where(e => e.Tipo == TipoDeEvento.Ingreso).ToListAsync();
-        ocupacionCarros = eventos.Count(e => e.TipoDeVehiculo == TipoDeVehiculo.Carro);
-        ocupacionMotos = eventos.Count(e => e.TipoDeVehiculo == TipoDeVehiculo.Moto);
+        var casoDeUso = scope.ServiceProvider.GetRequiredService<ConfigurarSede>();
+        var datos = await casoDeUso.ConsultarAsync();
+        inicioDiurno = datos.InicioFranjaDiurna.ToTimeSpan();
+        inicioNocturno = datos.InicioFranjaNocturna.ToTimeSpan();
+        cupoCarros = datos.CupoCarros;
+        cupoMotos = datos.CupoMotos;
+        umbral = datos.UmbralConfianza;
+        ocupacionCarros = datos.Ocupacion.Carros;
+        ocupacionMotos = datos.Ocupacion.Motos;
     }
 
     private async Task GuardarAsync()
@@ -76,13 +72,16 @@
                 return;
             }
             await using var scope = FabricaDeAlcances.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<ParkingAppDbContext>();
-            var sede = await db.Sedes.SingleAsync();
-            mensaje = sede.Configurar(TimeOnly.FromTimeSpan(inicioDiurno.Value), TimeOnly.FromTimeSpan(inicioNocturno.Value), cupoCarros, cupoMotos, umbral) ?? string.Empty;
+            var casoDeUso = scope.ServiceProvider.GetRequiredService<ConfigurarSede>();
+            mensaje = await casoDeUso.GuardarAsync(
+                TimeOnly.FromTimeSpan(inicioDiurno.Value),
+                TimeOnly.FromTimeSpan(inicioNocturno.Value),
+                cupoCarros,
+                cupoMotos,
+                umbral) ?? string.Empty;
             guardado = string.IsNullOrEmpty(mensaje);
             if (guardado)
             {
-                await db.SaveChangesAsync();
                 mensaje = cupoCarros <= ocupacionCarros || cupoMotos <= ocupacionMotos
                     ? "La configuración se guardó. Advertencia: el cupo de uno o más tipos ya se alcanzó; el parqueadero aparece LLENO hasta que baje la ocupación."
                     : "La configuración se guardó correctamente.";

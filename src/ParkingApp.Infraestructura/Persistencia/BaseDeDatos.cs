@@ -9,6 +9,7 @@ using Npgsql;
 
 using ParkingApp.Aplicacion.Accesos;
 using ParkingApp.Aplicacion.Configuracion;
+using ParkingApp.Aplicacion.Tarifas;
 using ParkingApp.Infraestructura.Configuracion;
 using ParkingApp.Infraestructura.Persistencia.Repositorios;
 
@@ -50,6 +51,7 @@ public static class BaseDeDatos
         });
 
         servicios.AddScoped<IRepositorioEventosDeAcceso, RepositorioEventosDeAcceso>();
+        servicios.AddScoped<IRepositorioTarifas, RepositorioTarifas>();
         servicios.AddSingleton<ISedeActual, SedeDelNodo>();
 
         return servicios;

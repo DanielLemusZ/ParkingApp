@@ -13,9 +13,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ParkingApp.Dominio\ParkingApp.Dominio.csproj" />
     <ProjectReference Include="..\..\src\ParkingApp.Aplicacion\ParkingApp.Aplicacion.csproj" />
+    <ProjectReference Include="..\..\src\ParkingApp.Infraestructura\ParkingApp.Infraestructura.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
     <PackageReference Include="xunit.v3" Version="4.0.3" />
   </ItemGroup>

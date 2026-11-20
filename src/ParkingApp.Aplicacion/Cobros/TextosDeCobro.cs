@@ -42,6 +42,17 @@ public static class TextosDeCobro
     }
 
     /// <summary>
+    /// Motivo del carril cuando el vehículo ya tiene el cobro del día operativo (RN-03 y RN-04), por ejemplo
+    /// <c>Reingreso sin cobro nuevo: ya existe el cobro del día operativo 2026-11-18</c>.
+    /// </summary>
+    /// <param name="diaOperativo">Día operativo del cobro que ya existe.</param>
+    /// <returns>El motivo que se muestra en el carril.</returns>
+    public static string Reingreso(DateOnly diaOperativo)
+    {
+        return $"Reingreso sin cobro nuevo: ya existe el cobro del día operativo {diaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
+    }
+
+    /// <summary>
     /// Motivo del carril cuando la tarifa vale $0, por ejemplo <c>Moto: sin cobro</c>.
     /// </summary>
     /// <param name="tipoDeVehiculo">Tipo de vehículo.</param>

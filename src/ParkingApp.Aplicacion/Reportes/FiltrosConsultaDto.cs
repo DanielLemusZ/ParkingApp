@@ -1,3 +1,5 @@
+using ParkingApp.Dominio.Cobros;
+
 namespace ParkingApp.Aplicacion.Reportes;
 
 /// <summary>
@@ -21,7 +23,7 @@ public class FiltrosConsultaDto
     public DateTime? FechaFin { get; set; }
 
     /// <summary>
-    /// Estado del cobro (por ejemplo, Pendiente o Pagado).
+    /// Estado del cobro (Pendiente o Pagado). Solo aplica a la consulta de cobros.
     /// </summary>
-    public string? EstadoCobro { get; set; }
+    public EstadoDeCobro? EstadoCobro { get; set; }
 }

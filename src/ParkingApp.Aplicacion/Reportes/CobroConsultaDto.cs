@@ -1,3 +1,6 @@
+using ParkingApp.Dominio.Cobros;
+using ParkingApp.Dominio.Configuracion;
+
 namespace ParkingApp.Aplicacion.Reportes;
 
 /// <summary>
@@ -13,12 +16,12 @@ public class CobroConsultaDto
     /// <summary>
     /// Día operativo al que corresponde el cobro.
     /// </summary>
-    public DateTime DiaOperativo { get; set; }
+    public DateOnly DiaOperativo { get; set; }
 
     /// <summary>
     /// Franja horaria aplicada (Diurna o Nocturna).
     /// </summary>
-    public string Franja { get; set; } = string.Empty;
+    public FranjaTarifaria Franja { get; set; }
 
     /// <summary>
     /// Valor monetario del cobro.
@@ -28,5 +31,5 @@ public class CobroConsultaDto
     /// <summary>
     /// Estado actual del cobro (Pendiente o Pagado).
     /// </summary>
-    public string Estado { get; set; } = string.Empty;
+    public EstadoDeCobro Estado { get; set; }
 }

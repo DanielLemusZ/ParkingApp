@@ -1,9 +1,11 @@
 @page "/consultas"
 @using System.Globalization
+@using ParkingApp.Aplicacion.Cobros
 @using ParkingApp.Aplicacion.Reportes
+@using ParkingApp.Dominio.Cobros
 @inject IServicioConsultas ServicioConsultas
 
-<MudText Typo="Typo.h4" GutterBottom="true">Consultar Ingresos, Salidas y Cobros</MudText>
+<MudText Typo="Typo.h4" GutterBottom="true">Consultar ingresos, salidas y cobros</MudText>
 
 <MudPaper Class="pa-4 mb-4" Elevation="3">
     <MudGrid>
@@ -11,15 +13,15 @@
             <MudTextField @bind-Value="Filtros.Placa" Label="Placa" Variant="Variant.Outlined" Clearable="true" />
         </MudItem>
         <MudItem xs="12" sm="3">
-            <MudDatePicker @bind-Date="Filtros.FechaInicio" Label="Fecha Inicial" Variant="Variant.Outlined" />
+            <MudDatePicker @bind-Date="Filtros.FechaInicio" Label="Fecha inicial" Variant="Variant.Outlined" />
         </MudItem>
         <MudItem xs="12" sm="3">
-            <MudDatePicker @bind-Date="Filtros.FechaFin" Label="Fecha Final" Variant="Variant.Outlined" />
+            <MudDatePicker @bind-Date="Filtros.FechaFin" Label="Fecha final" Variant="Variant.Outlined" />
         </MudItem>
         <MudItem xs="12" sm="3">
-            <MudSelect T="string" @bind-Value="Filtros.EstadoCobro" Label="Estado del Cobro" Variant="Variant.Outlined" Clearable="true">
-                <MudSelectItem Value="@("Pendiente")" />
-                <MudSelectItem Value="@("Pagado")" />
+            <MudSelect T="EstadoDeCobro?" @bind-Value="Filtros.EstadoCobro" Label="Estado del cobro" Variant="Variant.Outlined" Clearable="true">
+                <MudSelectItem T="EstadoDeCobro?" Value="@(EstadoDeCobro.Pendiente)">Pendiente</MudSelectItem>
+                <MudSelectItem T="EstadoDeCobro?" Value="@(EstadoDeCobro.Pagado)">Pagado</MudSelectItem>
             </MudSelect>
         </MudItem>
         <MudItem xs="12" Class="d-flex align-center">
@@ -33,15 +35,19 @@
 </MudPaper>
 
 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-6">
-    <MudTabPanel Text="Accesos (Ingresos/Salidas)">
+    <MudTabPanel Text="Accesos (ingresos y salidas)">
         <MudDataGrid Items="@ListaAccesos" Dense="true" Hover="true">
             <Columns>
                 <PropertyColumn Property="x => x.Placa" Title="Placa" />
-                <PropertyColumn Property="x => x.TipoVehiculo" Title="Tipo Vehículo" />
+                <PropertyColumn Property="x => x.TipoVehiculo" Title="Tipo de vehículo" />
                 <PropertyColumn Property="x => x.TipoEvento" Title="Evento" />
-                <PropertyColumn Property="x => x.FechaHora" Title="Fecha y Hora" />
+                <TemplateColumn Title="Fecha y hora">
+                    <CellTemplate>
+                        @context.Item.FechaHora.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+                    </CellTemplate>
+                </TemplateColumn>
                 <PropertyColumn Property="x => x.Carril" Title="Carril" />
-                <TemplateColumn Title="Lectura Manual">
+                <TemplateColumn Title="Lectura manual">
                     <CellTemplate>
                         @(context.Item.EsLecturaManual ? "Sí" : "No")
                     </CellTemplate>
@@ -51,7 +57,7 @@
                 <MudText>No hay resultados</MudText>
             </NoRecordsContent>
             <PagerContent>
-                <MudDataGridPager T="EventoAccesoDto" />
+                <MudDataGridPager T="EventoAccesoDto" RowsPerPageString="Filas por página:" InfoFormat="{first_item}-{last_item} de {all_items}" />
             </PagerContent>
         </MudDataGrid>
     </MudTabPanel>
@@ -60,15 +66,15 @@
         <MudDataGrid Items="@ListaCobros" Dense="true" Hover="true">
             <Columns>
                 <PropertyColumn Property="x => x.Placa" Title="Placa" />
-                <TemplateColumn Title="Día Operativo">
+                <TemplateColumn Title="Día operativo">
                     <CellTemplate>
-                        @context.Item.DiaOperativo.ToString("d", new CultureInfo("es-CO"))
+                        @context.Item.DiaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
                     </CellTemplate>
                 </TemplateColumn>
                 <PropertyColumn Property="x => x.Franja" Title="Franja" />
                 <TemplateColumn Title="Valor">
                     <CellTemplate>
-                        @context.Item.Valor.ToString("C0", new CultureInfo("es-CO"))
+                        @TextosDeCobro.Pesos(context.Item.Valor)
                     </CellTemplate>
                 </TemplateColumn>
                 <PropertyColumn Property="x => x.Estado" Title="Estado" />
@@ -77,7 +83,7 @@
                 <MudText>No hay resultados</MudText>
             </NoRecordsContent>
             <PagerContent>
-                <MudDataGridPager T="CobroConsultaDto" />
+                <MudDataGridPager T="CobroConsultaDto" RowsPerPageString="Filas por página:" InfoFormat="{first_item}-{last_item} de {all_items}" />
             </PagerContent>
         </MudDataGrid>
     </MudTabPanel>
@@ -97,7 +103,7 @@
     private async Task BuscarDatos()
     {
         MensajeError = string.Empty;
-        
+
         try
         {
             ListaAccesos = await ServicioConsultas.ConsultarAccesosAsync(Filtros);
@@ -105,6 +111,7 @@
         }
         catch (ArgumentException ex)
         {
+            // La fecha inicial es posterior a la final: se muestra el mensaje y se vacían las tablas.
             MensajeError = ex.Message;
             ListaAccesos.Clear();
             ListaCobros.Clear();

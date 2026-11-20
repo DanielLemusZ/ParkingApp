@@ -19,10 +19,6 @@ public sealed class ParkingAppDbContext : DbContext
         : base(opciones)
     {
     }
-    /// <summary>
-    /// Cobros generados por los vehículos.
-    /// </summary>
-    public DbSet<Cobro> Cobros => Set<Cobro>();
 
     /// <summary>
     /// Sedes del parqueadero.

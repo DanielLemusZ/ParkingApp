@@ -19,10 +19,13 @@ public interface IRepositorioCobros
     Task<bool> ExisteDelDiaAsync(Placa placa, Guid sedeId, DateOnly diaOperativo, CancellationToken cancelacion = default);
 
     /// <summary>
-    /// Guarda un cobro nuevo.
+    /// Guarda un cobro nuevo, salvo que la placa ya tenga uno en el mismo día operativo y sede (RN-04).
     /// </summary>
     /// <param name="cobro">Cobro pendiente.</param>
     /// <param name="cancelacion">Permite cancelar la operación.</param>
-    /// <returns>Una tarea que termina cuando el cobro queda guardado.</returns>
-    Task AgregarAsync(Cobro cobro, CancellationToken cancelacion = default);
+    /// <returns>
+    /// <see langword="true"/> si el cobro quedó guardado; <see langword="false"/> si ya existía el cobro
+    /// del día, por ejemplo porque otro ingreso simultáneo de la misma placa lo guardó primero.
+    /// </returns>
+    Task<bool> AgregarAsync(Cobro cobro, CancellationToken cancelacion = default);
 }

@@ -139,7 +139,8 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .HasDatabaseName("ix_cobros_tarifa_id");
 
                     b.HasIndex("Placa", "SedeId", "DiaOperativo")
-                        .HasDatabaseName("ix_cobros_placa_sede_id_dia_operativo");
+                        .IsUnique()
+                        .HasDatabaseName("ux_cobros_placa_sede_dia");
 
                     b.ToTable("cobros", null, t =>
                         {

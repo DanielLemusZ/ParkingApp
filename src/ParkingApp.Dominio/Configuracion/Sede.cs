@@ -5,6 +5,30 @@ namespace ParkingApp.Dominio.Configuracion;
 /// </summary>
 public sealed class Sede
 {
+    /// <summary>Motivo de rechazo cuando ambas franjas comienzan a la misma hora.</summary>
+    public const string FranjasConMismoInicio = "Las franjas no pueden empezar a la misma hora.";
+
+    /// <summary>Motivo de rechazo para un cupo negativo.</summary>
+    public const string CupoNegativo = "El cupo debe ser un número entero mayor o igual a 0.";
+
+    /// <summary>Motivo de rechazo para una confianza fuera de 0 a 100.</summary>
+    public const string UmbralConfianzaFueraDeRango = "El umbral debe estar entre 0 y 100.";
+
+    /// <summary>Hora de inicio de la franja diurna.</summary>
+    public TimeOnly InicioFranjaDiurna { get; private set; } = new(6, 0);
+
+    /// <summary>Hora de inicio de la franja nocturna.</summary>
+    public TimeOnly InicioFranjaNocturna { get; private set; } = new(18, 0);
+
+    /// <summary>Cupo máximo de carros.</summary>
+    public int CupoCarros { get; private set; } = 50;
+
+    /// <summary>Cupo máximo de motos.</summary>
+    public int CupoMotos { get; private set; } = 50;
+
+    /// <summary>Umbral mínimo de confianza aceptado para una lectura.</summary>
+    public int UmbralConfianza { get; private set; } = 80;
+
     /// <summary>
     /// Crea una sede nueva, con un identificador propio.
     /// </summary>
@@ -31,6 +55,21 @@ public sealed class Sede
     // Permite reconstruir una sede ya guardada.
     private Sede()
     {
+    }
+
+    /// <summary>Actualiza los horarios de franjas, cupos y umbral de confianza.</summary>
+    /// <returns>Un mensaje de error, o <see langword="null"/> si se guardaron los cambios.</returns>
+    public string? Configurar(TimeOnly inicioDiurno, TimeOnly inicioNocturno, int cupoCarros, int cupoMotos, int umbralConfianza)
+    {
+        if (inicioDiurno == inicioNocturno) return FranjasConMismoInicio;
+        if (cupoCarros < 0 || cupoMotos < 0) return CupoNegativo;
+        if (umbralConfianza is < 0 or > 100) return UmbralConfianzaFueraDeRango;
+        InicioFranjaDiurna = inicioDiurno;
+        InicioFranjaNocturna = inicioNocturno;
+        CupoCarros = cupoCarros;
+        CupoMotos = cupoMotos;
+        UmbralConfianza = umbralConfianza;
+        return null;
     }
 
     /// <summary>

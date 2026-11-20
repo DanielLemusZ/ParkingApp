@@ -1,6 +1,6 @@
 using ParkingApp.Aplicacion.Reportes;
 using ParkingApp.Dominio.Accesos;
-using ParkingApp.Dominio.Sedes;
+using ParkingApp.Aplicacion.Configuracion;
 
 using Xunit;
 

@@ -1,6 +1,6 @@
 using System.Globalization;
 using ParkingApp.Dominio.Accesos;
-using ParkingApp.Dominio.Sedes;
+using ParkingApp.Aplicacion.Configuracion;
 
 namespace ParkingApp.Aplicacion.Reportes;
 

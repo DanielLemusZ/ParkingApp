@@ -30,6 +30,7 @@ public static class ServiciosDeAplicacion
         servicios.AddScoped(CrearCadenaDeIngreso);
 
         servicios.AddScoped<RegistrarIngreso>();
+        servicios.AddScoped<RegistrarSalida>();
         servicios.AddScoped<AdministrarTarifas>();
         servicios.AddScoped<IServicioConsultas, ConsultarEventos>();
         servicios.AddScoped<ConfigurarSede>();

@@ -63,6 +63,54 @@
             }
         </MudPaper>
     </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Placa salida</MudText>
+
+            <MudSelect T="int" Label="Carril de salida" @bind-Value="carrilSalida">
+                <MudSelectItem T="int" Value="1">Carril 1</MudSelectItem>
+                <MudSelectItem T="int" Value="2">Carril 2</MudSelectItem>
+            </MudSelect>
+            <MudTextField T="string" Label="Placa" @bind-Value="placaSalida" Immediate="true" />
+            <MudNumericField T="int" Label="Confianza de la lectura (0 a 100)" @bind-Value="confianzaSalida" Immediate="true"
+                             Min="EventoDeAcceso.ConfianzaMinima" Max="EventoDeAcceso.ConfianzaMaxima" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="mt-4"
+                       Disabled="registrandoSalida" OnClick="RegistrarSalidaAsync">
+                Registrar salida
+            </MudButton>
+
+            @if (resultadoSalida != null)
+            {
+                @if (resultadoSalida.AbreBarrera)
+                {
+                    <MudAlert Class="mt-4" Severity="Severity.Success" Icon="@Icons.Material.Filled.LockOpen">
+                        <b>Barrera abierta</b>: @resultadoSalida.Motivo
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Class="mt-4" Severity="Severity.Error" Icon="@Icons.Material.Filled.Lock">
+                        <b>Barrera cerrada</b>: @resultadoSalida.Motivo
+                    </MudAlert>
+                }
+
+                @if (resultadoSalida.Salida != null)
+                {
+                    <MudSimpleTable Dense="true" Class="mt-2">
+                        <tbody>
+                            <tr><td>Placa</td><td>@resultadoSalida.Salida.Placa</td></tr>
+                            <tr><td>Tipo de vehículo</td><td>@resultadoSalida.Salida.TipoDeVehiculo</td></tr>
+                            <tr><td>Fecha y hora</td><td>@FormatearFecha(resultadoSalida.Salida.FechaHora)</td></tr>
+                            <tr><td>Carril</td><td>@resultadoSalida.Salida.Carril</td></tr>
+                            <tr><td>Confianza</td><td>@resultadoSalida.Salida.Confianza</td></tr>
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            }
+        </MudPaper>
+    </MudItem>
 </MudGrid>
 
 @code {
@@ -71,6 +119,12 @@
     private int confianza = 95;
     private bool registrando;
     private ResultadoDeIngreso? resultado;
+
+    private int carrilSalida = 1;
+    private string? placaSalida;
+    private int confianzaSalida = 95;
+    private bool registrandoSalida;
+    private ResultadoDeSalida? resultadoSalida;
 
     private async Task RegistrarIngresoAsync()
     {
@@ -87,6 +141,22 @@
         finally
         {
             registrando = false;
+        }
+    }
+
+    private async Task RegistrarSalidaAsync()
+    {
+        registrandoSalida = true;
+
+        try
+        {
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var registrarSalida = alcance.ServiceProvider.GetRequiredService<RegistrarSalida>();
+            resultadoSalida = await registrarSalida.EjecutarAsync(placaSalida, confianzaSalida, carrilSalida);
+        }
+        finally
+        {
+            registrandoSalida = false;
         }
     }
 

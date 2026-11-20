@@ -11,6 +11,7 @@ namespace ParkingApp.Pruebas.Dobles;
 internal sealed class RepositorioCobrosEnMemoria : IRepositorioCobros
 {
     private readonly List<Cobro> cobros = new List<Cobro>();
+    private readonly HashSet<Guid> pagados = new HashSet<Guid>();
 
     public IReadOnlyList<Cobro> Cobros => cobros;
 
@@ -35,6 +36,42 @@ internal sealed class RepositorioCobrosEnMemoria : IRepositorioCobros
 
         cobros.Add(cobro);
         return Task.FromResult(true);
+    }
+
+    /// <summary>
+    /// Simula el pago de un cobro mientras el dominio no tenga cómo pagarlo (llega con el pago en caja, #13).
+    /// </summary>
+    public void MarcarPagado(Cobro cobro)
+    {
+        pagados.Add(cobro.Id);
+    }
+
+    public Task<decimal> SumarPendientesAsync(Placa placa, Guid sedeId, CancellationToken cancelacion = default)
+    {
+        var total = 0m;
+
+        foreach (var cobro in cobros)
+        {
+            if (cobro.Placa == placa && cobro.SedeId == sedeId && !pagados.Contains(cobro.Id))
+            {
+                total += cobro.Valor;
+            }
+        }
+
+        return Task.FromResult(total);
+    }
+
+    public Task<bool> ExistePagadoDelDiaAsync(Placa placa, Guid sedeId, DateOnly diaOperativo, CancellationToken cancelacion = default)
+    {
+        foreach (var cobro in cobros)
+        {
+            if (cobro.Placa == placa && cobro.SedeId == sedeId && cobro.DiaOperativo == diaOperativo && pagados.Contains(cobro.Id))
+            {
+                return Task.FromResult(true);
+            }
+        }
+
+        return Task.FromResult(false);
     }
 
     private bool Existe(Placa placa, Guid sedeId, DateOnly diaOperativo)

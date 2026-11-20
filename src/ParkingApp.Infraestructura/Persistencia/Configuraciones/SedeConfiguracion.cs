@@ -26,6 +26,14 @@ internal sealed class SedeConfiguracion : IEntityTypeConfiguration<Sede>
         builder.Property(sede => sede.Id).ValueGeneratedNever();
         builder.Property(sede => sede.Nombre).HasMaxLength(100).IsRequired();
         builder.Property(sede => sede.ZonaHoraria).HasMaxLength(64).IsRequired();
+        builder.Property(sede => sede.InicioFranjaDiurna).IsRequired();
+        builder.Property(sede => sede.InicioFranjaNocturna).IsRequired();
+        builder.ToTable("sedes", tabla =>
+        {
+            tabla.HasCheckConstraint("ck_sedes_cupos_no_negativos", "cupo_carros >= 0 AND cupo_motos >= 0");
+            tabla.HasCheckConstraint("ck_sedes_umbral_confianza", "umbral_confianza BETWEEN 0 AND 100");
+            tabla.HasCheckConstraint("ck_sedes_franjas_distintas", "inicio_franja_diurna <> inicio_franja_nocturna");
+        });
 
         // El dato semilla se escribe como un objeto anónimo (new { ... }) porque el constructor de Sede
         // crea un Id nuevo cada vez, y la semilla necesita siempre el mismo Id.
@@ -34,6 +42,11 @@ internal sealed class SedeConfiguracion : IEntityTypeConfiguration<Sede>
             Id = IdSedeDelMvp,
             Nombre = "Sede principal UAM",
             ZonaHoraria = ZonaHorariaDeLaSedeDelMvp,
+            InicioFranjaDiurna = new TimeOnly(6, 0),
+            InicioFranjaNocturna = new TimeOnly(18, 0),
+            CupoCarros = 50,
+            CupoMotos = 50,
+            UmbralConfianza = 80,
         });
     }
 }

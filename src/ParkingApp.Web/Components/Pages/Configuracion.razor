@@ -1,0 +1,93 @@
+@page "/configuracion"
+@using ParkingApp.Aplicacion.Configuracion
+@inject IServiceScopeFactory FabricaDeAlcances
+
+<PageTitle>Configuración</PageTitle>
+<MudText Typo="Typo.h4" GutterBottom="true">Configuración del parqueadero</MudText>
+<MudText Class="mb-4">Define los horarios de las franjas, los cupos por vehículo y la confianza mínima de las lecturas.</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="7">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Franjas y umbral</MudText>
+            <MudTimePicker Label="Inicio de franja diurna" @bind-Time="inicioDiurno" />
+            <MudTimePicker Label="Inicio de franja nocturna" @bind-Time="inicioNocturno" />
+            <MudNumericField T="int" Label="Umbral mínimo de confianza (0 a 100)" Min="0" Max="100" @bind-Value="umbral" />
+            <MudText Typo="Typo.h6" Class="mt-4" GutterBottom="true">Cupos</MudText>
+            <MudNumericField T="int" Label="Cupo de carros" Min="0" @bind-Value="cupoCarros" />
+            <MudNumericField T="int" Label="Cupo de motos" Min="0" @bind-Value="cupoMotos" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" Disabled="guardando" OnClick="GuardarAsync">Guardar configuración</MudButton>
+            @if (!string.IsNullOrEmpty(mensaje))
+            {
+                <MudAlert Class="mt-4" Severity="@(guardado ? Severity.Success : Severity.Error)">@mensaje</MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="5">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Ocupación registrada</MudText>
+            <MudText>Carros: @ocupacionCarros / @cupoCarros @(ocupacionCarros >= cupoCarros ? "LLENO" : "Disponible")</MudText>
+            <MudText>Motos: @ocupacionMotos / @cupoMotos @(ocupacionMotos >= cupoMotos ? "LLENO" : "Disponible")</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private TimeSpan? inicioDiurno = new(6, 0, 0);
+    private TimeSpan? inicioNocturno = new(18, 0, 0);
+    private int cupoCarros = 50;
+    private int cupoMotos = 50;
+    private int umbral = 80;
+    private int ocupacionCarros;
+    private int ocupacionMotos;
+    private string mensaje = string.Empty;
+    private bool guardado;
+    private bool guardando;
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        await using var scope = FabricaDeAlcances.CreateAsyncScope();
+        var casoDeUso = scope.ServiceProvider.GetRequiredService<ConfigurarSede>();
+        var datos = await casoDeUso.ConsultarAsync();
+        inicioDiurno = datos.InicioFranjaDiurna.ToTimeSpan();
+        inicioNocturno = datos.InicioFranjaNocturna.ToTimeSpan();
+        cupoCarros = datos.CupoCarros;
+        cupoMotos = datos.CupoMotos;
+        umbral = datos.UmbralConfianza;
+        ocupacionCarros = datos.Ocupacion.Carros;
+        ocupacionMotos = datos.Ocupacion.Motos;
+    }
+
+    private async Task GuardarAsync()
+    {
+        guardando = true;
+        try
+        {
+            if (inicioDiurno is null || inicioNocturno is null)
+            {
+                mensaje = "Debes indicar la hora de inicio de ambas franjas.";
+                guardado = false;
+                return;
+            }
+            await using var scope = FabricaDeAlcances.CreateAsyncScope();
+            var casoDeUso = scope.ServiceProvider.GetRequiredService<ConfigurarSede>();
+            mensaje = await casoDeUso.GuardarAsync(
+                TimeOnly.FromTimeSpan(inicioDiurno.Value),
+                TimeOnly.FromTimeSpan(inicioNocturno.Value),
+                cupoCarros,
+                cupoMotos,
+                umbral) ?? string.Empty;
+            guardado = string.IsNullOrEmpty(mensaje);
+            if (guardado)
+            {
+                mensaje = cupoCarros <= ocupacionCarros || cupoMotos <= ocupacionMotos
+                    ? "La configuración se guardó. Advertencia: el cupo de uno o más tipos ya se alcanzó; el parqueadero aparece LLENO hasta que baje la ocupación."
+                    : "La configuración se guardó correctamente.";
+                await CargarAsync();
+            }
+        }
+        finally { guardando = false; }
+    }
+}

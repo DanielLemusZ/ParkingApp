@@ -1,6 +1,7 @@
 @page "/carril"
 @using System.Globalization
 @using ParkingApp.Aplicacion.Accesos
+@using ParkingApp.Aplicacion.Cobros
 @using ParkingApp.Dominio.Accesos
 @inject IServiceScopeFactory FabricaDeAlcances
 
@@ -50,6 +51,12 @@
                             <tr><td>Fecha y hora</td><td>@FormatearFecha(resultado.Ingreso.FechaHora)</td></tr>
                             <tr><td>Carril</td><td>@resultado.Ingreso.Carril</td></tr>
                             <tr><td>Confianza</td><td>@resultado.Ingreso.Confianza</td></tr>
+                            @if (resultado.Ingreso.Cobro != null)
+                            {
+                                <tr><td>Cobro</td><td><b>@TextosDeCobro.Pesos(resultado.Ingreso.Cobro.Valor)</b> (@resultado.Ingreso.Cobro.Estado)</td></tr>
+                                <tr><td>Franja</td><td>@resultado.Ingreso.Cobro.Franja</td></tr>
+                                <tr><td>Día operativo</td><td>@resultado.Ingreso.Cobro.DiaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td></tr>
+                            }
                         </tbody>
                     </MudSimpleTable>
                 }

@@ -6,4 +6,5 @@ namespace ParkingApp.Aplicacion.Accesos;
 /// <param name="Placa">Texto de la placa, ya normalizado. Puede estar vacío.</param>
 /// <param name="Confianza">Confianza de la lectura, que debería estar entre 0 y 100.</param>
 /// <param name="Carril">Número del carril de entrada.</param>
-public sealed record SolicitudDeIngreso(string Placa, int Confianza, int Carril);
+/// <param name="FechaHora">Instante de la lectura, en UTC. Todos los eslabones y el registro usan el mismo.</param>
+public sealed record SolicitudDeIngreso(string Placa, int Confianza, int Carril, DateTimeOffset FechaHora);

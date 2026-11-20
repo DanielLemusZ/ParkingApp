@@ -12,6 +12,9 @@ public class ConsultarEventos : IServicioConsultas
     private readonly IRepositorioConsultas _repositorio;
     private readonly ISedeActual _sedeActual;
 
+    /// <summary>
+    /// Inicializa una nueva instancia de la clase <see cref="ConsultarEventos"/>.
+    /// </summary>
     public ConsultarEventos(IRepositorioConsultas repositorio, ISedeActual sedeActual)
     {
         _repositorio = repositorio;

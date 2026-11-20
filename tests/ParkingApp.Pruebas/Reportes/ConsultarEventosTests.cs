@@ -76,6 +76,7 @@ public class ConsultarEventosTests
 
     private sealed class SedeActualFalsa : ISedeActual
     {
+        public int Id { get; set; } = 1;
         public TimeZoneInfo ZonaHoraria { get; set; } = TimeZoneInfo.Utc;
     }
 }

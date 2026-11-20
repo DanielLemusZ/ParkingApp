@@ -1,5 +1,7 @@
 using System.Globalization;
 
+using ParkingApp.Aplicacion.Reportes;
+using ParkingApp.Infraestructura.Persistencia.Consultas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

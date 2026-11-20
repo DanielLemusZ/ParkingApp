@@ -22,8 +22,8 @@ public interface IRepositorioPagos
     /// <param name="pago">Pago creado por <c>Cobro.Pagar</c>.</param>
     /// <param name="cancelacion">Permite cancelar la operación.</param>
     /// <returns>
-    /// <see langword="true"/> si el pago quedó guardado; <see langword="false"/> si la referencia ya tenía un pago,
-    /// por ejemplo porque un doble clic envió la misma solicitud dos veces. En ese caso no se guarda nada.
+    /// <see langword="true"/> si el pago quedó guardado; <see langword="false"/> si la referencia o el cobro ya tenían
+    /// un pago, por ejemplo porque un doble clic envió la misma solicitud dos veces. En ese caso no se guarda nada.
     /// </returns>
     Task<bool> AgregarAsync(Pago pago, CancellationToken cancelacion = default);
 }

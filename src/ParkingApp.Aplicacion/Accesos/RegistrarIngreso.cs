@@ -12,11 +12,6 @@ namespace ParkingApp.Aplicacion.Accesos;
 /// </summary>
 public sealed class RegistrarIngreso
 {
-    /// <summary>
-    /// Motivo que se muestra cuando la barrera abre y no se genera un cobro nuevo (reingreso del mismo día).
-    /// </summary>
-    public const string IngresoAceptado = "Ingreso registrado";
-
     private readonly ValidacionDeIngreso validaciones;
     private readonly IRepositorioEventosDeAcceso eventos;
     private readonly IRepositorioTarifas tarifas;
@@ -119,13 +114,20 @@ public sealed class RegistrarIngreso
             return (TextosDeCobro.SinCobro(tipoDeVehiculo), null);
         }
 
+        // RN-03 y RN-04: si la placa ya tiene el cobro del día operativo, el reingreso no genera otro.
         if (await cobros.ExisteDelDiaAsync(placa, sede.Id, momento.DiaOperativo, cancelacion))
         {
-            return (IngresoAceptado, null);
+            return (TextosDeCobro.Reingreso(momento.DiaOperativo), null);
         }
 
+        // Dos ingresos simultáneos pueden pasar la consulta anterior a la vez. La restricción única de la
+        // base de datos deja guardar solo uno; el otro ingreso queda registrado sin cobro y sin error.
         var cobro = Cobro.Generar(placa, tipoDeVehiculo, sede.Id, momento.DiaOperativo, tarifa, ahoraEnUtc);
-        await cobros.AgregarAsync(cobro, cancelacion);
+
+        if (!await cobros.AgregarAsync(cobro, cancelacion))
+        {
+            return (TextosDeCobro.Reingreso(momento.DiaOperativo), null);
+        }
 
         return (TextosDeCobro.CobroPendiente(cobro.Franja, cobro.Valor), cobro);
     }

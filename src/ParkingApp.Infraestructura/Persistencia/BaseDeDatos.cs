@@ -1,7 +1,5 @@
 using System.Globalization;
 
-using ParkingApp.Aplicacion.Reportes;
-using ParkingApp.Infraestructura.Persistencia.Consultas;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,8 +10,10 @@ using Npgsql;
 using ParkingApp.Aplicacion.Accesos;
 using ParkingApp.Aplicacion.Cobros;
 using ParkingApp.Aplicacion.Configuracion;
+using ParkingApp.Aplicacion.Reportes;
 using ParkingApp.Aplicacion.Tarifas;
 using ParkingApp.Infraestructura.Configuracion;
+using ParkingApp.Infraestructura.Persistencia.Consultas;
 using ParkingApp.Infraestructura.Persistencia.Repositorios;
 
 namespace ParkingApp.Infraestructura.Persistencia;

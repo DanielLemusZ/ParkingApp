@@ -1,6 +1,6 @@
+using ParkingApp.Aplicacion.Configuracion;
 using ParkingApp.Aplicacion.Reportes;
 using ParkingApp.Dominio.Accesos;
-using ParkingApp.Aplicacion.Configuracion;
 
 using Xunit;
 
@@ -32,15 +32,15 @@ public class ConsultarEventosTests
     {
         // Arrange
         var repositorio = new RepositorioConsultasFalso();
-        
+
         // Simulamos una sede con zona horaria de -5 horas (Colombia)
         var sedeActual = new SedeActualFalsa { ZonaHoraria = TimeZoneInfo.CreateCustomTimeZone("Test", TimeSpan.FromHours(-5), "Test", "Test") };
         var servicio = new ConsultarEventos(repositorio, sedeActual);
 
         var filtros = new FiltrosConsultaDto
         {
-            FechaInicio = new DateTime(2026, 11, 19), 
-            FechaFin = new DateTime(2026, 11, 19), 
+            FechaInicio = new DateTime(2026, 11, 19),
+            FechaFin = new DateTime(2026, 11, 19),
             Placa = "abc-123"
         };
 
@@ -49,7 +49,7 @@ public class ConsultarEventosTests
 
         // Assert
         Assert.True(repositorio.FueLlamado);
-        
+
         Assert.Equal("ABC123", repositorio.PlacaRecibida);
         Assert.Equal(new DateTimeOffset(2026, 11, 19, 5, 0, 0, TimeSpan.Zero), repositorio.InicioUtcRecibido);
         Assert.Equal(new DateTimeOffset(2026, 11, 20, 5, 0, 0, TimeSpan.Zero), repositorio.FinUtcRecibido);

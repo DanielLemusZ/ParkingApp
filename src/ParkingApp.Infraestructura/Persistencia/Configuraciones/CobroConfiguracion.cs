@@ -12,6 +12,11 @@ namespace ParkingApp.Infraestructura.Persistencia.Configuraciones;
 /// </summary>
 internal sealed class CobroConfiguracion : IEntityTypeConfiguration<Cobro>
 {
+    /// <summary>
+    /// Nombre de la restricción única de placa, sede y día operativo (RN-04).
+    /// </summary>
+    internal const string IndiceUnicoDelDia = "ux_cobros_placa_sede_dia";
+
     public void Configure(EntityTypeBuilder<Cobro> builder)
     {
         // Una tarifa de $0 no genera cobro, así que todo cobro guardado vale más que cero.
@@ -35,7 +40,10 @@ internal sealed class CobroConfiguracion : IEntityTypeConfiguration<Cobro>
         builder.HasOne<Sede>().WithMany().HasForeignKey(cobro => cobro.SedeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Tarifa>().WithMany().HasForeignKey(cobro => cobro.TarifaId).OnDelete(DeleteBehavior.Restrict);
 
-        // Busca el cobro del día de una placa. La historia #12 lo vuelve único (RN-04).
-        builder.HasIndex(cobro => new { cobro.Placa, cobro.SedeId, cobro.DiaOperativo });
+        // RN-04: un solo cobro por placa, sede y día operativo. Lo garantiza la base de datos, no solo la
+        // aplicación, para que dos ingresos simultáneos no generen dos cobros. También sirve para buscar el cobro del día.
+        builder.HasIndex(cobro => new { cobro.Placa, cobro.SedeId, cobro.DiaOperativo })
+            .IsUnique()
+            .HasDatabaseName(IndiceUnicoDelDia);
     }
 }

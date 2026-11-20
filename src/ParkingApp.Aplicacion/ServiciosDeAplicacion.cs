@@ -1,3 +1,4 @@
+using ParkingApp.Aplicacion.Reportes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

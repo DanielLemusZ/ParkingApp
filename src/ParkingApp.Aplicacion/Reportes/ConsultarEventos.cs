@@ -27,7 +27,7 @@ public class ConsultarEventos : IServicioConsultas
             throw new ArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin.");
         }
 
-        var zonaHoraria = _sedeActual.ZonaHoraria;
+        var zonaHoraria = _sedeActual.ZonaHoraria.BaseUtcOffset;
         DateTimeOffset? inicioUtc = null;
         DateTimeOffset? finUtc = null;
 

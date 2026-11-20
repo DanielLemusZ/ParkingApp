@@ -13,7 +13,7 @@ public class ConsultarEventosTests
     {
         // Arrange
         var repositorio = new RepositorioConsultasFalso();
-        var sedeActual = new SedeActualFalsa { ZonaHoraria = TimeSpan.FromHours(-5) };
+        var sedeActual = new SedeActualFalsa { ZonaHoraria = TimeZoneInfo.CreateCustomTimeZone("Test", TimeSpan.FromHours(-5), "Test", "Test") };
         var servicio = new ConsultarEventos(repositorio, sedeActual);
 
         var filtros = new FiltrosConsultaDto
@@ -34,13 +34,13 @@ public class ConsultarEventosTests
         var repositorio = new RepositorioConsultasFalso();
         
         // Simulamos una sede con zona horaria de -5 horas (Colombia)
-        var sedeActual = new SedeActualFalsa { ZonaHoraria = TimeSpan.FromHours(-5) };
+        var sedeActual = new SedeActualFalsa { ZonaHoraria = TimeZoneInfo.CreateCustomTimeZone("Test", TimeSpan.FromHours(-5), "Test", "Test") };
         var servicio = new ConsultarEventos(repositorio, sedeActual);
 
         var filtros = new FiltrosConsultaDto
         {
             FechaInicio = new DateTime(2026, 11, 19), 
-            FechaFin = new DateTime(2026, 11, 19), // El mismo día para probar que el fin toma hasta el final del día
+            FechaFin = new DateTime(2026, 11, 19), 
             Placa = "abc-123"
         };
 
@@ -50,13 +50,8 @@ public class ConsultarEventosTests
         // Assert
         Assert.True(repositorio.FueLlamado);
         
-        // 1. Validar que la placa se limpió (se quitó el guion y se puso en mayúsculas)
         Assert.Equal("ABC123", repositorio.PlacaRecibida);
-
-        // 2. Validar inicio: 19/11/2026 00:00:00 -05:00 a UTC -> 19/11/2026 05:00:00 UTC
         Assert.Equal(new DateTimeOffset(2026, 11, 19, 5, 0, 0, TimeSpan.Zero), repositorio.InicioUtcRecibido);
-
-        // 3. Validar fin: Se suma 1 día (20/11/2026 00:00:00 -05:00) a UTC -> 20/11/2026 05:00:00 UTC
         Assert.Equal(new DateTimeOffset(2026, 11, 20, 5, 0, 0, TimeSpan.Zero), repositorio.FinUtcRecibido);
     }
 
@@ -75,17 +70,12 @@ public class ConsultarEventosTests
             InicioUtcRecibido = fechaInicioUtc;
             FinUtcRecibido = fechaFinUtc;
             PlacaRecibida = placaNormalizada;
-
-            // Retornamos una lista vacía porque en esta prueba no nos importan los resultados, sino los parámetros enviados
             return Task.FromResult(new List<EventoDeAcceso>());
         }
     }
 
     private sealed class SedeActualFalsa : ISedeActual
     {
-        public TimeSpan ZonaHoraria { get; set; }
-
-        // Si tu interfaz ISedeActual exige más propiedades (como Id, Nombre, etc.), 
-        // puedes agregarlas debajo de esta línea así: public string Nombre { get; set; } = "Sede de Prueba";
+        public TimeZoneInfo ZonaHoraria { get; set; } = TimeZoneInfo.Utc;
     }
 }

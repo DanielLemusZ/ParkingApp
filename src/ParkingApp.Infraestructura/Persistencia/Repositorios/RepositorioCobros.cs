@@ -48,6 +48,24 @@ internal sealed class RepositorioCobros : IRepositorioCobros
         }
     }
 
+    public Task<decimal> SumarPendientesAsync(Placa placa, Guid sedeId, CancellationToken cancelacion = default)
+    {
+        return contexto.Cobros
+            .AsNoTracking()
+            .Where(cobro => cobro.Placa == placa && cobro.SedeId == sedeId && cobro.Estado == EstadoDeCobro.Pendiente)
+            .SumAsync(cobro => cobro.Valor, cancelacion);
+    }
+
+    public Task<bool> ExistePagadoDelDiaAsync(Placa placa, Guid sedeId, DateOnly diaOperativo, CancellationToken cancelacion = default)
+    {
+        return contexto.Cobros
+            .AsNoTracking()
+            .AnyAsync(
+                cobro => cobro.Placa == placa && cobro.SedeId == sedeId && cobro.DiaOperativo == diaOperativo &&
+                    cobro.Estado == EstadoDeCobro.Pagado,
+                cancelacion);
+    }
+
     // PostgreSQL responde con el código 23505 cuando se viola la restricción única del cobro del día.
     private static bool EsCobroDelDiaDuplicado(DbUpdateException error)
     {

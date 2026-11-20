@@ -96,31 +96,36 @@ public sealed class EventoDeAcceso
             throw new ArgumentOutOfRangeException(nameof(tipoDeVehiculo), tipoDeVehiculo, "El ingreso necesita un tipo de vehículo reconocido");
         }
 
-        if (carril < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(carril), carril, "El carril debe ser 1 o mayor");
-        }
-
-        if (confianza < ConfianzaMinima || confianza > ConfianzaMaxima)
-        {
-            throw new ArgumentOutOfRangeException(nameof(confianza), confianza, "La confianza debe estar entre 0 y 100");
-        }
-
-        if (fechaHora.Offset != TimeSpan.Zero)
-        {
-            throw new ArgumentException("La fecha y la hora deben estar en UTC", nameof(fechaHora));
-        }
+        ValidarLectura(carril, confianza, fechaHora);
 
         return new EventoDeAcceso(TipoDeEvento.Ingreso, tipoDeVehiculo, placa, sedeId, carril, confianza, fechaHora);
     }
 
     /// <summary>
-    /// Registra la salida de un vehículo.
+    /// Registra la salida de un vehículo por un carril de salida. A diferencia del ingreso, acepta un vehículo
+    /// <see cref="TipoDeVehiculo.NoClasificado"/>, porque pudo entrar por ingreso manual con una placa sin formato reconocido.
     /// </summary>
+    /// <param name="placa">Placa leída.</param>
+    /// <param name="tipoDeVehiculo">Tipo de vehículo identificado por el formato de la placa, o no clasificado.</param>
+    /// <param name="sedeId">Sede del carril.</param>
+    /// <param name="carril">Número del carril, desde 1.</param>
+    /// <param name="confianza">Confianza de la lectura, de 0 a 100.</param>
+    /// <param name="fechaHora">Fecha y hora de la salida, en UTC.</param>
+    /// <returns>El evento de salida.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">El carril o la confianza están fuera de rango.</exception>
+    /// <exception cref="ArgumentException">La fecha y la hora no están en UTC.</exception>
     public static EventoDeAcceso RegistrarSalida(Placa placa, TipoDeVehiculo tipoDeVehiculo, Guid sedeId, int carril, int confianza, DateTimeOffset fechaHora)
     {
         ArgumentNullException.ThrowIfNull(placa);
 
+        ValidarLectura(carril, confianza, fechaHora);
+
+        return new EventoDeAcceso(TipoDeEvento.Salida, tipoDeVehiculo, placa, sedeId, carril, confianza, fechaHora);
+    }
+
+    // Reglas comunes del ingreso y la salida: carril desde 1, confianza de 0 a 100 y hora en UTC.
+    private static void ValidarLectura(int carril, int confianza, DateTimeOffset fechaHora)
+    {
         if (carril < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(carril), carril, "El carril debe ser 1 o mayor");
@@ -135,7 +140,5 @@ public sealed class EventoDeAcceso
         {
             throw new ArgumentException("La fecha y la hora deben estar en UTC", nameof(fechaHora));
         }
-
-        return new EventoDeAcceso(TipoDeEvento.Salida, tipoDeVehiculo, placa, sedeId, carril, confianza, fechaHora);
     }
 }

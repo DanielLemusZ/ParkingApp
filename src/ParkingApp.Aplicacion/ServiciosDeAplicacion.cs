@@ -20,8 +20,6 @@ public static class ServiciosDeAplicacion
     /// <returns>El mismo contenedor de servicios.</returns>
     public static IServiceCollection AgregarAplicacion(this IServiceCollection servicios)
     {
-        servicios.AddScoped<ProcesarSalidaUseCase>();
-
         servicios.TryAddSingleton(TimeProvider.System);
 
         // Por alcance, porque el horario de la sede se lee de la base de datos.
@@ -31,6 +29,7 @@ public static class ServiciosDeAplicacion
         servicios.AddScoped(CrearCadenaDeIngreso);
 
         servicios.AddScoped<RegistrarIngreso>();
+        servicios.AddScoped<RegistrarSalida>();
         servicios.AddScoped<AdministrarTarifas>();
         servicios.AddScoped<ConfigurarSede>();
 

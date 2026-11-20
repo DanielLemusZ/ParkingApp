@@ -81,37 +81,30 @@
                 Registrar salida
             </MudButton>
 
-            @if (!string.IsNullOrWhiteSpace(errorSalida))
-            {
-                <MudAlert Class="mt-4" Severity="Severity.Warning">
-                    @errorSalida
-                </MudAlert>
-            }
-
             @if (resultadoSalida != null)
             {
                 @if (resultadoSalida.AbreBarrera)
                 {
                     <MudAlert Class="mt-4" Severity="Severity.Success" Icon="@Icons.Material.Filled.LockOpen">
-                        <b>Barrera abierta</b>: @resultadoSalida.Mensaje
+                        <b>Barrera abierta</b>: @resultadoSalida.Motivo
                     </MudAlert>
                 }
                 else
                 {
                     <MudAlert Class="mt-4" Severity="Severity.Error" Icon="@Icons.Material.Filled.Lock">
-                        <b>Barrera cerrada</b>: @resultadoSalida.Mensaje
+                        <b>Barrera cerrada</b>: @resultadoSalida.Motivo
                     </MudAlert>
                 }
 
-                @if (resultadoSalida.AbreBarrera && resultadoSalida.Placa != null)
+                @if (resultadoSalida.Salida != null)
                 {
                     <MudSimpleTable Dense="true" Class="mt-2">
                         <tbody>
-                            <tr><td>Placa</td><td>@resultadoSalida.Placa</td></tr>
-                            <tr><td>Tipo de vehículo</td><td>@resultadoSalida.TipoDeVehiculo</td></tr>
-                            <tr><td>Fecha y hora</td><td>@FormatearFecha(resultadoSalida.FechaHora!.Value)</td></tr>
-                            <tr><td>Carril</td><td>@resultadoSalida.Carril</td></tr>
-                            <tr><td>Confianza</td><td>@resultadoSalida.Confianza</td></tr>
+                            <tr><td>Placa</td><td>@resultadoSalida.Salida.Placa</td></tr>
+                            <tr><td>Tipo de vehículo</td><td>@resultadoSalida.Salida.TipoDeVehiculo</td></tr>
+                            <tr><td>Fecha y hora</td><td>@FormatearFecha(resultadoSalida.Salida.FechaHora)</td></tr>
+                            <tr><td>Carril</td><td>@resultadoSalida.Salida.Carril</td></tr>
+                            <tr><td>Confianza</td><td>@resultadoSalida.Salida.Confianza</td></tr>
                         </tbody>
                     </MudSimpleTable>
                 }
@@ -131,8 +124,7 @@
     private string? placaSalida;
     private int confianzaSalida = 95;
     private bool registrandoSalida;
-    private string? errorSalida;
-    private ResultadoSalida? resultadoSalida;
+    private ResultadoDeSalida? resultadoSalida;
 
     private async Task RegistrarIngresoAsync()
     {
@@ -140,6 +132,8 @@
 
         try
         {
+            // Cada registro usa su propio alcance: en Blazor Server la página vive mucho tiempo,
+            // y el contexto de la base de datos no debe acumular datos entre un registro y otro.
             await using var alcance = FabricaDeAlcances.CreateAsyncScope();
             var registrarIngreso = alcance.ServiceProvider.GetRequiredService<RegistrarIngreso>();
             resultado = await registrarIngreso.EjecutarAsync(placa, confianza, carril);
@@ -153,18 +147,12 @@
     private async Task RegistrarSalidaAsync()
     {
         registrandoSalida = true;
-        errorSalida = null;
 
         try
         {
             await using var alcance = FabricaDeAlcances.CreateAsyncScope();
-            var procesarSalida = alcance.ServiceProvider.GetRequiredService<ProcesarSalidaUseCase>();
-            resultadoSalida = await procesarSalida.EjecutarAsync(placaSalida, confianzaSalida, Guid.Empty, carrilSalida);
-        }
-        catch (ArgumentException ex)
-        {
-            resultadoSalida = null;
-            errorSalida = ex.Message;
+            var registrarSalida = alcance.ServiceProvider.GetRequiredService<RegistrarSalida>();
+            resultadoSalida = await registrarSalida.EjecutarAsync(placaSalida, confianzaSalida, carrilSalida);
         }
         finally
         {

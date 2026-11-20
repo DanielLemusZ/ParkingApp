@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ParkingApp.Dominio\ParkingApp.Dominio.csproj" />
     <ProjectReference Include="..\..\src\ParkingApp.Aplicacion\ParkingApp.Aplicacion.csproj" />
+    <ProjectReference Include="..\..\src\ParkingApp.Infraestructura\ParkingApp.Infraestructura.csproj" />
   </ItemGroup>
 
   <ItemGroup>

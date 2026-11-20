@@ -1,0 +1,126 @@
+@page "/tarifas"
+@using System.Globalization
+@using ParkingApp.Aplicacion.Tarifas
+@using ParkingApp.Dominio.Accesos
+@using ParkingApp.Dominio.Configuracion
+@inject IServiceScopeFactory FabricaDeAlcances
+
+<PageTitle>Tarifas</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Tarifas</MudText>
+<MudText Class="mb-4">Configura los valores por tipo de vehículo y franja. Cada cambio conserva la versión anterior.</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="7">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Tarifas vigentes</MudText>
+            <MudTable Items="tarifas" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Vehículo</MudTh>
+                    <MudTh>Franja</MudTh>
+                    <MudTh>Valor</MudTh>
+                    <MudTh>Vigente desde</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Vehículo">@NombreVehiculo(context.TipoDeVehiculo)</MudTd>
+                    <MudTd DataLabel="Franja">@context.Franja</MudTd>
+                    <MudTd DataLabel="Valor">@FormatearValor(context.Valor)</MudTd>
+                    <MudTd DataLabel="Vigente desde">@context.VigenteDesde.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>Aún no hay tarifas configuradas.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="5">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Cambiar tarifa</MudText>
+            <MudSelect T="TipoDeVehiculo" Label="Tipo de vehículo" @bind-Value="tipoDeVehiculo">
+                <MudSelectItem Value="TipoDeVehiculo.Carro">Carro</MudSelectItem>
+                <MudSelectItem Value="TipoDeVehiculo.Moto">Moto</MudSelectItem>
+            </MudSelect>
+            <MudSelect T="FranjaTarifaria" Label="Franja" @bind-Value="franja">
+                <MudSelectItem Value="FranjaTarifaria.Diurna">Diurna</MudSelectItem>
+                <MudSelectItem Value="FranjaTarifaria.Nocturna">Nocturna</MudSelectItem>
+            </MudSelect>
+            <MudNumericField T="decimal" Label="Valor en pesos" Min="0" @bind-Value="valor" />
+            <MudText Class="mt-3">Vigente desde</MudText>
+            <InputDate TValue="DateOnly" @bind-Value="vigenteDesde" class="mud-input-root mud-input-root-outlined" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
+                       Disabled="guardando" OnClick="GuardarAsync">
+                Guardar tarifa
+            </MudButton>
+            @if (!string.IsNullOrEmpty(mensaje))
+            {
+                <MudAlert Class="mt-4" Severity="@(guardado ? Severity.Success : Severity.Error)">@mensaje</MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private IReadOnlyList<Tarifa> tarifas = Array.Empty<Tarifa>();
+    private TipoDeVehiculo tipoDeVehiculo = TipoDeVehiculo.Carro;
+    private FranjaTarifaria franja = FranjaTarifaria.Diurna;
+    private decimal valor;
+    private DateOnly vigenteDesde;
+    private string mensaje = string.Empty;
+    private bool guardado;
+    private bool guardando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var administrarTarifas = alcance.ServiceProvider.GetRequiredService<AdministrarTarifas>();
+        vigenteDesde = administrarTarifas.FechaActualSede();
+        tarifas = await administrarTarifas.ConsultarVigentesAsync(vigenteDesde);
+    }
+
+    private async Task GuardarAsync()
+    {
+        guardando = true;
+        mensaje = string.Empty;
+
+        try
+        {
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var administrarTarifas = alcance.ServiceProvider.GetRequiredService<AdministrarTarifas>();
+            var resultado = await administrarTarifas.CambiarAsync(tipoDeVehiculo, franja, valor, vigenteDesde);
+            guardado = resultado.Guardado;
+            mensaje = guardado ? "La tarifa se guardó y su versión anterior quedó conservada." : resultado.Motivo;
+
+            if (guardado)
+            {
+                await CargarTarifasAsync();
+            }
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task CargarTarifasAsync()
+    {
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var administrarTarifas = alcance.ServiceProvider.GetRequiredService<AdministrarTarifas>();
+        tarifas = await administrarTarifas.ConsultarVigentesAsync(administrarTarifas.FechaActualSede());
+    }
+
+    private static string NombreVehiculo(TipoDeVehiculo tipo)
+    {
+        return tipo switch
+        {
+            TipoDeVehiculo.Carro => "Carro",
+            TipoDeVehiculo.Moto => "Moto",
+            _ => "No clasificado",
+        };
+    }
+
+    private static string FormatearValor(decimal monto)
+    {
+        return $"${monto.ToString("N0", CultureInfo.GetCultureInfo("es-CO"))}";
+    }
+}

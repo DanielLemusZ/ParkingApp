@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using ParkingApp.Aplicacion.Accesos;
 using ParkingApp.Aplicacion.Accesos.Validaciones;
+using ParkingApp.Aplicacion.Configuracion;
+using ParkingApp.Aplicacion.Tarifas;
 
 namespace ParkingApp.Aplicacion;
 
@@ -22,10 +24,15 @@ public static class ServiciosDeAplicacion
 
         servicios.TryAddSingleton(TimeProvider.System);
 
+        // Por alcance, porque el horario de la sede se lee de la base de datos.
+        servicios.AddScoped<CalendarioOperativo>();
+
         // La cadena se arma de nuevo en cada alcance, porque cada eslabón guarda cuál es el siguiente.
         servicios.AddScoped(CrearCadenaDeIngreso);
 
         servicios.AddScoped<RegistrarIngreso>();
+        servicios.AddScoped<AdministrarTarifas>();
+        servicios.AddScoped<ConfigurarSede>();
 
         return servicios;
     }
@@ -41,6 +48,9 @@ public static class ServiciosDeAplicacion
     {
         return CadenaDeValidacionesDeIngreso.Crear(
             new LecturaValida(),
-            new ClasificacionDeVehiculoValida());
+            new ClasificacionDeVehiculoValida(),
+            new TarifaVigente(
+                proveedor.GetRequiredService<IRepositorioTarifas>(),
+                proveedor.GetRequiredService<CalendarioOperativo>()));
     }
 }

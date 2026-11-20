@@ -26,6 +26,7 @@ public static class ServiciosDeAplicacion
 
         servicios.AddScoped<RegistrarIngreso>();
         servicios.AddScoped<AdministrarTarifas>();
+        services.AddScoped<IServicioConsultas, ConsultarEventos>();
 
         return servicios;
     }

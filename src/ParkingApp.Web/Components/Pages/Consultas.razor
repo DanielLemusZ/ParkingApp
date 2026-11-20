@@ -1,8 +1,7 @@
 @page "/consultas"
-@rendermode InteractiveServer
+@using System.Globalization
 @using ParkingApp.Aplicacion.Reportes
 @inject IServicioConsultas ServicioConsultas
-@* @attribute [Authorize(Roles = "Administrador")] *@
 
 <MudText Typo="Typo.h4" GutterBottom="true">Consultar Ingresos, Salidas y Cobros</MudText>
 
@@ -42,7 +41,11 @@
                 <PropertyColumn Property="x => x.TipoEvento" Title="Evento" />
                 <PropertyColumn Property="x => x.FechaHora" Title="Fecha y Hora" />
                 <PropertyColumn Property="x => x.Carril" Title="Carril" />
-                <PropertyColumn Property="x => x.EsLecturaManual" Title="Lectura Manual" />
+                <TemplateColumn Title="Lectura Manual">
+                    <CellTemplate>
+                        @(context.Item.EsLecturaManual ? "Sí" : "No")
+                    </CellTemplate>
+                </TemplateColumn>
             </Columns>
             <NoRecordsContent>
                 <MudText>No hay resultados</MudText>
@@ -57,9 +60,17 @@
         <MudDataGrid Items="@ListaCobros" Dense="true" Hover="true">
             <Columns>
                 <PropertyColumn Property="x => x.Placa" Title="Placa" />
-                <PropertyColumn Property="x => x.DiaOperativo.ToShortDateString()" Title="Día Operativo" />
+                <TemplateColumn Title="Día Operativo">
+                    <CellTemplate>
+                        @context.Item.DiaOperativo.ToString("d", new CultureInfo("es-CO"))
+                    </CellTemplate>
+                </TemplateColumn>
                 <PropertyColumn Property="x => x.Franja" Title="Franja" />
-                <PropertyColumn Property="x => x.Valor" Title="Valor" Format="C" />
+                <TemplateColumn Title="Valor">
+                    <CellTemplate>
+                        @context.Item.Valor.ToString("C0", new CultureInfo("es-CO"))
+                    </CellTemplate>
+                </TemplateColumn>
                 <PropertyColumn Property="x => x.Estado" Title="Estado" />
             </Columns>
             <NoRecordsContent>
@@ -86,16 +97,17 @@
     private async Task BuscarDatos()
     {
         MensajeError = string.Empty;
-
-        if (Filtros.FechaInicio.HasValue && Filtros.FechaFin.HasValue && Filtros.FechaInicio.Value > Filtros.FechaFin.Value)
+        
+        try
         {
-            MensajeError = "La fecha inicial debe ser anterior a la final";
+            ListaAccesos = await ServicioConsultas.ConsultarAccesosAsync(Filtros);
+            ListaCobros = await ServicioConsultas.ConsultarCobrosAsync(Filtros);
+        }
+        catch (ArgumentException ex)
+        {
+            MensajeError = ex.Message;
             ListaAccesos.Clear();
             ListaCobros.Clear();
-            return;
         }
-
-        ListaAccesos = await ServicioConsultas.ConsultarAccesosAsync(Filtros);
-        ListaCobros = await ServicioConsultas.ConsultarCobrosAsync(Filtros);
     }
 }

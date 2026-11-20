@@ -1,0 +1,157 @@
+@page "/caja"
+@using System.Globalization
+@using ParkingApp.Aplicacion.Cobros
+@using ParkingApp.Aplicacion.Pagos
+@using ParkingApp.Dominio.Configuracion
+@using ParkingApp.Web.Controllers
+@inject IServiceScopeFactory FabricaDeAlcances
+
+<PageTitle>Caja</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Caja</MudText>
+<MudText Class="mb-4">Cobros pendientes de la sede. Elige uno para registrar su pago en efectivo.</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="7">
+        <MudPaper Class="pa-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudTextField T="string" Label="Buscar por placa" @bind-Value="busqueda" Immediate="true"
+                              DebounceInterval="300" OnDebounceIntervalElapsed="BuscarAsync"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" />
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="CargarAsync" aria-label="Actualizar" />
+            </MudStack>
+            <MudTable Items="pendientes" Dense="true" Hover="true" T="CobroPendiente"
+                      OnRowClick="@(fila => Elegir(fila.Item))" RowClassFunc="@ClaseDeFila">
+                <HeaderContent>
+                    <MudTh>Placa</MudTh>
+                    <MudTh>Hora de ingreso</MudTh>
+                    <MudTh>Franja</MudTh>
+                    <MudTh>Valor</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Placa">@context.Placa</MudTd>
+                    <MudTd DataLabel="Hora de ingreso">@context.HoraDeIngreso.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</MudTd>
+                    <MudTd DataLabel="Franja">@NombreFranja(context.Franja)</MudTd>
+                    <MudTd DataLabel="Valor">@TextosDeCobro.Pesos(context.Valor)</MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>No hay cobros pendientes@(string.IsNullOrWhiteSpace(busqueda) ? string.Empty : " con esa placa").</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="5">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" GutterBottom="true">Pago en efectivo</MudText>
+            @if (elegido is null)
+            {
+                <MudText>Elige un cobro de la lista.</MudText>
+            }
+            else
+            {
+                <MudText><b>Placa:</b> @elegido.Placa</MudText>
+                <MudText><b>Día operativo:</b> @elegido.DiaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</MudText>
+                <MudText><b>Franja:</b> @NombreFranja(elegido.Franja)</MudText>
+                <MudText Typo="Typo.h5" Class="my-2">@TextosDeCobro.Pesos(elegido.Valor)</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Payments"
+                           Disabled="pagando" OnClick="PagarAsync">
+                    @(pagando ? "Registrando…" : "Registrar pago en efectivo")
+                </MudButton>
+            }
+            @if (resultado is not null)
+            {
+                <MudAlert Class="mt-4" Severity="@(resultado.Registrado ? Severity.Success : Severity.Warning)">
+                    @resultado.Motivo
+                    @if (resultado.Pago is not null)
+                    {
+                        <br />
+                        <small>
+                            @resultado.Pago.Placa · @resultado.Pago.FechaHora.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+                            · Ref. @resultado.Pago.Referencia
+                        </small>
+                    }
+                </MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private IReadOnlyList<CobroPendiente> pendientes = Array.Empty<CobroPendiente>();
+    private string? busqueda;
+    private CobroPendiente? elegido;
+    private ResultadoDePago? resultado;
+    private bool pagando;
+
+    // Se genera al elegir el cobro, no al pagar: un doble clic o un reintento mandan la misma referencia,
+    // y la caja registra un solo pago.
+    private Guid referencia;
+
+    protected override Task OnInitializedAsync()
+    {
+        return CargarAsync();
+    }
+
+    private void Elegir(CobroPendiente? cobro)
+    {
+        if (cobro is null || elegido?.Id == cobro.Id)
+        {
+            return;
+        }
+
+        elegido = cobro;
+        referencia = Guid.NewGuid();
+        resultado = null;
+    }
+
+    private async Task PagarAsync()
+    {
+        if (elegido is null || pagando)
+        {
+            return;
+        }
+
+        pagando = true;
+
+        try
+        {
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var registrarPago = alcance.ServiceProvider.GetRequiredService<RegistrarPagoEnEfectivo>();
+            resultado = await registrarPago.EjecutarAsync(elegido.Id, referencia, CajaController.OperadorSinIdentificar);
+
+            if (resultado.Registrado)
+            {
+                elegido = null;
+                await CargarAsync();
+            }
+        }
+        finally
+        {
+            pagando = false;
+        }
+    }
+
+    private Task BuscarAsync(string texto)
+    {
+        busqueda = texto;
+        return CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var listar = alcance.ServiceProvider.GetRequiredService<ListarCobrosPendientes>();
+        pendientes = await listar.EjecutarAsync(busqueda);
+    }
+
+    private string ClaseDeFila(CobroPendiente cobro, int indice)
+    {
+        return cobro.Id == elegido?.Id ? "mud-selected-item cursor-pointer" : "cursor-pointer";
+    }
+
+    private static string NombreFranja(FranjaTarifaria franja)
+    {
+        return franja == FranjaTarifaria.Diurna ? "Diurna" : "Nocturna";
+    }
+}

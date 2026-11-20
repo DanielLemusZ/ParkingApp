@@ -9,8 +9,9 @@ namespace ParkingApp.Infraestructura.Persistencia.Repositorios;
 /// <summary>
 /// Implementación de persistencia para las operaciones de salida y consulta de cobros.
 /// </summary>
-public class SalidaRepository : ISalidaRepository
+public sealed class SalidaRepository : ISalidaRepository
 {
+    private const int UmbralConfianzaPorDefecto = 80;
     private readonly ParkingAppDbContext _contexto;
 
     /// <summary>
@@ -23,42 +24,60 @@ public class SalidaRepository : ISalidaRepository
     }
 
     /// <inheritdoc />
-    public async Task<decimal?> ObtenerValorCobroPendienteAsync(string placa)
+    public async Task<decimal?> ObtenerValorCobroPendienteAsync(Placa placa, CancellationToken cancelacion = default)
     {
         var cobro = await _contexto.Cobros
-            .Where(c => c.Placa == placa && c.Estado == EstadoCobro.Pendiente)
-            .FirstOrDefaultAsync();
+            .AsNoTracking()
+            .Where(c => c.Placa == placa && c.Estado == EstadoDeCobro.Pendiente)
+            .OrderBy(c => c.FechaHora)
+            .FirstOrDefaultAsync(cancelacion);
 
         return cobro?.Valor;
     }
 
     /// <inheritdoc />
-    public async Task<bool> TieneCobroPagadoHoyAsync(string placa)
+    public Task<bool> TieneCobroPagadoEnDiaOperativoAsync(Placa placa, DateOnly diaOperativo, CancellationToken cancelacion = default)
     {
-        var hoy = DateTime.Today;
-
-        return await _contexto.Cobros
-            .AnyAsync(c => c.Placa == placa &&
-                           c.Estado == EstadoCobro.Pagado &&
-                           c.FechaCreacion.Date == hoy);
+        return _contexto.Cobros
+            .AsNoTracking()
+            .AnyAsync(
+                c => c.Placa == placa &&
+                     c.Estado == EstadoDeCobro.Pagado &&
+                     c.DiaOperativo == diaOperativo,
+                cancelacion);
     }
 
     /// <inheritdoc />
-    public async Task RegistrarSalidaAsync(string placa, DateTimeOffset fechaHora, Guid sedeId, int carril, int confianza)
+    public async Task<int> ObtenerUmbralConfianzaAsync(Guid sedeId, CancellationToken cancelacion = default)
     {
-        var placaObjeto = Placa.Crear(placa);
-        var tipoVehiculo = TipoDeVehiculo.Carro;
+        var umbral = await _contexto.Sedes
+            .AsNoTracking()
+            .Where(s => s.Id == sedeId)
+            .Select(s => (int?)s.UmbralConfianza)
+            .FirstOrDefaultAsync(cancelacion);
 
+        return umbral ?? UmbralConfianzaPorDefecto;
+    }
+
+    /// <inheritdoc />
+    public async Task RegistrarSalidaAsync(
+        Placa placa,
+        TipoDeVehiculo tipoDeVehiculo,
+        DateTimeOffset fechaHoraUtc,
+        Guid sedeId,
+        int carril,
+        int confianza,
+        CancellationToken cancelacion = default)
+    {
         var eventoSalida = EventoDeAcceso.RegistrarSalida(
-            placaObjeto,
-            tipoVehiculo,
+            placa,
+            tipoDeVehiculo,
             sedeId,
             carril,
             confianza,
-            fechaHora
-        );
+            fechaHoraUtc);
 
         _contexto.EventosDeAcceso.Add(eventoSalida);
-        await _contexto.SaveChangesAsync();
+        await _contexto.SaveChangesAsync(cancelacion);
     }
 }

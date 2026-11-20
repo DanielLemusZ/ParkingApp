@@ -1,5 +1,5 @@
-using System.Globalization;
-
+using ParkingApp.Aplicacion.Cobros;
+using ParkingApp.Aplicacion.Configuracion;
 using ParkingApp.Dominio.Accesos;
 
 namespace ParkingApp.Aplicacion.Accesos;
@@ -7,33 +7,61 @@ namespace ParkingApp.Aplicacion.Accesos;
 /// <summary>
 /// Caso de uso para procesar el intento de salida de un vehículo.
 /// </summary>
-public class ProcesarSalidaUseCase
+public sealed class ProcesarSalidaUseCase
 {
     private readonly ISalidaRepository _repositorio;
+    private readonly ISedeActual _sedeActual;
+    private readonly CalendarioOperativo _calendario;
+    private readonly TimeProvider _reloj;
 
-    // Umbral de confianza configurado
-    private const double UmbralConfianza = 80.0;
-
-    /// <inheritdoc/>
-    public ProcesarSalidaUseCase(ISalidaRepository repositorio)
+    /// <summary>
+    /// Inicializa una nueva instancia del caso de uso de salida.
+    /// </summary>
+    /// <param name="repositorio">Repositorio de salidas y consulta de cobros.</param>
+    /// <param name="sedeActual">Sede actual donde opera el carril.</param>
+    /// <param name="calendario">Calendario operativo para determinar el día operativo.</param>
+    /// <param name="reloj">Proveedor de fecha y hora del sistema.</param>
+    public ProcesarSalidaUseCase(
+        ISalidaRepository repositorio,
+        ISedeActual sedeActual,
+        CalendarioOperativo calendario,
+        TimeProvider reloj)
     {
         _repositorio = repositorio;
+        _sedeActual = sedeActual;
+        _calendario = calendario;
+        _reloj = reloj;
     }
 
     /// <summary>
-    /// Ejecuta la lógica para determinar si la barrera debe abrirse.
+    /// Ejecuta la lógica para determinar si la barrera debe abrirse y registra la salida si corresponde.
     /// </summary>
-    // Nota: Actualizamos sede a Guid y carril a int
-    public async Task<ResultadoSalida> EjecutarAsync(string placa, double confianza, Guid sedeId, int carril)
+    /// <param name="placa">Texto leído de la placa.</param>
+    /// <param name="confianza">Porcentaje de confianza de la lectura.</param>
+    /// <param name="sedeId">Identificador de la sede (si es <see cref="Guid.Empty"/>, usa la sede actual).</param>
+    /// <param name="carril">Número del carril de salida.</param>
+    /// <param name="cancelacion">Token para cancelar la operación.</param>
+    /// <returns>Resultado indicando si la barrera abre, el motivo y los datos de la salida registrada.</returns>
+    public async Task<ResultadoSalida> EjecutarAsync(
+        string? placa,
+        double confianza,
+        Guid sedeId,
+        int carril,
+        CancellationToken cancelacion = default)
     {
-        // 1. Criterio de error: Placa vacía
-        if (string.IsNullOrWhiteSpace(placa))
+        // 1. Criterio de error: Placa vacía o solo espacios/guiones
+        if (string.IsNullOrWhiteSpace(Placa.Normalizar(placa)))
         {
-            throw new ArgumentException("La placa no puede estar vacía.");
+            throw new ArgumentException("La placa no puede estar vacía.", nameof(placa));
         }
 
-        // 2. Nota técnica F-05: Confianza menor al umbral (Pasa a validación)
-        if (confianza < UmbralConfianza)
+        var placaNormalizada = Placa.Crear(placa);
+        var sedeEfectiva = sedeId == Guid.Empty ? _sedeActual.Id : sedeId;
+
+        // 2. Nota técnica F-05: Confianza menor al umbral de la sede (pasa a validación en caja)
+        var umbralConfianza = await _repositorio.ObtenerUmbralConfianzaAsync(sedeEfectiva, cancelacion);
+
+        if (confianza < umbralConfianza)
         {
             return new ResultadoSalida
             {
@@ -42,38 +70,47 @@ public class ProcesarSalidaUseCase
             };
         }
 
-        // 3. Buscar cobros pendientes de cualquier día
-        var valorPendiente = await _repositorio.ObtenerValorCobroPendienteAsync(placa);
+        // 3. Criterio 3: Buscar cobros pendientes de cualquier día operativo
+        var valorPendiente = await _repositorio.ObtenerValorCobroPendienteAsync(placaNormalizada, cancelacion);
 
         if (valorPendiente.HasValue)
         {
-            var valorFormateado = valorPendiente.Value.ToString("N0", CultureInfo.GetCultureInfo("es-CO"));
-
             return new ResultadoSalida
             {
                 AbreBarrera = false,
-                Mensaje = $"No abre: cobro pendiente de ${valorFormateado}"
+                Mensaje = $"No abre: cobro pendiente de {TextosDeCobro.Pesos(valorPendiente.Value)}"
             };
         }
 
-        // 4. Determinar si fue pagado o si salió sin cobro
-        bool cobroPagado = await _repositorio.TieneCobroPagadoHoyAsync(placa);
-        string mensajeExito = cobroPagado ? "Abre: cobro pagado" : "Abre: sin cobro";
+        // 4. Criterio 2 y 4: Determinar si tiene cobro pagado en el día operativo actual o sale sin cobro
+        var ahoraEnUtc = _reloj.GetUtcNow();
+        var momento = await _calendario.UbicarAsync(ahoraEnUtc, cancelacion);
+        var cobroPagado = await _repositorio.TieneCobroPagadoEnDiaOperativoAsync(placaNormalizada, momento.DiaOperativo, cancelacion);
+        var mensajeExito = cobroPagado ? "Abre: cobro pagado" : "Abre: sin cobro";
 
-        // 5. Criterio de éxito: Registrar la salida porque la barrera va a abrir
-        // Usamos la variable correcta _repositorio
+        // 5. Criterio 1 y 7: Clasificar (permitiendo placas manuales como NoClasificado) y registrar la salida
+        var tipoDeVehiculo = ClasificadorDeVehiculo.Clasificar(placaNormalizada) ?? TipoDeVehiculo.NoClasificado;
+        var confianzaEntera = (int)Math.Round(confianza, MidpointRounding.AwayFromZero);
+
         await _repositorio.RegistrarSalidaAsync(
-            placa,
-            DateTimeOffset.UtcNow,
-            sedeId,
+            placaNormalizada,
+            tipoDeVehiculo,
+            ahoraEnUtc,
+            sedeEfectiva,
             carril,
-            (int)confianza
-        );
+            confianzaEntera,
+            cancelacion);
 
         return new ResultadoSalida
         {
             AbreBarrera = true,
-            Mensaje = mensajeExito
+            Mensaje = mensajeExito,
+            Placa = placaNormalizada.Valor,
+            TipoDeVehiculo = tipoDeVehiculo,
+            FechaHora = momento.HoraLocal,
+            SedeId = sedeEfectiva,
+            Carril = carril,
+            Confianza = confianzaEntera
         };
     }
 }

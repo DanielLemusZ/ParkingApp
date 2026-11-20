@@ -1,4 +1,9 @@
+using Microsoft.Extensions.Time.Testing;
+
 using ParkingApp.Aplicacion.Accesos;
+using ParkingApp.Aplicacion.Configuracion;
+using ParkingApp.Dominio.Accesos;
+using ParkingApp.Pruebas.Dobles;
 
 using Xunit;
 
@@ -6,100 +11,137 @@ namespace ParkingApp.Pruebas.Accesos;
 
 public class ProcesarSalidaUseCasePruebas
 {
-    // Clase falsa (Fake) para simular la base de datos en las pruebas
+    private sealed class SedeActualDePrueba : ISedeActual
+    {
+        public Guid Id { get; } = Guid.CreateVersion7();
+
+        public TimeZoneInfo ZonaHoraria { get; } = TimeZoneInfo.FindSystemTimeZoneById("America/Bogota");
+    }
+
     private sealed class FakeSalidaRepository : ISalidaRepository
     {
         public decimal? ValorPendiente { get; set; }
+
         public bool CobroPagado { get; set; }
+
+        public int UmbralConfianza { get; set; } = 80;
+
         public bool SalidaRegistrada { get; private set; }
 
-        public Task<decimal?> ObtenerValorCobroPendienteAsync(string placa) => Task.FromResult(ValorPendiente);
+        public Placa? UltimaPlacaRegistrada { get; private set; }
 
-        public Task<bool> TieneCobroPagadoHoyAsync(string placa) => Task.FromResult(CobroPagado);
+        public TipoDeVehiculo? UltimoTipoRegistrado { get; private set; }
 
-        public Task RegistrarSalidaAsync(string placa, DateTimeOffset fechaHora, Guid sedeId, int carril, int confianza)
+        public Task<decimal?> ObtenerValorCobroPendienteAsync(Placa placa, CancellationToken cancelacion = default) =>
+            Task.FromResult(ValorPendiente);
+
+        public Task<bool> TieneCobroPagadoEnDiaOperativoAsync(Placa placa, DateOnly diaOperativo, CancellationToken cancelacion = default) =>
+            Task.FromResult(CobroPagado);
+
+        public Task<int> ObtenerUmbralConfianzaAsync(Guid sedeId, CancellationToken cancelacion = default) =>
+            Task.FromResult(UmbralConfianza);
+
+        public Task RegistrarSalidaAsync(
+            Placa placa,
+            TipoDeVehiculo tipoDeVehiculo,
+            DateTimeOffset fechaHoraUtc,
+            Guid sedeId,
+            int carril,
+            int confianza,
+            CancellationToken cancelacion = default)
         {
             SalidaRegistrada = true;
+            UltimaPlacaRegistrada = placa;
+            UltimoTipoRegistrado = tipoDeVehiculo;
             return Task.CompletedTask;
         }
+    }
+
+    private static (ProcesarSalidaUseCase CasoDeUso, FakeSalidaRepository Repo, SedeActualDePrueba Sede) CrearEscenario()
+    {
+        var repo = new FakeSalidaRepository();
+        var sede = new SedeActualDePrueba();
+        var calendario = new CalendarioOperativo(sede, new HorarioDeOperacionDePrueba());
+        var reloj = new FakeTimeProvider(new DateTimeOffset(2026, 11, 19, 19, 0, 0, TimeSpan.Zero));
+        var casoDeUso = new ProcesarSalidaUseCase(repo, sede, calendario, reloj);
+        return (casoDeUso, repo, sede);
     }
 
     [Fact]
     public async Task EjecutarAsync_ConPlacaVacia_LanzaExcepcion()
     {
-        // Arrange
-        var repoFalso = new FakeSalidaRepository();
-        var casoDeUso = new ProcesarSalidaUseCase(repoFalso);
+        var (casoDeUso, repo, sede) = CrearEscenario();
 
-        // Act & Assert
         var excepcion = await Assert.ThrowsAsync<ArgumentException>(() =>
-            casoDeUso.EjecutarAsync("", 90.0, Guid.NewGuid(), 1));
+            casoDeUso.EjecutarAsync("", 90.0, sede.Id, 1, TestContext.Current.CancellationToken));
 
-        Assert.Equal("La placa no puede estar vacía.", excepcion.Message);
-        Assert.False(repoFalso.SalidaRegistrada); // Verifica que no se guardó nada
+        Assert.Contains("La placa no puede estar vacía.", excepcion.Message);
+        Assert.False(repo.SalidaRegistrada);
     }
 
     [Fact]
     public async Task EjecutarAsync_BajaConfianza_NoAbreYPideValidacion()
     {
-        // Arrange
-        var repoFalso = new FakeSalidaRepository();
-        var casoDeUso = new ProcesarSalidaUseCase(repoFalso);
+        var (casoDeUso, repo, sede) = CrearEscenario();
 
-        // Act
-        var resultado = await casoDeUso.EjecutarAsync("ABC123", 50.0, Guid.NewGuid(), 1);
+        var resultado = await casoDeUso.EjecutarAsync("ABC123", 50.0, sede.Id, 1, TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.False(resultado.AbreBarrera);
         Assert.Equal("No abre: requiere validación de operador por baja confianza", resultado.Mensaje);
-        Assert.False(repoFalso.SalidaRegistrada);
+        Assert.False(repo.SalidaRegistrada);
     }
 
     [Fact]
     public async Task EjecutarAsync_ConCobroPendiente_NoAbreYMuestraDeuda()
     {
-        // Arrange
-        var repoFalso = new FakeSalidaRepository { ValorPendiente = 8000 };
-        var casoDeUso = new ProcesarSalidaUseCase(repoFalso);
+        var (casoDeUso, repo, sede) = CrearEscenario();
+        repo.ValorPendiente = 8000m;
 
-        // Act
-        var resultado = await casoDeUso.EjecutarAsync("ABC123", 95.0, Guid.NewGuid(), 1);
+        var resultado = await casoDeUso.EjecutarAsync("ABC123", 95.0, sede.Id, 1, TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.False(resultado.AbreBarrera);
         Assert.Equal("No abre: cobro pendiente de $8.000", resultado.Mensaje);
-        Assert.False(repoFalso.SalidaRegistrada);
+        Assert.False(repo.SalidaRegistrada);
     }
 
     [Fact]
-    public async Task EjecutarAsync_SaleSinCobro_AbreBarrera()
+    public async Task EjecutarAsync_MotoSinCobro_AbreBarrera()
     {
-        // Arrange: Moto XYZ12D que no genera cobro
-        var repoFalso = new FakeSalidaRepository { ValorPendiente = null, CobroPagado = false };
-        var casoDeUso = new ProcesarSalidaUseCase(repoFalso);
+        var (casoDeUso, repo, sede) = CrearEscenario();
 
-        // Act
-        var resultado = await casoDeUso.EjecutarAsync("XYZ12D", 98.0, Guid.NewGuid(), 1);
+        var resultado = await casoDeUso.EjecutarAsync("XYZ12D", 98.0, sede.Id, 1, TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.True(resultado.AbreBarrera);
         Assert.Equal("Abre: sin cobro", resultado.Mensaje);
-        Assert.True(repoFalso.SalidaRegistrada);
+        Assert.True(repo.SalidaRegistrada);
+        Assert.Equal(TipoDeVehiculo.Moto, repo.UltimoTipoRegistrado);
     }
 
     [Fact]
     public async Task EjecutarAsync_CobroPagado_AbreBarrera()
     {
-        // Arrange: Carro con cobro ya pagado
-        var repoFalso = new FakeSalidaRepository { ValorPendiente = null, CobroPagado = true };
-        var casoDeUso = new ProcesarSalidaUseCase(repoFalso);
+        var (casoDeUso, repo, sede) = CrearEscenario();
+        repo.CobroPagado = true;
 
-        // Act
-        var resultado = await casoDeUso.EjecutarAsync("ABC123", 95.0, Guid.NewGuid(), 1);
+        var resultado = await casoDeUso.EjecutarAsync("ABC123", 95.0, sede.Id, 1, TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.True(resultado.AbreBarrera);
         Assert.Equal("Abre: cobro pagado", resultado.Mensaje);
-        Assert.True(repoFalso.SalidaRegistrada);
+        Assert.True(repo.SalidaRegistrada);
+    }
+
+    [Fact]
+    public async Task EjecutarAsync_PlacaManualDiplomaticaPagada_AbreBarreraSinExigirFormatoEstandar()
+    {
+        var (casoDeUso, repo, sede) = CrearEscenario();
+        repo.CobroPagado = true;
+
+        var resultado = await casoDeUso.EjecutarAsync("CD1234", 100.0, sede.Id, 1, TestContext.Current.CancellationToken);
+
+        Assert.True(resultado.AbreBarrera);
+        Assert.Equal("Abre: cobro pagado", resultado.Mensaje);
+        Assert.True(repo.SalidaRegistrada);
+        Assert.Equal("CD1234", repo.UltimaPlacaRegistrada?.Valor);
+        Assert.Equal(TipoDeVehiculo.NoClasificado, repo.UltimoTipoRegistrado);
     }
 }

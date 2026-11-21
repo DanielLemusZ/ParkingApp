@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Identity
 @using ParkingApp.Infraestructura.Identidad
 @inject SignInManager<Usuario> Sesiones
+@inject UserManager<Usuario> Usuarios
 @inject NavigationManager Navegacion
 
 @*
@@ -61,8 +62,9 @@
     {
         // lockoutOnFailure: true hace que cada contraseña incorrecta sume un intento fallido. Al 5.º, Identity
         // bloquea la cuenta (criterio 7). isPersistent: false: la cookie se borra al cerrar el navegador.
+        var correo = Entrada.Correo!.Trim();
         var resultado = await Sesiones.PasswordSignInAsync(
-            Entrada.Correo!.Trim(),
+            correo,
             Entrada.Contrasena!,
             isPersistent: false,
             lockoutOnFailure: true);
@@ -73,10 +75,23 @@
             return;
         }
 
+        // Un usuario desactivado por el administrador también llega como bloqueado (#68): su bloqueo no tiene fin.
+        if (resultado.IsLockedOut)
+        {
+            mensaje = await EstaDesactivadoAsync(correo)
+                ? "Tu usuario está desactivado. Habla con el administrador."
+                : "Cuenta bloqueada temporalmente. Vuelve a intentarlo en 5 minutos.";
+            return;
+        }
+
         // No se dice si falló el correo o la contraseña: así nadie puede averiguar qué correos tienen cuenta.
-        mensaje = resultado.IsLockedOut
-            ? "Cuenta bloqueada temporalmente. Vuelve a intentarlo en 5 minutos."
-            : "Correo o contraseña incorrectos.";
+        mensaje = "Correo o contraseña incorrectos.";
+    }
+
+    private async Task<bool> EstaDesactivadoAsync(string correo)
+    {
+        var usuario = await Usuarios.FindByNameAsync(correo);
+        return usuario is not null && AdministrarUsuarios.EstaDesactivado(usuario.LockoutEnd);
     }
 
     // Solo se vuelve a direcciones de esta misma aplicación. Sin esta revisión, un enlace como

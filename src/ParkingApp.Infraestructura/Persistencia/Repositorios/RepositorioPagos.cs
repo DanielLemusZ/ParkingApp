@@ -49,6 +49,13 @@ internal sealed class RepositorioPagos : IRepositorioPagos
         }
     }
 
+    public Task<bool> ExistenDelOperadorAsync(string operador, CancellationToken cancelacion = default)
+    {
+        return contexto.Pagos
+            .AsNoTracking()
+            .AnyAsync(pago => pago.Operador == operador, cancelacion);
+    }
+
     // PostgreSQL responde con el código 23505 cuando se viola una restricción única.
     private static bool EsPagoDuplicado(DbUpdateException error)
     {

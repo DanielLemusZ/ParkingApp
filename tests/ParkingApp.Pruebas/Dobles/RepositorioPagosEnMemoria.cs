@@ -39,6 +39,19 @@ internal sealed class RepositorioPagosEnMemoria : IRepositorioPagos
     /// <summary>
     /// Guarda un pago como si lo hubiera registrado otra solicitud, para simular un doble clic.
     /// </summary>
+    public Task<bool> ExistenDelOperadorAsync(string operador, CancellationToken cancelacion = default)
+    {
+        foreach (var pago in pagos)
+        {
+            if (pago.Operador == operador)
+            {
+                return Task.FromResult(true);
+            }
+        }
+
+        return Task.FromResult(false);
+    }
+
     public void AgregarDeOtraSolicitud(Pago pago)
     {
         pagos.Add(pago);

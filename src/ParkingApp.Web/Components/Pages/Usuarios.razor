@@ -1,0 +1,362 @@
+@page "/usuarios"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@inject IServiceScopeFactory FabricaDeAlcances
+
+<PageTitle>Usuarios</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Usuarios</MudText>
+<MudText Class="mb-4">Crea usuarios y administra su rol, su contraseña y su acceso. Elige uno de la lista para ver sus acciones.</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="7">
+        <MudPaper Class="pa-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudTextField T="string" Label="Buscar por correo" @bind-Value="busqueda" Immediate="true"
+                              DebounceInterval="300" OnDebounceIntervalElapsed="BuscarAsync"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" />
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="CargarAsync" aria-label="Actualizar" />
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="NuevoUsuario">
+                    Nuevo usuario
+                </MudButton>
+            </MudStack>
+            <MudTable Items="usuarios" Dense="true" Hover="true" T="UsuarioAdministrado"
+                      OnRowClick="@(fila => Elegir(fila.Item))" RowClassFunc="@ClaseDeFila">
+                <HeaderContent>
+                    <MudTh>Correo</MudTh>
+                    <MudTh>Rol</MudTh>
+                    <MudTh>Estado</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Correo">@context.Correo</MudTd>
+                    <MudTd DataLabel="Rol">@context.Rol</MudTd>
+                    <MudTd DataLabel="Estado">
+                        <MudChip T="string" Size="Size.Small" Color="@ColorDe(context.Estado)">@NombreDe(context.Estado)</MudChip>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>No hay usuarios@(string.IsNullOrWhiteSpace(busqueda) ? string.Empty : " con ese correo").</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="5">
+        <MudPaper Class="pa-4">
+            @if (elegido is null)
+            {
+                <MudText Typo="Typo.h6" GutterBottom="true">Nuevo usuario</MudText>
+                <MudTextField T="string" Label="Correo" @bind-Value="correoNuevo" InputType="InputType.Email" />
+                <MudSelect T="string" Label="Rol" @bind-Value="rolNuevo">
+                    @foreach (var rol in Roles.Todos)
+                    {
+                        <MudSelectItem T="string" Value="@rol">@rol</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField T="string" Label="Contraseña inicial" @bind-Value="contrasenaNueva" InputType="InputType.Password"
+                              HelperText="Al menos 8 caracteres, con una mayúscula, una minúscula, un número y un símbolo." />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" StartIcon="@Icons.Material.Filled.PersonAdd"
+                           Disabled="trabajando" OnClick="CrearAsync">
+                    Crear usuario
+                </MudButton>
+            }
+            else
+            {
+                <MudText Typo="Typo.h6" GutterBottom="true">@elegido.Correo</MudText>
+                <MudText><b>Rol:</b> @elegido.Rol</MudText>
+                <MudText Class="mb-2"><b>Estado:</b> @NombreDe(elegido.Estado)</MudText>
+
+                @if (EsElDeLaSesion)
+                {
+                    @* La regla la aplica el caso de uso; aquí solo se evita mostrar acciones que se rechazarían. *@
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                        Es tu usuario: no puedes cambiarte el rol, desactivarte ni borrarte. Para cambiar tu contraseña,
+                        usa <i>Cambiar contraseña</i> en el menú de tu cuenta.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.End">
+                        <MudSelect T="string" Label="Rol" @bind-Value="rolElegido">
+                            @foreach (var rol in Roles.Todos)
+                            {
+                                <MudSelectItem T="string" Value="@rol">@rol</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Variant="Variant.Outlined" Disabled="trabajando" OnClick="CambiarRolAsync">Cambiar rol</MudButton>
+                    </MudStack>
+
+                    @* Restablecer cierra las sesiones del usuario: para el propio administrador está Cambiar contraseña. *@
+                    <MudStack Row="true" AlignItems="AlignItems.End" Class="mt-2">
+                        <MudTextField T="string" Label="Contraseña nueva" @bind-Value="contrasenaRestablecida" InputType="InputType.Password" />
+                        <MudButton Variant="Variant.Outlined" Disabled="trabajando" OnClick="RestablecerContrasenaAsync">Restablecer</MudButton>
+                    </MudStack>
+                }
+
+                <MudStack Row="true" Wrap="Wrap.Wrap" Class="mt-4">
+                    @if (elegido.Estado == EstadoDeUsuario.Bloqueado)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.LockOpen"
+                                   Disabled="trabajando" OnClick="DesbloquearAsync">
+                            Desbloquear
+                        </MudButton>
+                    }
+
+                    @if (elegido.Estado == EstadoDeUsuario.Desactivado)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.PersonOutline"
+                                   Disabled="trabajando" OnClick="ReactivarAsync">
+                            Reactivar
+                        </MudButton>
+                    }
+                    else if (!EsElDeLaSesion)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Warning" StartIcon="@Icons.Material.Filled.PersonOff"
+                                   Disabled="trabajando" OnClick="DesactivarAsync">
+                            Desactivar
+                        </MudButton>
+                    }
+
+                    @if (!EsElDeLaSesion)
+                    {
+                        @if (confirmarBorrado)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Error" Disabled="trabajando" OnClick="BorrarAsync">
+                                Confirmar borrado
+                            </MudButton>
+                            <MudButton Variant="Variant.Text" OnClick="CancelarBorrado">Cancelar</MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
+                                       OnClick="PedirConfirmacionDeBorrado">
+                                Borrar
+                            </MudButton>
+                        }
+                    }
+                </MudStack>
+            }
+
+            @if (resultado is not null)
+            {
+                <MudAlert Class="mt-4" Severity="@(resultado.Exito ? Severity.Success : Severity.Warning)">@resultado.Motivo</MudAlert>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private IReadOnlyList<UsuarioAdministrado> usuarios = Array.Empty<UsuarioAdministrado>();
+    private string? busqueda;
+    private UsuarioAdministrado? elegido;
+    private ResultadoDeAdministracion? resultado;
+    private bool trabajando;
+    private bool confirmarBorrado;
+    private string? correoDeLaSesion;
+
+    // Formulario del usuario nuevo.
+    private string? correoNuevo;
+    private string rolNuevo = Roles.Operador;
+    private string? contrasenaNueva;
+
+    // Acciones sobre el usuario elegido.
+    private string rolElegido = Roles.Operador;
+    private string? contrasenaRestablecida;
+
+    // El usuario de la sesión, que llega en cascada desde AddCascadingAuthenticationState.
+    [CascadingParameter]
+    private Task<AuthenticationState> EstadoDeSesion { get; set; } = default!;
+
+    private bool EsElDeLaSesion => elegido is not null
+        && string.Equals(elegido.Correo, correoDeLaSesion, StringComparison.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var sesion = await EstadoDeSesion;
+        correoDeLaSesion = sesion.User.Identity?.Name;
+        await CargarAsync();
+    }
+
+    private void NuevoUsuario()
+    {
+        elegido = null;
+        resultado = null;
+        confirmarBorrado = false;
+    }
+
+    private void Elegir(UsuarioAdministrado? usuario)
+    {
+        if (usuario is null)
+        {
+            return;
+        }
+
+        elegido = usuario;
+        rolElegido = usuario.Rol;
+        contrasenaRestablecida = null;
+        resultado = null;
+        confirmarBorrado = false;
+    }
+
+    private async Task CrearAsync()
+    {
+        await EjecutarAsync(administrar => administrar.CrearAsync(correoNuevo, rolNuevo, contrasenaNueva));
+
+        if (resultado is not null && resultado.Exito)
+        {
+            correoNuevo = null;
+            contrasenaNueva = null;
+        }
+    }
+
+    private Task CambiarRolAsync()
+    {
+        var id = IdDelElegido();
+        return EjecutarAsync(administrar => administrar.CambiarRolAsync(id, rolElegido, CorreoDeLaSesion()));
+    }
+
+    private async Task RestablecerContrasenaAsync()
+    {
+        var id = IdDelElegido();
+        await EjecutarAsync(administrar => administrar.RestablecerContrasenaAsync(id, contrasenaRestablecida));
+
+        if (resultado is not null && resultado.Exito)
+        {
+            contrasenaRestablecida = null;
+        }
+    }
+
+    private Task DesactivarAsync()
+    {
+        var id = IdDelElegido();
+        return EjecutarAsync(administrar => administrar.DesactivarAsync(id, CorreoDeLaSesion()));
+    }
+
+    private Task ReactivarAsync()
+    {
+        var id = IdDelElegido();
+        return EjecutarAsync(administrar => administrar.ReactivarAsync(id));
+    }
+
+    private Task DesbloquearAsync()
+    {
+        var id = IdDelElegido();
+        return EjecutarAsync(administrar => administrar.DesbloquearAsync(id));
+    }
+
+    private Task BorrarAsync()
+    {
+        var id = IdDelElegido();
+        return EjecutarAsync(administrar => administrar.BorrarAsync(id, CorreoDeLaSesion()));
+    }
+
+    private void PedirConfirmacionDeBorrado()
+    {
+        confirmarBorrado = true;
+    }
+
+    private void CancelarBorrado()
+    {
+        confirmarBorrado = false;
+    }
+
+    // Cada acción usa su propio alcance, como las demás pantallas, y después recarga la lista para mostrar el estado nuevo.
+    private async Task EjecutarAsync(Func<AdministrarUsuarios, Task<ResultadoDeAdministracion>> accion)
+    {
+        if (trabajando)
+        {
+            return;
+        }
+
+        trabajando = true;
+
+        try
+        {
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var administrar = alcance.ServiceProvider.GetRequiredService<AdministrarUsuarios>();
+            resultado = await accion(administrar);
+            confirmarBorrado = false;
+
+            await CargarAsync();
+            ActualizarElegido();
+        }
+        finally
+        {
+            trabajando = false;
+        }
+    }
+
+    private Task BuscarAsync(string texto)
+    {
+        busqueda = texto;
+        return CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var administrar = alcance.ServiceProvider.GetRequiredService<AdministrarUsuarios>();
+        usuarios = await administrar.ListarAsync(busqueda);
+    }
+
+    // Después de una acción, el usuario elegido se vuelve a tomar de la lista para ver su rol y su estado nuevos.
+    // Si ya no está, porque se borró, se vuelve al formulario del usuario nuevo.
+    private void ActualizarElegido()
+    {
+        if (elegido is null)
+        {
+            return;
+        }
+
+        UsuarioAdministrado? actualizado = null;
+
+        foreach (var usuario in usuarios)
+        {
+            if (usuario.Id == elegido.Id)
+            {
+                actualizado = usuario;
+            }
+        }
+
+        elegido = actualizado;
+
+        if (actualizado is not null)
+        {
+            rolElegido = actualizado.Rol;
+        }
+    }
+
+    private Guid IdDelElegido()
+    {
+        return elegido?.Id ?? throw new InvalidOperationException("No hay un usuario elegido.");
+    }
+
+    private string CorreoDeLaSesion()
+    {
+        return correoDeLaSesion ?? throw new InvalidOperationException("No hay un usuario con sesión.");
+    }
+
+    private string ClaseDeFila(UsuarioAdministrado usuario, int indice)
+    {
+        return usuario.Id == elegido?.Id ? "mud-selected-item cursor-pointer" : "cursor-pointer";
+    }
+
+    private static string NombreDe(EstadoDeUsuario estado)
+    {
+        return estado switch
+        {
+            EstadoDeUsuario.Bloqueado => "Bloqueado",
+            EstadoDeUsuario.Desactivado => "Desactivado",
+            _ => "Activo",
+        };
+    }
+
+    private static Color ColorDe(EstadoDeUsuario estado)
+    {
+        return estado switch
+        {
+            EstadoDeUsuario.Bloqueado => Color.Warning,
+            EstadoDeUsuario.Desactivado => Color.Default,
+            _ => Color.Success,
+        };
+    }
+}

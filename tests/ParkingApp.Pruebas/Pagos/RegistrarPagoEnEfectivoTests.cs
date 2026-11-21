@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 using ParkingApp.Aplicacion.Pagos;
 using ParkingApp.Dominio.Accesos;
 using ParkingApp.Dominio.Cobros;
@@ -20,6 +22,7 @@ public class RegistrarPagoEnEfectivoTests
     private readonly CarrilDeEntradaDePrueba entrada;
     private readonly RepositorioPagosEnMemoria pagos = new RepositorioPagosEnMemoria();
     private readonly FacturacionDePrueba facturacion = new FacturacionDePrueba();
+    private readonly RegistroDePrueba<RegistrarPagoEnEfectivo> registro = new RegistroDePrueba<RegistrarPagoEnEfectivo>();
 
     public RegistrarPagoEnEfectivoTests()
     {
@@ -66,6 +69,27 @@ public class RegistrarPagoEnEfectivoTests
     }
 
     [Fact]
+    public async Task Si_la_factura_falla_el_pago_queda_registrado_y_la_falla_queda_en_el_registro()
+    {
+        // Criterio 4 del #24.
+        await entrada.IngresarAsync("ABC123");
+        var cobro = entrada.Cobros.Cobros[0];
+        facturacion.ProveedorCaido = true;
+
+        var resultado = await PagarAsync(cobro.Id, Guid.NewGuid());
+
+        Assert.True(resultado.Registrado);
+        Assert.Equal("Pago registrado: $8.000", resultado.Motivo);
+        Assert.Equal(EstadoDeCobro.Pagado, cobro.Estado);
+        Assert.Single(pagos.Pagos);
+
+        var falla = Assert.Single(registro.Entradas);
+        Assert.Equal(LogLevel.Error, falla.Nivel);
+        Assert.IsType<HttpRequestException>(falla.Error);
+        Assert.Contains("El pago quedó registrado", falla.Mensaje, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Carro_que_pago_a_las_1100_reingresa_a_las_1500_sin_cobro_y_con_pase_vigente()
     {
         await entrada.IngresarAsync("ABC123");
@@ -89,7 +113,7 @@ public class RegistrarPagoEnEfectivoTests
     {
         var lunes = new CarrilDeEntradaDePrueba(LunesALas0800);
         await lunes.IngresarAsync("ABC123");
-        var caja = new RegistrarPagoEnEfectivo(lunes.Cobros, pagos, facturacion, lunes.Sede, lunes.Reloj);
+        var caja = new RegistrarPagoEnEfectivo(lunes.Cobros, pagos, facturacion, lunes.Sede, lunes.Reloj, registro);
         await caja.EjecutarAsync(lunes.Cobros.Cobros[0].Id, Guid.NewGuid(), "caja", TestContext.Current.CancellationToken);
 
         // Martes 17 a las 07:00 en Bogotá = 12:00 UTC: ya es otro día operativo.
@@ -180,7 +204,7 @@ public class RegistrarPagoEnEfectivoTests
 
     private Task<ResultadoDePago> PagarAsync(Guid cobroId, Guid referencia)
     {
-        var caja = new RegistrarPagoEnEfectivo(entrada.Cobros, pagos, facturacion, entrada.Sede, entrada.Reloj);
+        var caja = new RegistrarPagoEnEfectivo(entrada.Cobros, pagos, facturacion, entrada.Sede, entrada.Reloj, registro);
         return caja.EjecutarAsync(cobroId, referencia, "caja", TestContext.Current.CancellationToken);
     }
 }

@@ -1,0 +1,14 @@
+@inject NavigationManager Navegacion
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Se guarda la página que quería abrir (por ejemplo /caja) para volver ahí después de iniciar sesión.
+        var destino = "/" + Navegacion.ToBaseRelativePath(Navegacion.Uri);
+        var direccion = $"{ParkingApp.Infraestructura.Identidad.ServiciosDeIdentidad.RutaIniciarSesion}?ReturnUrl={Uri.EscapeDataString(destino)}";
+
+        // forceLoad: la página de inicio de sesión es estática, así que se pide con una solicitud HTTP nueva y no
+        // dentro de la conexión interactiva.
+        Navegacion.NavigateTo(direccion, forceLoad: true);
+    }
+}

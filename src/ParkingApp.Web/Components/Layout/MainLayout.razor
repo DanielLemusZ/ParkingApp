@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@using ParkingApp.Web.Cuenta
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -9,11 +10,35 @@
     <MudAppBar Elevation="1">
         <MudButton Href="/" Color="Color.Inherit" Class="mud-typography-h6">ParkingApp</MudButton>
         <MudSpacer />
-        <MudButton Href="/carril" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Garage">Carril</MudButton>
-        <MudButton Href="/caja" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.PointOfSale">Caja</MudButton>
-        <MudButton Href="/tarifas" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.AttachMoney">Tarifas</MudButton>
-        <MudButton Href="/consultas" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Assessment">Consultas</MudButton>
-        <MudButton Href="/configuracion" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Settings">Configuración</MudButton>
+
+        @* El menú muestra solo las opciones del rol (criterio 6). Ocultar no es proteger: cada página tiene su
+           [Authorize], y es eso lo que impide entrar escribiendo la dirección. *@
+        <AuthorizeView Context="sesion">
+            @foreach (var opcion in MenuPorRol.Para(RolesDe(sesion.User)))
+            {
+                <MudButton Href="@opcion.Ruta" Color="Color.Inherit" StartIcon="@IconoDe(opcion.Ruta)">@opcion.Texto</MudButton>
+            }
+        </AuthorizeView>
+
+        @* AuthorizeView muestra una parte u otra según haya sesión. "context.User" es el usuario de la cookie. *@
+        <AuthorizeView>
+            <Authorized>
+                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+                <MudButton Href="/cuenta/cambiar-contrasena" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.AccountCircle">
+                    @context.User.Identity?.Name
+                </MudButton>
+                @* Cerrar sesión es un POST con token antiforgery: otro sitio no puede cerrar la sesión con un enlace. *@
+                <form action="@EndpointsDeCuenta.RutaCerrarSesion" method="post">
+                    <AntiforgeryToken />
+                    <MudButton ButtonType="ButtonType.Submit" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Logout">
+                        Cerrar sesión
+                    </MudButton>
+                </form>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Href="/cuenta/iniciar-sesion" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Login">Iniciar sesión</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
     </MudAppBar>
     <MudMainContent Class="pt-16 px-4">
         @Body
@@ -25,3 +50,25 @@
     <a href="." class="reload">Recargar</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    // Los roles viajan en la cookie como claims de tipo "role"; Identity los agregó al iniciar sesión.
+    private static IEnumerable<string> RolesDe(System.Security.Claims.ClaimsPrincipal usuario)
+    {
+        return usuario.FindAll(System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value);
+    }
+
+    // El ícono es asunto de la pantalla, no de la regla de roles: por eso vive aquí y no en MenuPorRol.
+    private static string IconoDe(string ruta)
+    {
+        return ruta switch
+        {
+            "/carril" => Icons.Material.Filled.Garage,
+            "/caja" => Icons.Material.Filled.PointOfSale,
+            "/tarifas" => Icons.Material.Filled.AttachMoney,
+            "/consultas" => Icons.Material.Filled.Assessment,
+            "/configuracion" => Icons.Material.Filled.Settings,
+            _ => Icons.Material.Filled.ChevronRight,
+        };
+    }
+}

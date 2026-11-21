@@ -10,14 +10,24 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["ParkingApp.Web.styles.css"]" />
     <ImportMap />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="ModoDeLaPagina" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="ModoDeLaPagina" />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
 </body>
 
 </html>
+
+@code {
+    // Cada página llega primero por HTTP. Si la página tiene [ExcludeFromInteractiveRouting] (las de cuenta), se
+    // entrega estática: un formulario clásico que hace POST, cuya respuesta puede traer la cookie de sesión.
+    // Las demás son interactivas (Blazor Server sobre SignalR), como antes.
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private IComponentRenderMode? ModoDeLaPagina => HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+}

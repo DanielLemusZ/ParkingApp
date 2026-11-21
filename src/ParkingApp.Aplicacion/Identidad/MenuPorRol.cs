@@ -1,0 +1,40 @@
+namespace ParkingApp.Aplicacion.Identidad;
+
+/// <summary>
+/// Decide qué opciones del menú ve cada rol (F-10): el Administrador ve todo; el Operador, solo el carril y la caja.
+/// Las pantallas y la API aplican la misma regla con <c>[Authorize(Roles = ...)]</c>; el menú solo evita mostrar
+/// opciones que el usuario no puede abrir.
+/// </summary>
+public static class MenuPorRol
+{
+    private static readonly IReadOnlyList<string> OperadorOAdministrador = [Roles.Operador, Roles.Administrador];
+    private static readonly IReadOnlyList<string> SoloAdministrador = [Roles.Administrador];
+
+    /// <summary>
+    /// Todas las opciones del menú, en el orden en que se muestran.
+    /// </summary>
+    public static IReadOnlyList<OpcionDelMenu> Opciones { get; } =
+    [
+        new OpcionDelMenu("Carril", "/carril", OperadorOAdministrador),
+        new OpcionDelMenu("Caja", "/caja", OperadorOAdministrador),
+        new OpcionDelMenu("Tarifas", "/tarifas", SoloAdministrador),
+        new OpcionDelMenu("Consultas", "/consultas", SoloAdministrador),
+        new OpcionDelMenu("Configuración", "/configuracion", SoloAdministrador),
+    ];
+
+    /// <summary>
+    /// Opciones del menú que puede ver un usuario con los roles dados.
+    /// </summary>
+    /// <param name="roles">Roles del usuario que inició sesión.</param>
+    /// <returns>Las opciones permitidas, en el orden del menú; ninguna si el usuario no tiene un rol conocido.</returns>
+    public static IReadOnlyList<OpcionDelMenu> Para(IEnumerable<string> roles)
+    {
+        ArgumentNullException.ThrowIfNull(roles);
+
+        var delUsuario = roles.ToHashSet(StringComparer.Ordinal);
+
+        return Opciones
+            .Where(opcion => opcion.RolesPermitidos.Any(delUsuario.Contains))
+            .ToList();
+    }
+}

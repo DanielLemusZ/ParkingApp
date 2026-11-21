@@ -1,4 +1,5 @@
 @page "/configuracion"
+@attribute [Authorize(Roles = Roles.Administrador)]
 @using ParkingApp.Aplicacion.Configuracion
 @inject IServiceScopeFactory FabricaDeAlcances
 

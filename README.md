@@ -61,7 +61,7 @@ dotnet run --project src/ParkingApp.Web    # levanta la aplicación
 
 **Requisito:** Docker Desktop abierto (en Windows, con WSL 2).
 
-1. **La primera vez:** copia `.env.example` como `.env` y cambia la contraseña. Si en tu equipo ya usas el puerto 5432, cambia también `POSTGRES_PORT`.
+1. **La primera vez:** copia `.env.example` como `.env` y cambia las contraseñas: la de la base de datos y las de los usuarios iniciales (ver [Usuarios y roles](#usuarios-y-roles)). Si en tu equipo ya usas el puerto 5432, cambia también `POSTGRES_PORT`.
 
    ```powershell
    Copy-Item .env.example .env
@@ -98,6 +98,41 @@ dotnet ef migrations script --idempotent --project src/ParkingApp.Infraestructur
 ```
 
 **Sin Docker:** instala PostgreSQL 18.7 nativo, con el mismo puerto, usuario, contraseña y base de tu `.env`.
+
+### Usuarios y roles
+
+Todas las pantallas y la API piden iniciar sesión, en `/cuenta/iniciar-sesion`. No hay registro público: los usuarios iniciales los crea la aplicación al arrancar.
+
+**Usuarios iniciales.** Al arrancar, la aplicación crea un usuario por rol con estas variables de `.env`, si todavía no existen:
+
+| Variable | Para qué |
+|---|---|
+| `ADMIN_CORREO` y `ADMIN_CONTRASENA` | Usuario con el rol `Administrador` |
+| `OPERADOR_CORREO` y `OPERADOR_CONTRASENA` | Usuario con el rol `Operador` |
+
+- La contraseña necesita al menos 8 caracteres, con una mayúscula, una minúscula, un número y un símbolo.
+- La terminal dice qué pasó con cada usuario: *creado*, *ya existía* o *no se creó* y por qué.
+- Si el usuario ya existe, el arranque **no lo cambia**. Cambiar la contraseña en `.env` después no cambia la del usuario: para eso está *Cambiar contraseña*, en el menú de la cuenta.
+- Si olvidaste la contraseña de un usuario inicial, bórralo y reinicia la aplicación, que lo vuelve a crear con la de `.env`:
+
+  ```powershell
+  docker compose exec postgres psql -U parkingapp -d parkingapp -c "delete from asp_net_users where email = 'admin@parkingapp.local';"
+  ```
+
+**Qué puede usar cada rol:**
+
+| Rol | Pantallas | API |
+|---|---|---|
+| `Operador` | Carril y caja | `api/carril` y `api/caja` |
+| `Administrador` | Todo: carril, caja, tarifas, consultas y configuración | `api/carril`, `api/caja` y `api/tarifas` |
+
+En cada pago queda el correo del usuario que lo registró en la caja.
+
+- El menú muestra solo las opciones del rol. Si un operador escribe la dirección de otra pantalla, ve *Acceso denegado*.
+- Sin sesión, la API responde **401**; con un rol que no alcanza, **403**.
+- **Bloqueo:** después de 5 contraseñas incorrectas seguidas, la cuenta queda bloqueada 5 minutos y se muestra *Cuenta bloqueada temporalmente*.
+
+**Probar la API desde Swagger:** inicia sesión en la aplicación y abre `/swagger` en el mismo navegador. Swagger envía la cookie de la sesión, así que cada endpoint responde según tu rol.
 
 ---
 

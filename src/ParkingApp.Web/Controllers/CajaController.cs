@@ -1,24 +1,23 @@
 using System.ComponentModel.DataAnnotations;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using ParkingApp.Aplicacion.Cobros;
+using ParkingApp.Aplicacion.Identidad;
 using ParkingApp.Aplicacion.Pagos;
 
 namespace ParkingApp.Web.Controllers;
 
 /// <summary>
 /// API de la caja: lista los cobros pendientes y registra su pago en efectivo (F-04).
+/// La usan el Operador y el Administrador (F-10): sin sesión responde 401.
 /// </summary>
+[Authorize(Roles = Roles.OperadorOAdministrador)]
 [ApiController]
 [Route("api/caja")]
 public sealed class CajaController : ControllerBase
 {
-    /// <summary>
-    /// Operador que queda en el pago mientras no haya usuarios. La historia de F-10 lo cambia por el usuario que inició sesión.
-    /// </summary>
-    public const string OperadorSinIdentificar = "caja";
-
     private readonly ListarCobrosPendientes listarCobrosPendientes;
     private readonly RegistrarPagoEnEfectivo registrarPagoEnEfectivo;
 
@@ -75,7 +74,10 @@ public sealed class CajaController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
-        var resultado = await registrarPagoEnEfectivo.EjecutarAsync(cobroId, referencia, OperadorSinIdentificar, cancelacion);
+        // El operador del pago es el usuario de la sesión (su correo). [Authorize] garantiza que hay uno.
+        var operador = User.Identity?.Name ?? throw new InvalidOperationException("La solicitud no tiene un usuario con sesión.");
+
+        var resultado = await registrarPagoEnEfectivo.EjecutarAsync(cobroId, referencia, operador, cancelacion);
         return resultado;
     }
 }

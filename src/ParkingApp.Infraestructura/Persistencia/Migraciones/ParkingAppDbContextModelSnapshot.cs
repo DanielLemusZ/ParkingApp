@@ -472,6 +472,57 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("ParkingApp.Dominio.Pagos.Pago", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CobroId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cobro_id");
+
+                    b.Property<DateTimeOffset>("FechaHora")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_hora");
+
+                    b.Property<string>("Medio")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("medio");
+
+                    b.Property<string>("Operador")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("operador");
+
+                    b.Property<Guid>("Referencia")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referencia");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pagos");
+
+                    b.HasIndex("CobroId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_pagos_cobro");
+
+                    b.HasIndex("Referencia")
+                        .IsUnique()
+                        .HasDatabaseName("ux_pagos_referencia");
+
+                    b.ToTable("pagos", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_pagos_valor_positivo", "valor > 0");
+                        });
+                });
+
             modelBuilder.Entity("ParkingApp.Infraestructura.Identidad.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -635,6 +686,16 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_cobros_tarifas_tarifa_id");
+                });
+
+            modelBuilder.Entity("ParkingApp.Dominio.Pagos.Pago", b =>
+                {
+                    b.HasOne("ParkingApp.Dominio.Cobros.Cobro", null)
+                        .WithMany()
+                        .HasForeignKey("CobroId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pagos_cobros_cobro_id");
                 });
 #pragma warning restore 612, 618
         }

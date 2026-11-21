@@ -3,8 +3,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using ParkingApp.Aplicacion.Accesos;
 using ParkingApp.Aplicacion.Accesos.Validaciones;
+using ParkingApp.Aplicacion.Cobros;
 using ParkingApp.Aplicacion.Configuracion;
 using ParkingApp.Aplicacion.Identidad;
+using ParkingApp.Aplicacion.Pagos;
 using ParkingApp.Aplicacion.Reportes;
 using ParkingApp.Aplicacion.Tarifas;
 
@@ -36,6 +38,8 @@ public static class ServiciosDeAplicacion
         servicios.AddScoped<IServicioConsultas, ConsultarEventos>();
         servicios.AddScoped<ConfigurarSede>();
         servicios.AddScoped<CrearUsuariosIniciales>();
+        servicios.AddScoped<ListarCobrosPendientes>();
+        servicios.AddScoped<RegistrarPagoEnEfectivo>();
 
         return servicios;
     }

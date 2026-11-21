@@ -12,8 +12,8 @@ using ParkingApp.Infraestructura.Persistencia;
 namespace ParkingApp.Infraestructura.Persistencia.Migraciones
 {
     [DbContext(typeof(ParkingAppDbContext))]
-    [Migration("20261121032943_AgregarIdentidad")]
-    partial class AgregarIdentidad
+    [Migration("20261120210642_AgregarPagos")]
+    partial class AgregarPagos
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,184 +24,6 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("text")
-                        .HasColumnName("concurrency_stamp");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("name");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("normalized_name");
-
-                    b.HasKey("Id")
-                        .HasName("pk_asp_net_roles");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex");
-
-                    b.ToTable("asp_net_roles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("6f1d2c3a-0a4b-4c1e-9b7a-1f2e3d4c5b01"),
-                            ConcurrencyStamp = "b3e1a6f2-5c47-4d0e-8a91-0c2f7d6e5a01",
-                            Name = "Operador",
-                            NormalizedName = "OPERADOR"
-                        },
-                        new
-                        {
-                            Id = new Guid("6f1d2c3a-0a4b-4c1e-9b7a-1f2e3d4c5b02"),
-                            ConcurrencyStamp = "b3e1a6f2-5c47-4d0e-8a91-0c2f7d6e5a02",
-                            Name = "Administrador",
-                            NormalizedName = "ADMINISTRADOR"
-                        });
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("text")
-                        .HasColumnName("claim_type");
-
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("text")
-                        .HasColumnName("claim_value");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("role_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_asp_net_role_claims");
-
-                    b.HasIndex("RoleId")
-                        .HasDatabaseName("ix_asp_net_role_claims_role_id");
-
-                    b.ToTable("asp_net_role_claims", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ClaimType")
-                        .HasColumnType("text")
-                        .HasColumnName("claim_type");
-
-                    b.Property<string>("ClaimValue")
-                        .HasColumnType("text")
-                        .HasColumnName("claim_value");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_asp_net_user_claims");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_asp_net_user_claims_user_id");
-
-                    b.ToTable("asp_net_user_claims", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
-                {
-                    b.Property<string>("LoginProvider")
-                        .HasColumnType("text")
-                        .HasColumnName("login_provider");
-
-                    b.Property<string>("ProviderKey")
-                        .HasColumnType("text")
-                        .HasColumnName("provider_key");
-
-                    b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("text")
-                        .HasColumnName("provider_display_name");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("LoginProvider", "ProviderKey")
-                        .HasName("pk_asp_net_user_logins");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_asp_net_user_logins_user_id");
-
-                    b.ToTable("asp_net_user_logins", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("role_id");
-
-                    b.HasKey("UserId", "RoleId")
-                        .HasName("pk_asp_net_user_roles");
-
-                    b.HasIndex("RoleId")
-                        .HasDatabaseName("ix_asp_net_user_roles_role_id");
-
-                    b.ToTable("asp_net_user_roles", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("LoginProvider")
-                        .HasColumnType("text")
-                        .HasColumnName("login_provider");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<string>("Value")
-                        .HasColumnType("text")
-                        .HasColumnName("value");
-
-                    b.HasKey("UserId", "LoginProvider", "Name")
-                        .HasName("pk_asp_net_user_tokens");
-
-                    b.ToTable("asp_net_user_tokens", (string)null);
-                });
 
             modelBuilder.Entity("ParkingApp.Dominio.Accesos.EventoDeAcceso", b =>
                 {
@@ -475,142 +297,55 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         });
                 });
 
-            modelBuilder.Entity("ParkingApp.Infraestructura.Identidad.Usuario", b =>
+            modelBuilder.Entity("ParkingApp.Dominio.Pagos.Pago", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("access_failed_count");
+                    b.Property<Guid>("CobroId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cobro_id");
 
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("text")
-                        .HasColumnName("concurrency_stamp");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("email");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("boolean")
-                        .HasColumnName("email_confirmed");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("lockout_enabled");
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
+                    b.Property<DateTimeOffset>("FechaHora")
                         .HasColumnType("timestamptz")
-                        .HasColumnName("lockout_end");
+                        .HasColumnName("fecha_hora");
 
-                    b.Property<string>("NormalizedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("normalized_email");
+                    b.Property<string>("Medio")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("medio");
 
-                    b.Property<string>("NormalizedUserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("normalized_user_name");
+                    b.Property<string>("Operador")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("operador");
 
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("text")
-                        .HasColumnName("password_hash");
+                    b.Property<Guid>("Referencia")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referencia");
 
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("text")
-                        .HasColumnName("phone_number");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("boolean")
-                        .HasColumnName("phone_number_confirmed");
-
-                    b.Property<string>("SecurityStamp")
-                        .HasColumnType("text")
-                        .HasColumnName("security_stamp");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean")
-                        .HasColumnName("two_factor_enabled");
-
-                    b.Property<string>("UserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
-                        .HasColumnName("user_name");
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("valor");
 
                     b.HasKey("Id")
-                        .HasName("pk_asp_net_users");
+                        .HasName("pk_pagos");
 
-                    b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
-
-                    b.HasIndex("NormalizedUserName")
+                    b.HasIndex("CobroId")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex");
+                        .HasDatabaseName("ux_pagos_cobro");
 
-                    b.ToTable("asp_net_users", (string)null);
-                });
+                    b.HasIndex("Referencia")
+                        .IsUnique()
+                        .HasDatabaseName("ux_pagos_referencia");
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_asp_net_role_claims_asp_net_roles_role_id");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
-                {
-                    b.HasOne("ParkingApp.Infraestructura.Identidad.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_claims_asp_net_users_user_id");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
-                {
-                    b.HasOne("ParkingApp.Infraestructura.Identidad.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_logins_asp_net_users_user_id");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
-                {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_roles_asp_net_roles_role_id");
-
-                    b.HasOne("ParkingApp.Infraestructura.Identidad.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_roles_asp_net_users_user_id");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
-                {
-                    b.HasOne("ParkingApp.Infraestructura.Identidad.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_tokens_asp_net_users_user_id");
+                    b.ToTable("pagos", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_pagos_valor_positivo", "valor > 0");
+                        });
                 });
 
             modelBuilder.Entity("ParkingApp.Dominio.Accesos.EventoDeAcceso", b =>
@@ -638,6 +373,16 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_cobros_tarifas_tarifa_id");
+                });
+
+            modelBuilder.Entity("ParkingApp.Dominio.Pagos.Pago", b =>
+                {
+                    b.HasOne("ParkingApp.Dominio.Cobros.Cobro", null)
+                        .WithMany()
+                        .HasForeignKey("CobroId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pagos_cobros_cobro_id");
                 });
 #pragma warning restore 612, 618
         }

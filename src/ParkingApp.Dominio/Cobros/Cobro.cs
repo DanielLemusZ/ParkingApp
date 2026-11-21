@@ -1,5 +1,6 @@
 using ParkingApp.Dominio.Accesos;
 using ParkingApp.Dominio.Configuracion;
+using ParkingApp.Dominio.Pagos;
 
 namespace ParkingApp.Dominio.Cobros;
 
@@ -119,5 +120,42 @@ public sealed class Cobro
         }
 
         return new Cobro(placa, tipoDeVehiculo, sedeId, diaOperativo, tarifa, fechaHora);
+    }
+
+    /// <summary>
+    /// Paga el cobro: pasa de Pendiente a Pagado y crea el pago con el valor del cobro. Es la única transición válida: un cobro Pagado no se vuelve a pagar (F-04).
+    /// </summary>
+    /// <param name="medio">Medio de pago.</param>
+    /// <param name="operador">Operador que registra el pago.</param>
+    /// <param name="referencia">Referencia única de la solicitud de pago.</param>
+    /// <param name="fechaHora">Fecha y hora del pago, en UTC.</param>
+    /// <returns>El pago registrado.</returns>
+    /// <exception cref="InvalidOperationException">El cobro no está pendiente.</exception>
+    /// <exception cref="ArgumentException">
+    /// El operador está vacío o es muy largo, la referencia está vacía, o la fecha y la hora no están en UTC.
+    /// </exception>
+    public Pago Pagar(MedioDePago medio, string operador, Guid referencia, DateTimeOffset fechaHora)
+    {
+        if (Estado != EstadoDeCobro.Pendiente)
+        {
+            throw new InvalidOperationException("Solo se puede pagar un cobro pendiente.");
+        }
+
+        // Se crea el pago antes de cambiar el estado: si un dato es inválido, el cobro sigue pendiente.
+        var pago = Pago.Registrar(Id, Valor, medio, operador, referencia, fechaHora);
+        Estado = EstadoDeCobro.Pagado;
+
+        return pago;
+    }
+
+    /// <summary>
+    /// Indica si el cobro da pase vigente en un día operativo: está pagado y es de ese día (RN-03). La vigencia se calcula, sin guardar un estado Vencido.
+    /// A las 06:00 empieza otro día operativo y el pase del anterior deja de valer solo.
+    /// </summary>
+    /// <param name="diaOperativo">Día operativo que se consulta.</param>
+    /// <returns><see langword="true"/> si el cobro está pagado y es de ese día operativo.</returns>
+    public bool DaPaseVigenteEn(DateOnly diaOperativo)
+    {
+        return Estado == EstadoDeCobro.Pagado && DiaOperativo == diaOperativo;
     }
 }

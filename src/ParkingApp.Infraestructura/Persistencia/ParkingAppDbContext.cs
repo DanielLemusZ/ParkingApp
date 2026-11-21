@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ParkingApp.Dominio.Accesos;
 using ParkingApp.Dominio.Cobros;
 using ParkingApp.Dominio.Configuracion;
+using ParkingApp.Dominio.Pagos;
 using ParkingApp.Infraestructura.Identidad;
 
 namespace ParkingApp.Infraestructura.Persistencia;
@@ -43,6 +44,11 @@ public sealed class ParkingAppDbContext : IdentityDbContext<Usuario, IdentityRol
     /// Cobros de los vehículos, uno por placa, sede y día operativo.
     /// </summary>
     public DbSet<Cobro> Cobros => Set<Cobro>();
+
+    /// <summary>
+    /// Pagos de los cobros, cada uno con su referencia única.
+    /// </summary>
+    public DbSet<Pago> Pagos => Set<Pago>();
 
     /// <inheritdoc />
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

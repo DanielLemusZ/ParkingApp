@@ -27,7 +27,7 @@ public static class TextosDeCobro
     public const string CobroNoEncontrado = "Cobro no encontrado";
 
     /// <summary>
-    /// Respuesta de la caja cuando el cobro ya está pagado (D-27).
+    /// Respuesta de la caja cuando el cobro ya está pagado: solo se paga un cobro Pendiente (F-04).
     /// </summary>
     public const string CobroNoPendiente = "El cobro no está pendiente";
 

@@ -115,7 +115,7 @@ public sealed class RegistrarIngreso
         }
 
         // RN-03 y RN-04: si la placa ya tiene el cobro del día operativo, el reingreso no genera otro.
-        // Si ese cobro ya está pagado, el vehículo entra con pase vigente (D-27).
+        // Si ese cobro ya está pagado, el vehículo entra con pase vigente hasta el fin del día operativo (RN-03).
         if (await cobros.ExisteDelDiaAsync(placa, sede.Id, momento.DiaOperativo, cancelacion))
         {
             var pagado = await cobros.ExistePagadoDelDiaAsync(placa, sede.Id, momento.DiaOperativo, cancelacion);

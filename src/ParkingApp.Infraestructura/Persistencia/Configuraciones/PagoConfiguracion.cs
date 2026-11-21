@@ -39,7 +39,7 @@ internal sealed class PagoConfiguracion : IEntityTypeConfiguration<Pago>
         // datos deja guardar solo un pago, aunque las dos solicitudes lleguen a la vez.
         builder.HasIndex(pago => pago.Referencia).IsUnique().HasDatabaseName(IndiceUnicoDeReferencia);
 
-        // Dos solicitudes con referencias distintas tampoco pueden pagar dos veces el mismo cobro (D-27).
+        // Dos solicitudes con referencias distintas tampoco pueden pagar dos veces el mismo cobro: un cobro tiene a lo sumo un pago (F-04).
         builder.HasIndex(pago => pago.CobroId).IsUnique().HasDatabaseName(IndiceUnicoDelCobro);
     }
 }

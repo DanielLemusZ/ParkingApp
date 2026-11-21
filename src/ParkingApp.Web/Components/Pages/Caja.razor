@@ -120,11 +120,10 @@
             var registrarPago = alcance.ServiceProvider.GetRequiredService<RegistrarPagoEnEfectivo>();
             resultado = await registrarPago.EjecutarAsync(elegido.Id, referencia, CajaController.OperadorSinIdentificar);
 
-            if (resultado.Registrado)
-            {
-                elegido = null;
-                await CargarAsync();
-            }
+            // Se recarga con cualquier respuesta: si el pago ya estaba registrado o el cobro ya no está pendiente,
+            // ese cobro tampoco se puede pagar y no debe seguir en la lista.
+            elegido = null;
+            await CargarAsync();
         }
         finally
         {

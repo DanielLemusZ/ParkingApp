@@ -74,17 +74,20 @@ internal sealed class RepositorioCobros : IRepositorioCobros
 
     public async Task<IReadOnlyList<Cobro>> ListarPendientesAsync(Guid sedeId, string placaContiene, CancellationToken cancelacion = default)
     {
-        var pendientes = await contexto.Cobros
+        var consulta = contexto.Cobros
             .AsNoTracking()
-            .Where(cobro => cobro.SedeId == sedeId && cobro.Estado == EstadoDeCobro.Pendiente)
+            .Where(cobro => cobro.SedeId == sedeId && cobro.Estado == EstadoDeCobro.Pendiente);
+
+        if (!string.IsNullOrEmpty(placaContiene))
+        {
+            // La placa es un value object guardado como texto: el cast le dice a EF que compare la columna, y
+            // Contains se traduce a LIKE en la base de datos, igual que en RepositorioConsultas.
+            consulta = consulta.Where(cobro => ((string)(object)cobro.Placa).Contains(placaContiene));
+        }
+
+        return await consulta
             .OrderBy(cobro => cobro.FechaHora)
             .ToListAsync(cancelacion);
-
-        // La placa es un value object con conversión, y EF no traduce Placa.Valor.Contains a SQL. Los pendientes
-        // de una sede son pocos (los vehículos que deben), así que el filtro por placa se hace en memoria.
-        return pendientes
-            .Where(cobro => cobro.Placa.Valor.Contains(placaContiene, StringComparison.Ordinal))
-            .ToList();
     }
 
     // PostgreSQL responde con el código 23505 cuando se viola la restricción única del cobro del día.

@@ -123,7 +123,7 @@ public sealed class Cobro
     }
 
     /// <summary>
-    /// Paga el cobro: pasa de Pendiente a Pagado y crea el pago con el valor del cobro (D-27).
+    /// Paga el cobro: pasa de Pendiente a Pagado y crea el pago con el valor del cobro. Es la única transición válida: un cobro Pagado no se vuelve a pagar (F-04).
     /// </summary>
     /// <param name="medio">Medio de pago.</param>
     /// <param name="operador">Operador que registra el pago.</param>
@@ -149,7 +149,7 @@ public sealed class Cobro
     }
 
     /// <summary>
-    /// Indica si el cobro da pase vigente en un día operativo: está pagado y es de ese día (RN-03, D-27).
+    /// Indica si el cobro da pase vigente en un día operativo: está pagado y es de ese día (RN-03). La vigencia se calcula, sin guardar un estado Vencido.
     /// A las 06:00 empieza otro día operativo y el pase del anterior deja de valer solo.
     /// </summary>
     /// <param name="diaOperativo">Día operativo que se consulta.</param>

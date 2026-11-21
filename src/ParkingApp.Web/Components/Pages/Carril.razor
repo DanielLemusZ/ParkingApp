@@ -1,4 +1,5 @@
 @page "/carril"
+@attribute [Authorize(Roles = Roles.OperadorOAdministrador)]
 @using System.Globalization
 @using ParkingApp.Aplicacion.Accesos
 @using ParkingApp.Aplicacion.Cobros

@@ -1,14 +1,18 @@
 using System.ComponentModel.DataAnnotations;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using ParkingApp.Aplicacion.Accesos;
+using ParkingApp.Aplicacion.Identidad;
 
 namespace ParkingApp.Web.Controllers;
 
 /// <summary>
 /// API del carril: recibe la placa y la confianza, como las entregaría una cámara LPR.
 /// </summary>
+// Igual que la pantalla del carril: exige sesión con rol Operador o Administrador (F-10). Sin sesión responde 401.
+[Authorize(Roles = Roles.OperadorOAdministrador)]
 [ApiController]
 [Route("api/carril")]
 public sealed class CarrilController : ControllerBase

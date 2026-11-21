@@ -1,0 +1,104 @@
+@page "/cuenta/iniciar-sesion"
+@attribute [ExcludeFromInteractiveRouting]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using ParkingApp.Infraestructura.Identidad
+@inject SignInManager<Usuario> Sesiones
+@inject NavigationManager Navegacion
+
+@*
+    Página estática (no interactiva): el formulario hace un POST HTTP clásico y la respuesta trae la cookie de sesión.
+    Por una conexión interactiva (SignalR) no se podría entregar la cookie.
+*@
+<PageTitle>Iniciar sesión</PageTitle>
+
+<div class="cuenta">
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudText Typo="Typo.h5" GutterBottom="true">Iniciar sesión</MudText>
+
+        @if (!string.IsNullOrEmpty(mensaje))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@mensaje</MudAlert>
+        }
+
+        @* FormName identifica el formulario cuando llega el POST; method="post" lo envía como un formulario normal. *@
+        <EditForm Model="Entrada" method="post" OnValidSubmit="IniciarSesionAsync" FormName="iniciar-sesion">
+            <DataAnnotationsValidator />
+
+            <label class="cuenta-etiqueta" for="correo">Correo</label>
+            <InputText id="correo" class="cuenta-campo" type="email" autocomplete="username" @bind-Value="Entrada.Correo" />
+            <ValidationMessage For="() => Entrada.Correo" />
+
+            <label class="cuenta-etiqueta" for="contrasena">Contraseña</label>
+            <InputText id="contrasena" class="cuenta-campo" type="password" autocomplete="current-password" @bind-Value="Entrada.Contrasena" />
+            <ValidationMessage For="() => Entrada.Contrasena" />
+
+            <button type="submit" class="cuenta-boton">Iniciar sesión</button>
+        </EditForm>
+    </MudPaper>
+</div>
+
+@code {
+    private string? mensaje;
+
+    // [SupplyParameterFromForm] llena el modelo con los campos del POST, porque en una página estática no hay
+    // enlace de datos en vivo: los valores llegan todos juntos al enviar el formulario.
+    // Sin un objeto nuevo como valor inicial: en cada POST Blazor reemplaza la propiedad con lo que llega del
+    // formulario, y lo que se pusiera aquí se perdería. Se crea en OnInitialized solo si no llegó nada (en el GET).
+    [SupplyParameterFromForm]
+    private DatosDeInicioDeSesion Entrada { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Entrada ??= new();
+    }
+
+    // La cookie agrega ?ReturnUrl=/caja cuando manda aquí a alguien que intentó abrir una página protegida.
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private async Task IniciarSesionAsync()
+    {
+        // lockoutOnFailure: true hace que cada contraseña incorrecta sume un intento fallido. Al 5.º, Identity
+        // bloquea la cuenta (criterio 7). isPersistent: false: la cookie se borra al cerrar el navegador.
+        var resultado = await Sesiones.PasswordSignInAsync(
+            Entrada.Correo!.Trim(),
+            Entrada.Contrasena!,
+            isPersistent: false,
+            lockoutOnFailure: true);
+
+        if (resultado.Succeeded)
+        {
+            Navegacion.NavigateTo(DireccionLocal(ReturnUrl));
+            return;
+        }
+
+        // No se dice si falló el correo o la contraseña: así nadie puede averiguar qué correos tienen cuenta.
+        mensaje = resultado.IsLockedOut
+            ? "Cuenta bloqueada temporalmente. Vuelve a intentarlo en 5 minutos."
+            : "Correo o contraseña incorrectos.";
+    }
+
+    // Solo se vuelve a direcciones de esta misma aplicación. Sin esta revisión, un enlace como
+    // ?ReturnUrl=https://sitio-falso.com mandaría al usuario a otro sitio justo después de iniciar sesión.
+    private static string DireccionLocal(string? direccion)
+    {
+        var esLocal = direccion is not null
+            && direccion.StartsWith('/')
+            && !direccion.StartsWith("//", StringComparison.Ordinal)
+            && !direccion.StartsWith("/\\", StringComparison.Ordinal);
+
+        return esLocal ? direccion! : "/";
+    }
+
+    private sealed class DatosDeInicioDeSesion
+    {
+        [Required(ErrorMessage = "Escribe tu correo")]
+        [EmailAddress(ErrorMessage = "El correo no es válido")]
+        public string? Correo { get; set; }
+
+        [Required(ErrorMessage = "Escribe tu contraseña")]
+        [DataType(DataType.Password)]
+        public string? Contrasena { get; set; }
+    }
+}

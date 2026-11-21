@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,7 +67,8 @@ public static class ServiciosDeIdentidad
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ParkingAppDbContext>()
             .AddSignInManager()
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddErrorDescriber<ErroresDeIdentidadEnEspanol>();
 
         // 3. La cookie de sesión.
         servicios.ConfigureApplicationCookie(cookie =>
@@ -102,6 +104,15 @@ public static class ServiciosDeIdentidad
         if (contexto.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
         {
             contexto.Response.StatusCode = codigoParaLaApi;
+
+            // La aplicación cambia las respuestas de error sin cuerpo por la página "no encontrado". Para la API se
+            // apaga en esta respuesta: el cliente debe recibir el 401 o el 403 tal cual, no una página HTML.
+            var paginasDeEstado = contexto.HttpContext.Features.Get<IStatusCodePagesFeature>();
+
+            if (paginasDeEstado is not null)
+            {
+                paginasDeEstado.Enabled = false;
+            }
         }
         else
         {

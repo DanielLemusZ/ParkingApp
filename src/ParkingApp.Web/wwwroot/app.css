@@ -11,3 +11,48 @@ h1:focus {
     .blazor-error-boundary::after {
         content: "Ocurrió un error."
     }
+
+/* Páginas de cuenta. Son estáticas, así que usan campos HTML normales en lugar de los de MudBlazor,
+   que necesitan interactividad. */
+.cuenta {
+    max-width: 420px;
+    margin: 48px auto;
+}
+
+.cuenta-etiqueta {
+    display: block;
+    margin: 16px 0 4px;
+    font-weight: 500;
+}
+
+.cuenta-campo {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #bdbdbd;
+    border-radius: 4px;
+    font: inherit;
+}
+
+    .cuenta-campo:focus {
+        outline: 2px solid #594ae2;
+        border-color: #594ae2;
+    }
+
+.cuenta-boton {
+    margin-top: 24px;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    background: #594ae2;
+    color: white;
+    font: inherit;
+    font-weight: 500;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.validation-message {
+    color: #d32f2f;
+    font-size: 0.85rem;
+}

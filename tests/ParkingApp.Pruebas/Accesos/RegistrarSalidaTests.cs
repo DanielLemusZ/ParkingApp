@@ -7,7 +7,7 @@ using ParkingApp.Pruebas.Dobles;
 namespace ParkingApp.Pruebas.Accesos;
 
 // Escenarios del issue #14 (F-05 y RN-06): la barrera de salida abre solo si el vehículo no tiene cobros pendientes.
-// Mientras no exista el pago en caja, el pago se simula en el repositorio de cobros en memoria.
+// El pago se hace con el dominio (Cobro.Pagar), sin pasar por la caja.
 public class RegistrarSalidaTests
 {
     // Miércoles 18 de noviembre, 08:00 en Bogotá (UTC-5) = 13:00 UTC.
@@ -42,7 +42,7 @@ public class RegistrarSalidaTests
     public async Task Carro_con_el_cobro_de_hoy_pagado_abre_con_cobro_pagado_y_registra_la_salida()
     {
         await entrada.IngresarAsync("ABC123");
-        entrada.Cobros.MarcarPagado(entrada.Cobros.Cobros[0]);
+        entrada.Cobros.PagarEnEfectivo(entrada.Cobros.Cobros[0]);
 
         entrada.Reloj.Advance(TimeSpan.FromHours(3));
         var resultado = await salida.SalirAsync("ABC123");
@@ -59,7 +59,7 @@ public class RegistrarSalidaTests
         var tarifa = new Tarifa(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 8000m, new DateOnly(2026, 11, 1));
         var cobro = Cobro.Generar(Placa.Crear("CD1234"), TipoDeVehiculo.Carro, entrada.Sede.Id, new DateOnly(2026, 11, 18), tarifa, MiercolesALas0800);
         await entrada.Cobros.AgregarAsync(cobro, TestContext.Current.CancellationToken);
-        entrada.Cobros.MarcarPagado(cobro);
+        entrada.Cobros.PagarEnEfectivo(cobro);
 
         var resultado = await salida.SalirAsync("CD1234");
 
@@ -113,7 +113,7 @@ public class RegistrarSalidaTests
     public async Task Un_cobro_pagado_de_otro_dia_no_cuenta_como_cobro_pagado_de_hoy()
     {
         await entrada.IngresarAsync("ABC123");
-        entrada.Cobros.MarcarPagado(entrada.Cobros.Cobros[0]);
+        entrada.Cobros.PagarEnEfectivo(entrada.Cobros.Cobros[0]);
 
         // Jueves 19, 10:00 en Bogotá: el cobro pagado es del miércoles.
         entrada.Reloj.Advance(TimeSpan.FromHours(26));

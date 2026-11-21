@@ -47,4 +47,21 @@ public interface IRepositorioCobros
     /// <param name="cancelacion">Permite cancelar la operación.</param>
     /// <returns><see langword="true"/> si el cobro de ese día está pagado.</returns>
     Task<bool> ExistePagadoDelDiaAsync(Placa placa, Guid sedeId, DateOnly diaOperativo, CancellationToken cancelacion = default);
+
+    /// <summary>
+    /// Busca un cobro para cambiarlo, por ejemplo para pagarlo. Los cambios se guardan con el pago.
+    /// </summary>
+    /// <param name="id">Identificador del cobro.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>El cobro, o <see langword="null"/> si no existe.</returns>
+    Task<Cobro?> ObtenerAsync(Guid id, CancellationToken cancelacion = default);
+
+    /// <summary>
+    /// Lista los cobros pendientes de la sede, del más antiguo al más reciente, para la caja.
+    /// </summary>
+    /// <param name="sedeId">Sede de los cobros.</param>
+    /// <param name="placaContiene">Texto normalizado que debe contener la placa; vacío para no filtrar.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>Los cobros pendientes que cumplen el filtro.</returns>
+    Task<IReadOnlyList<Cobro>> ListarPendientesAsync(Guid sedeId, string placaContiene, CancellationToken cancelacion = default);
 }

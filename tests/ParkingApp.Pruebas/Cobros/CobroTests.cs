@@ -1,6 +1,7 @@
 using ParkingApp.Dominio.Accesos;
 using ParkingApp.Dominio.Cobros;
 using ParkingApp.Dominio.Configuracion;
+using ParkingApp.Dominio.Pagos;
 
 namespace ParkingApp.Pruebas.Cobros;
 
@@ -10,6 +11,9 @@ public class CobroTests
 
     // Lunes 16 de noviembre de 2026 a las 08:00 en Bogotá son las 13:00 en UTC.
     private static readonly DateTimeOffset LunesALas8EnUtc = new DateTimeOffset(2026, 11, 16, 13, 0, 0, TimeSpan.Zero);
+
+    // Lunes 16 de noviembre de 2026 a las 11:00 en Bogotá son las 16:00 en UTC.
+    private static readonly DateTimeOffset LunesALas11EnUtc = new DateTimeOffset(2026, 11, 16, 16, 0, 0, TimeSpan.Zero);
 
     private static readonly Placa Carro = Placa.Crear("ABC123");
 
@@ -47,5 +51,77 @@ public class CobroTests
 
         Assert.Throws<ArgumentException>(() =>
             Cobro.Generar(Carro, TipoDeVehiculo.Carro, Guid.CreateVersion7(), Lunes, tarifaDeMoto, LunesALas8EnUtc));
+    }
+
+    [Fact]
+    public void Pagar_un_cobro_pendiente_lo_deja_pagado_y_crea_el_pago_con_su_valor()
+    {
+        var cobro = CobroDiurnoDe8000();
+        var referencia = Guid.NewGuid();
+
+        var pago = cobro.Pagar(MedioDePago.Efectivo, "caja", referencia, LunesALas11EnUtc);
+
+        Assert.Equal(EstadoDeCobro.Pagado, cobro.Estado);
+        Assert.Equal(cobro.Id, pago.CobroId);
+        Assert.Equal(8000m, pago.Valor);
+        Assert.Equal(MedioDePago.Efectivo, pago.Medio);
+        Assert.Equal("caja", pago.Operador);
+        Assert.Equal(referencia, pago.Referencia);
+        Assert.Equal(LunesALas11EnUtc, pago.FechaHora);
+    }
+
+    [Fact]
+    public void Cobro_pagado_no_se_puede_pagar_otra_vez()
+    {
+        var cobro = CobroDiurnoDe8000();
+        cobro.Pagar(MedioDePago.Efectivo, "caja", Guid.NewGuid(), LunesALas11EnUtc);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            cobro.Pagar(MedioDePago.Efectivo, "caja", Guid.NewGuid(), LunesALas11EnUtc));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Pago_sin_operador_es_invalido_y_el_cobro_sigue_pendiente(string operador)
+    {
+        var cobro = CobroDiurnoDe8000();
+
+        Assert.Throws<ArgumentException>(() =>
+            cobro.Pagar(MedioDePago.Efectivo, operador, Guid.NewGuid(), LunesALas11EnUtc));
+        Assert.Equal(EstadoDeCobro.Pendiente, cobro.Estado);
+    }
+
+    [Fact]
+    public void Pago_sin_referencia_o_con_hora_local_es_invalido()
+    {
+        var cobro = CobroDiurnoDe8000();
+        var horaEnBogota = new DateTimeOffset(2026, 11, 16, 11, 0, 0, TimeSpan.FromHours(-5));
+
+        Assert.Throws<ArgumentException>(() =>
+            cobro.Pagar(MedioDePago.Efectivo, "caja", Guid.Empty, LunesALas11EnUtc));
+        Assert.Throws<ArgumentException>(() =>
+            cobro.Pagar(MedioDePago.Efectivo, "caja", Guid.NewGuid(), horaEnBogota));
+    }
+
+    [Fact]
+    public void Pase_vigente_vale_solo_en_el_dia_operativo_del_cobro_pagado()
+    {
+        var cobro = CobroDiurnoDe8000();
+        var martes = Lunes.AddDays(1);
+
+        Assert.False(cobro.DaPaseVigenteEn(Lunes));
+
+        cobro.Pagar(MedioDePago.Efectivo, "caja", Guid.NewGuid(), LunesALas11EnUtc);
+
+        // El martes a las 05:59 sigue siendo el día operativo del lunes; a las 06:00 empieza el del martes.
+        Assert.True(cobro.DaPaseVigenteEn(Lunes));
+        Assert.False(cobro.DaPaseVigenteEn(martes));
+    }
+
+    private static Cobro CobroDiurnoDe8000()
+    {
+        var tarifa = new Tarifa(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 8000m, new DateOnly(2026, 11, 1));
+        return Cobro.Generar(Carro, TipoDeVehiculo.Carro, Guid.CreateVersion7(), Lunes, tarifa, LunesALas8EnUtc);
     }
 }

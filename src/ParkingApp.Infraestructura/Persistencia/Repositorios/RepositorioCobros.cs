@@ -66,6 +66,30 @@ internal sealed class RepositorioCobros : IRepositorioCobros
                 cancelacion);
     }
 
+    public Task<Cobro?> ObtenerAsync(Guid id, CancellationToken cancelacion = default)
+    {
+        // Con seguimiento: el cambio a Pagado se guarda junto con el pago, en el mismo SaveChanges.
+        return contexto.Cobros.FirstOrDefaultAsync(cobro => cobro.Id == id, cancelacion);
+    }
+
+    public async Task<IReadOnlyList<Cobro>> ListarPendientesAsync(Guid sedeId, string placaContiene, CancellationToken cancelacion = default)
+    {
+        var consulta = contexto.Cobros
+            .AsNoTracking()
+            .Where(cobro => cobro.SedeId == sedeId && cobro.Estado == EstadoDeCobro.Pendiente);
+
+        if (!string.IsNullOrEmpty(placaContiene))
+        {
+            // La placa es un value object guardado como texto: el cast le dice a EF que compare la columna, y
+            // Contains se traduce a LIKE en la base de datos, igual que en RepositorioConsultas.
+            consulta = consulta.Where(cobro => ((string)(object)cobro.Placa).Contains(placaContiene));
+        }
+
+        return await consulta
+            .OrderBy(cobro => cobro.FechaHora)
+            .ToListAsync(cancelacion);
+    }
+
     // PostgreSQL responde con el código 23505 cuando se viola la restricción única del cobro del día.
     private static bool EsCobroDelDiaDuplicado(DbUpdateException error)
     {

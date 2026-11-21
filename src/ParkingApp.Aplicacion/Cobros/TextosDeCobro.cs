@@ -11,6 +11,26 @@ namespace ParkingApp.Aplicacion.Cobros;
 /// </summary>
 public static class TextosDeCobro
 {
+    /// <summary>
+    /// Motivo del carril cuando el vehículo reingresa con el cobro del día operativo pagado (RN-03).
+    /// </summary>
+    public const string PaseVigente = "Pase vigente";
+
+    /// <summary>
+    /// Respuesta de la caja cuando la misma solicitud de pago llega otra vez (idempotencia).
+    /// </summary>
+    public const string PagoYaRegistrado = "El pago ya estaba registrado";
+
+    /// <summary>
+    /// Respuesta de la caja cuando el cobro no existe en la sede.
+    /// </summary>
+    public const string CobroNoEncontrado = "Cobro no encontrado";
+
+    /// <summary>
+    /// Respuesta de la caja cuando el cobro ya está pagado: solo se paga un cobro Pendiente (F-04).
+    /// </summary>
+    public const string CobroNoPendiente = "El cobro no está pendiente";
+
     // Pesos colombianos sin decimales y con punto de miles, igual en cualquier equipo.
     private static readonly NumberFormatInfo FormatoDePesos = new NumberFormatInfo
     {
@@ -50,6 +70,16 @@ public static class TextosDeCobro
     public static string Reingreso(DateOnly diaOperativo)
     {
         return $"Reingreso sin cobro nuevo: ya existe el cobro del día operativo {diaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
+    }
+
+    /// <summary>
+    /// Respuesta de la caja cuando se registra el pago, por ejemplo <c>Pago registrado: $8.000</c>.
+    /// </summary>
+    /// <param name="valor">Valor pagado.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string PagoRegistrado(decimal valor)
+    {
+        return $"Pago registrado: {Pesos(valor)}";
     }
 
     /// <summary>

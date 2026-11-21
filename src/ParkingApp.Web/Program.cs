@@ -3,6 +3,7 @@ using DotNetEnv;
 using MudBlazor.Services;
 
 using ParkingApp.Aplicacion;
+using ParkingApp.Infraestructura.Identidad;
 using ParkingApp.Infraestructura.Persistencia;
 using ParkingApp.Infraestructura.ServiciosExternos;
 using ParkingApp.Web.Components;
@@ -20,6 +21,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AgregarAplicacion();
 builder.Services.AgregarBaseDeDatos(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AgregarServiciosExternos();
+builder.Services.AgregarIdentidad();
 
 var app = builder.Build();
 

@@ -123,8 +123,10 @@ Todas las pantallas y la API piden iniciar sesión, en `/cuenta/iniciar-sesion`.
 
 | Rol | Pantallas | API |
 |---|---|---|
-| `Operador` | Carril y caja | `api/carril` |
-| `Administrador` | Todo: carril, caja, tarifas, consultas y configuración | `api/carril` y `api/tarifas` |
+| `Operador` | Carril y caja | `api/carril` y `api/caja` |
+| `Administrador` | Todo: carril, caja, tarifas, consultas y configuración | `api/carril`, `api/caja` y `api/tarifas` |
+
+En cada pago queda el correo del usuario que lo registró en la caja.
 
 - El menú muestra solo las opciones del rol. Si un operador escribe la dirección de otra pantalla, ve *Acceso denegado*.
 - Sin sesión, la API responde **401**; con un rol que no alcanza, **403**.

@@ -1,9 +1,9 @@
 @page "/caja"
+@attribute [Authorize(Roles = Roles.OperadorOAdministrador)]
 @using System.Globalization
 @using ParkingApp.Aplicacion.Cobros
 @using ParkingApp.Aplicacion.Pagos
 @using ParkingApp.Dominio.Configuracion
-@using ParkingApp.Web.Controllers
 @inject IServiceScopeFactory FabricaDeAlcances
 
 <PageTitle>Caja</PageTitle>
@@ -88,6 +88,10 @@
     // y la caja registra un solo pago.
     private Guid referencia;
 
+    // El usuario de la sesión, que llega en cascada desde AddCascadingAuthenticationState.
+    [CascadingParameter]
+    private Task<AuthenticationState> EstadoDeSesion { get; set; } = default!;
+
     protected override Task OnInitializedAsync()
     {
         return CargarAsync();
@@ -118,7 +122,11 @@
         {
             await using var alcance = FabricaDeAlcances.CreateAsyncScope();
             var registrarPago = alcance.ServiceProvider.GetRequiredService<RegistrarPagoEnEfectivo>();
-            resultado = await registrarPago.EjecutarAsync(elegido.Id, referencia, CajaController.OperadorSinIdentificar);
+            // El operador del pago es el usuario de la sesión: su correo queda guardado en el pago.
+            var sesion = await EstadoDeSesion;
+            var operador = sesion.User.Identity?.Name ?? throw new InvalidOperationException("No hay un usuario con sesión.");
+
+            resultado = await registrarPago.EjecutarAsync(elegido.Id, referencia, operador);
 
             // Se recarga con cualquier respuesta: si el pago ya estaba registrado o el cobro ya no está pendiente,
             // ese cobro tampoco se puede pagar y no debe seguir en la lista.

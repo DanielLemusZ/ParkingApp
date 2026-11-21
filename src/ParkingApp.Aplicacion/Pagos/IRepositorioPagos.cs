@@ -26,4 +26,12 @@ public interface IRepositorioPagos
     /// un pago, por ejemplo porque un doble clic envió la misma solicitud dos veces. En ese caso no se guarda nada.
     /// </returns>
     Task<bool> AgregarAsync(Pago pago, CancellationToken cancelacion = default);
+
+    /// <summary>
+    /// Indica si un operador registró algún pago. Se usa antes de borrar un usuario (#68).
+    /// </summary>
+    /// <param name="operador">Correo del operador, tal como quedó en los pagos.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns><see langword="true"/> si hay al menos un pago con ese operador.</returns>
+    Task<bool> ExistenDelOperadorAsync(string operador, CancellationToken cancelacion = default);
 }

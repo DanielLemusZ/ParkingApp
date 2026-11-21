@@ -86,7 +86,7 @@ dotnet run --project src/ParkingApp.Web    # levanta la aplicación
 4. **Detener:** `docker compose stop` o `docker compose down`. Los dos conservan los datos.
 5. **Recrear desde cero:** `docker compose down -v` borra el volumen **y todos los datos**. Después, `docker compose up -d` y el paso 3.
 
-**Si falta una variable en `.env`**, Compose y la aplicación no arrancan y dicen cuál falta. La aplicación lee el mismo `.env`. `POSTGRES_HOST` es opcional: si no está, usa `localhost`.
+**Si falta una variable en `.env`**, Compose y la aplicación no arrancan y dicen cuál falta. La aplicación lee el mismo `.env`. `POSTGRES_HOST` es opcional: si no está, usa `localhost`. Con Docker en Windows conviene `127.0.0.1`, como en `.env.example`: con `localhost` se intenta primero IPv6, y cada conexión nueva a PostgreSQL espera varios segundos.
 
 **Migraciones** (código en `src/ParkingApp.Infraestructura/Persistencia/Migraciones`):
 
@@ -113,7 +113,8 @@ Todas las pantallas y la API piden iniciar sesión, en `/cuenta/iniciar-sesion`.
 - La contraseña necesita al menos 8 caracteres, con una mayúscula, una minúscula, un número y un símbolo.
 - La terminal dice qué pasó con cada usuario: *creado*, *ya existía* o *no se creó* y por qué.
 - Si el usuario ya existe, el arranque **no lo cambia**. Cambiar la contraseña en `.env` después no cambia la del usuario: para eso está *Cambiar contraseña*, en el menú de la cuenta.
-- Si olvidaste la contraseña de un usuario inicial, bórralo y reinicia la aplicación, que lo vuelve a crear con la de `.env`:
+- Si un usuario olvidó su contraseña, el Administrador la restablece en *Usuarios*.
+- Si se olvidó la contraseña del único Administrador, bórralo y reinicia la aplicación, que lo vuelve a crear con la de `.env`:
 
   ```powershell
   docker compose exec postgres psql -U parkingapp -d parkingapp -c "delete from asp_net_users where email = 'admin@parkingapp.local';"
@@ -124,13 +125,20 @@ Todas las pantallas y la API piden iniciar sesión, en `/cuenta/iniciar-sesion`.
 | Rol | Pantallas | API |
 |---|---|---|
 | `Operador` | Carril y caja | `api/carril` y `api/caja` |
-| `Administrador` | Todo: carril, caja, tarifas, consultas y configuración | `api/carril`, `api/caja` y `api/tarifas` |
+| `Administrador` | Todo: carril, caja, tarifas, consultas, configuración y usuarios | `api/carril`, `api/caja`, `api/tarifas` y `api/usuarios` |
 
 En cada pago queda el correo del usuario que lo registró en la caja.
 
 - El menú muestra solo las opciones del rol. Si un operador escribe la dirección de otra pantalla, ve *Acceso denegado*.
 - Sin sesión, la API responde **401**; con un rol que no alcanza, **403**.
 - **Bloqueo:** después de 5 contraseñas incorrectas seguidas, la cuenta queda bloqueada 5 minutos y se muestra *Cuenta bloqueada temporalmente*.
+
+**Administrar usuarios.** En *Usuarios*, el Administrador crea usuarios con su rol y una contraseña inicial, les cambia el rol, restablece su contraseña, los desactiva y reactiva, los desbloquea y los borra.
+
+- El correo no se puede cambiar, porque identifica al operador en los pagos que registró.
+- Un usuario desactivado no puede iniciar sesión. Si tenía una sesión abierta, se cierra en menos de un minuto: la API lo rechaza y la pantalla vuelve al inicio de sesión.
+- Solo se borra un usuario que nunca registró un pago; si registró pagos, hay que desactivarlo.
+- Nadie puede desactivarse, borrarse ni cambiarse el rol a sí mismo, así que siempre queda un Administrador activo.
 
 **Probar la API desde Swagger:** inicia sesión en la aplicación y abre `/swagger` en el mismo navegador. Swagger envía la cookie de la sesión, así que cada endpoint responde según tu rol.
 

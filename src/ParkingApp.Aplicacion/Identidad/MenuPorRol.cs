@@ -20,6 +20,7 @@ public static class MenuPorRol
         new OpcionDelMenu("Tarifas", "/tarifas", SoloAdministrador),
         new OpcionDelMenu("Consultas", "/consultas", SoloAdministrador),
         new OpcionDelMenu("Configuración", "/configuracion", SoloAdministrador),
+        new OpcionDelMenu("Usuarios", "/usuarios", SoloAdministrador),
     ];
 
     /// <summary>

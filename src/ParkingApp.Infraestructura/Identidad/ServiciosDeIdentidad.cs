@@ -94,6 +94,13 @@ public static class ServiciosDeIdentidad
             cookie.Events.OnRedirectToAccessDenied = contexto => ResponderORedirigir(contexto, StatusCodes.Status403Forbidden);
         });
 
+        // 4. Cada minuto se compara el sello de seguridad de la cookie con el del usuario en la base de datos. Al
+        // desactivar un usuario, cambiarle el rol o restablecer su contraseña, el sello cambia, y la sesión que tenía
+        // abierta se cierra en menos de un minuto (criterio 6 del #68), igual que en las pantallas abiertas
+        // (SesionRevalidada). El valor por defecto es cada 30 minutos. No se revisa en cada solicitud porque cada
+        // archivo de la página (CSS, JS) consultaría la base de datos.
+        servicios.Configure<SecurityStampValidatorOptions>(opciones => opciones.ValidationInterval = TimeSpan.FromMinutes(1));
+
         servicios.AddScoped<IDirectorioDeUsuarios, DirectorioDeUsuariosConIdentity>();
 
         return servicios;

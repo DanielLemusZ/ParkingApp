@@ -1,5 +1,7 @@
 using DotNetEnv;
 
+using Microsoft.AspNetCore.Components.Authorization;
+
 using MudBlazor.Services;
 
 using ParkingApp.Aplicacion;
@@ -26,6 +28,9 @@ builder.Services.AgregarIdentidad();
 
 // Pone el usuario que inició sesión al alcance de todas las pantallas (<AuthorizeView>, [Authorize]).
 builder.Services.AddCascadingAuthenticationState();
+
+// Las pantallas interactivas revisan cada minuto que la sesión siga valiendo, por si el administrador desactivó al usuario.
+builder.Services.AddScoped<AuthenticationStateProvider, SesionRevalidada>();
 
 var app = builder.Build();
 

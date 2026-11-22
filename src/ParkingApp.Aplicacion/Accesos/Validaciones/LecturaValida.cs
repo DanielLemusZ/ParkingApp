@@ -17,6 +17,11 @@ public sealed class LecturaValida : ValidacionDeIngreso
     /// </summary>
     public const string ConfianzaFueraDeRango = "La confianza debe estar entre 0 y 100";
 
+    /// <summary>
+    /// Motivo cuando la lectura trae caracteres que no se pueden guardar, ni siquiera como lectura pendiente.
+    /// </summary>
+    public const string CaracteresNoValidos = "La placa tiene caracteres no válidos";
+
     /// <inheritdoc />
     protected override Task<ResultadoDeValidacion> RevisarAsync(SolicitudDeIngreso solicitud, CancellationToken cancelacion)
     {
@@ -31,6 +36,10 @@ public sealed class LecturaValida : ValidacionDeIngreso
         else if (solicitud.Placa.Length > Placa.LargoMaximo)
         {
             resultado = ResultadoDeValidacion.Rechazar($"La placa no puede tener más de {Placa.LargoMaximo} caracteres");
+        }
+        else if (!Placa.SePuedeGuardar(solicitud.Placa))
+        {
+            resultado = ResultadoDeValidacion.Rechazar(CaracteresNoValidos);
         }
         else if (solicitud.Confianza < EventoDeAcceso.ConfianzaMinima || solicitud.Confianza > EventoDeAcceso.ConfianzaMaxima)
         {

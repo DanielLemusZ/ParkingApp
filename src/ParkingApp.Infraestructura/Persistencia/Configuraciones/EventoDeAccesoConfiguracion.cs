@@ -33,6 +33,9 @@ internal sealed class EventoDeAccesoConfiguracion : IEntityTypeConfiguration<Eve
             .HasConversion(placa => placa.Valor, valor => Placa.Crear(valor))
             .HasMaxLength(Placa.LargoMaximo);
 
+        // El operador de una lectura manual (F-06). Vacío si la lectura fue automática.
+        builder.Property(evento => evento.ValidadoPor).HasMaxLength(EventoDeAcceso.LargoMaximoOperador);
+
         // Cada evento pertenece a una sede existente, y una sede con eventos no se puede borrar.
         builder.HasOne<Sede>().WithMany().HasForeignKey(evento => evento.SedeId).OnDelete(DeleteBehavior.Restrict);
 

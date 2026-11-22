@@ -240,6 +240,11 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .HasColumnType("character varying(20)")
                         .HasColumnName("tipo_de_vehiculo");
 
+                    b.Property<string>("ValidadoPor")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("validado_por");
+
                     b.HasKey("Id")
                         .HasName("pk_eventos_de_acceso");
 
@@ -254,6 +259,87 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                             t.HasCheckConstraint("ck_eventos_de_acceso_carril", "carril > 0");
 
                             t.HasCheckConstraint("ck_eventos_de_acceso_confianza", "confianza BETWEEN 0 AND 100");
+                        });
+                });
+
+            modelBuilder.Entity("ParkingApp.Dominio.Accesos.LecturaPendiente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Carril")
+                        .HasColumnType("integer")
+                        .HasColumnName("carril");
+
+                    b.Property<int>("Confianza")
+                        .HasColumnType("integer")
+                        .HasColumnName("confianza");
+
+                    b.Property<string>("Estado")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTimeOffset?>("FechaDeValidacion")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_de_validacion");
+
+                    b.Property<DateTimeOffset>("FechaHora")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_hora");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("motivo");
+
+                    b.Property<string>("PlacaLeida")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("placa_leida");
+
+                    b.Property<string>("PlacaValidada")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("placa_validada");
+
+                    b.Property<string>("Resultado")
+                        .HasColumnType("text")
+                        .HasColumnName("resultado");
+
+                    b.Property<Guid>("SedeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sede_id");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("tipo");
+
+                    b.Property<string>("ValidadaPor")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("validada_por");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lecturas_pendientes");
+
+                    b.HasIndex("SedeId", "Estado", "FechaHora")
+                        .HasDatabaseName("ix_lecturas_pendientes_sede_id_estado_fecha_hora");
+
+                    b.ToTable("lecturas_pendientes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_lecturas_pendientes_carril", "carril > 0");
+
+                            t.HasCheckConstraint("ck_lecturas_pendientes_confianza", "confianza BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("ck_lecturas_pendientes_validacion", "estado = 'Pendiente' OR (placa_validada IS NOT NULL AND validada_por IS NOT NULL AND fecha_de_validacion IS NOT NULL)");
                         });
                 });
 
@@ -669,6 +755,16 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_eventos_de_acceso_sedes_sede_id");
+                });
+
+            modelBuilder.Entity("ParkingApp.Dominio.Accesos.LecturaPendiente", b =>
+                {
+                    b.HasOne("ParkingApp.Dominio.Configuracion.Sede", null)
+                        .WithMany()
+                        .HasForeignKey("SedeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_lecturas_pendientes_sedes_sede_id");
                 });
 
             modelBuilder.Entity("ParkingApp.Dominio.Cobros.Cobro", b =>

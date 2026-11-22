@@ -50,7 +50,7 @@
                 <PropertyColumn Property="x => x.Carril" Title="Carril" />
                 <TemplateColumn Title="Lectura manual">
                     <CellTemplate>
-                        @(context.Item.EsLecturaManual ? "Sí" : "No")
+                        @(context.Item.EsLecturaManual ? $"Sí ({context.Item.ValidadoPor})" : "No")
                     </CellTemplate>
                 </TemplateColumn>
             </Columns>

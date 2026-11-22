@@ -1,7 +1,6 @@
 using ParkingApp.Aplicacion.Cobros;
 using ParkingApp.Aplicacion.Configuracion;
 using ParkingApp.Aplicacion.Tarifas;
-using ParkingApp.Dominio.Accesos;
 
 namespace ParkingApp.Aplicacion.Accesos.Validaciones;
 
@@ -30,8 +29,8 @@ public sealed class TarifaVigente : ValidacionDeIngreso
     {
         ArgumentNullException.ThrowIfNull(solicitud);
 
-        // Los eslabones anteriores ya garantizan que la placa tiene un formato reconocido.
-        var tipoDeVehiculo = ClasificadorDeVehiculo.Clasificar(Placa.Crear(solicitud.Placa))!.Value;
+        // Los eslabones anteriores ya garantizan que se conoce el tipo, por el formato de la placa o por el operador.
+        var tipoDeVehiculo = solicitud.ObtenerTipoDeVehiculo()!.Value;
         var momento = await calendario.UbicarAsync(solicitud.FechaHora, cancelacion);
         var tarifa = await tarifas.ObtenerVigenteAsync(tipoDeVehiculo, momento.Franja, momento.DiaOperativo, cancelacion);
 

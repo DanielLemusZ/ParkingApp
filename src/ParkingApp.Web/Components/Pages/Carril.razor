@@ -36,6 +36,12 @@
                         <b>Barrera abierta</b>: @resultado.Motivo
                     </MudAlert>
                 }
+                else if (resultado.PendienteDeValidacion)
+                {
+                    <MudAlert Class="mt-4" Severity="Severity.Warning" Icon="@Icons.Material.Filled.Lock">
+                        <b>Barrera cerrada</b>: @resultado.Motivo
+                    </MudAlert>
+                }
                 else
                 {
                     <MudAlert Class="mt-4" Severity="Severity.Error" Icon="@Icons.Material.Filled.Lock">
@@ -88,6 +94,12 @@
                 {
                     <MudAlert Class="mt-4" Severity="Severity.Success" Icon="@Icons.Material.Filled.LockOpen">
                         <b>Barrera abierta</b>: @resultadoSalida.Motivo
+                    </MudAlert>
+                }
+                else if (resultadoSalida.PendienteDeValidacion)
+                {
+                    <MudAlert Class="mt-4" Severity="Severity.Warning" Icon="@Icons.Material.Filled.Lock">
+                        <b>Barrera cerrada</b>: @resultadoSalida.Motivo
                     </MudAlert>
                 }
                 else

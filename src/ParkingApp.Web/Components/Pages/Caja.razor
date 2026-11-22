@@ -4,11 +4,13 @@
 @using ParkingApp.Aplicacion.Cobros
 @using ParkingApp.Aplicacion.Pagos
 @using ParkingApp.Dominio.Configuracion
+@using ParkingApp.Web.Components.Lecturas
 @inject IServiceScopeFactory FabricaDeAlcances
 
 <PageTitle>Caja</PageTitle>
 
 <MudText Typo="Typo.h4" GutterBottom="true">Caja</MudText>
+<PlacasPorRevisar AlValidar="CargarAsync" />
 <MudText Class="mb-4">Cobros pendientes de la sede. Elige uno para registrar su pago en efectivo.</MudText>
 
 <MudGrid>

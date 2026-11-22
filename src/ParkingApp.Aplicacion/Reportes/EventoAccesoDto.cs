@@ -31,7 +31,12 @@ public class EventoAccesoDto
     public string Carril { get; set; } = string.Empty;
 
     /// <summary>
-    /// Indica si la placa fue digitada manualmente por el operador.
+    /// Indica si un operador confirmó o digitó la placa en la caja ("lectura manual").
     /// </summary>
     public bool EsLecturaManual { get; set; }
+
+    /// <summary>
+    /// Operador que validó la lectura manual, o nada si la lectura fue automática.
+    /// </summary>
+    public string? ValidadoPor { get; set; }
 }

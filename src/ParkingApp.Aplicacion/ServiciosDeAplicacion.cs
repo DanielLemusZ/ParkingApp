@@ -57,6 +57,7 @@ public static class ServiciosDeAplicacion
         return CadenaDeValidacionesDeIngreso.Crear(
             new LecturaValida(),
             new ClasificacionDeVehiculoValida(),
+            new CupoDisponible(proveedor.GetRequiredService<IRepositorioSedes>()),
             new TarifaVigente(
                 proveedor.GetRequiredService<IRepositorioTarifas>(),
                 proveedor.GetRequiredService<CalendarioOperativo>()));

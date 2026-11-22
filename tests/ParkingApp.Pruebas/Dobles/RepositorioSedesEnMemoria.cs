@@ -7,11 +7,13 @@ namespace ParkingApp.Pruebas.Dobles;
 internal sealed class RepositorioSedesEnMemoria : IRepositorioSedes
 {
     private readonly Sede sede;
+    private readonly Func<OcupacionActual>? consultarOcupacion;
 
-    public RepositorioSedesEnMemoria(Sede sede, OcupacionActual? ocupacion = null)
+    public RepositorioSedesEnMemoria(Sede sede, OcupacionActual? ocupacion = null, Func<OcupacionActual>? consultarOcupacion = null)
     {
         this.sede = sede;
         Ocupacion = ocupacion ?? new OcupacionActual(0, 0);
+        this.consultarOcupacion = consultarOcupacion;
     }
 
     public OcupacionActual Ocupacion { get; set; }
@@ -32,6 +34,6 @@ internal sealed class RepositorioSedesEnMemoria : IRepositorioSedes
 
     public Task<OcupacionActual> ConsultarOcupacionAsync(CancellationToken cancelacion = default)
     {
-        return Task.FromResult(Ocupacion);
+        return Task.FromResult(consultarOcupacion?.Invoke() ?? Ocupacion);
     }
 }

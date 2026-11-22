@@ -56,7 +56,7 @@ public sealed class Cobro
     public DateOnly DiaOperativo { get; private set; }
 
     /// <summary>
-    /// Franja del primer ingreso del día, que definió la tarifa.
+    /// Franja del primer ingreso del día, o diurna si es el cobro de un día nuevo.
     /// </summary>
     public FranjaTarifaria Franja { get; private set; }
 

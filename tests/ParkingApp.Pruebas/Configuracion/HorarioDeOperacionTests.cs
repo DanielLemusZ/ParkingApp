@@ -57,4 +57,32 @@ public class HorarioDeOperacionTests
         Assert.Equal(new DateOnly(2026, 11, 19), HorarioDeOperacion.DiaOperativo(alasSeisYMedia));
         Assert.Equal(FranjaTarifaria.Nocturna, horarioCambiado.Franja(alasSeisYMedia));
     }
+
+    [Fact]
+    public void Los_dias_siguientes_van_del_dia_despues_del_ingreso_hasta_hoy()
+    {
+        // Entró el lunes 16 y hoy es miércoles 18: se cobran el martes y el miércoles (S-05).
+        var dias = HorarioDeOperacion.DiasOperativosSiguientes(new DateOnly(2026, 11, 16), new DateOnly(2026, 11, 18));
+
+        Assert.Equal([new DateOnly(2026, 11, 17), new DateOnly(2026, 11, 18)], dias);
+    }
+
+    [Fact]
+    public void Un_vehiculo_que_entro_hoy_no_tiene_dias_siguientes()
+    {
+        var hoy = new DateOnly(2026, 11, 16);
+
+        Assert.Empty(HorarioDeOperacion.DiasOperativosSiguientes(hoy, hoy));
+    }
+
+    [Fact]
+    public void En_Bogota_el_dia_operativo_empieza_a_las_1100_UTC()
+    {
+        var zonaBogota = TimeZoneInfo.FindSystemTimeZoneById("America/Bogota");
+
+        var inicio = HorarioDeOperacion.InicioEnUtc(new DateOnly(2026, 11, 16), zonaBogota);
+
+        Assert.Equal(new DateTimeOffset(2026, 11, 16, 11, 0, 0, TimeSpan.Zero), inicio);
+        Assert.Equal(TimeSpan.Zero, inicio.Offset);
+    }
 }

@@ -10,6 +10,7 @@ using ParkingApp.Infraestructura.Persistencia;
 using ParkingApp.Infraestructura.ServiciosExternos;
 using ParkingApp.Web.Components;
 using ParkingApp.Web.Cuenta;
+using ParkingApp.Web.Tareas;
 
 // Carga el .env de la raíz del repositorio. Si una variable ya existe en el entorno (por ejemplo, en Docker), se respeta.
 Env.NoClobber().TraversePath().Load();
@@ -25,6 +26,9 @@ builder.Services.AgregarAplicacion();
 builder.Services.AgregarBaseDeDatos(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AgregarServiciosExternos();
 builder.Services.AgregarIdentidad();
+
+// Cobro del día nuevo (D-28): corre al arrancar y cada día a las 06:00 de la sede.
+builder.Services.AddHostedService<TareaCobrosDelDiaNuevo>();
 
 // Pone el usuario que inició sesión al alcance de todas las pantallas (<AuthorizeView>, [Authorize]).
 builder.Services.AddCascadingAuthenticationState();

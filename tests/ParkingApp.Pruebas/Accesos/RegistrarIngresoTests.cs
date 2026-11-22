@@ -96,4 +96,91 @@ public class RegistrarIngresoTests
         Assert.Equal(LecturaValida.ConfianzaFueraDeRango, resultado.Motivo);
         Assert.Empty(carril.Eventos.Eventos);
     }
+
+    [Fact]
+    public async Task Un_carro_puede_entrar_mientras_quede_cupo_de_carros()
+    {
+        carril.ConfigurarCupos(cupoCarros: 2, cupoMotos: 1);
+        var primero = await carril.IngresarAsync("ABC123");
+        Assert.True(primero.AbreBarrera);
+
+        carril.Reloj.Advance(TimeSpan.FromSeconds(1));
+        var segundo = await carril.IngresarAsync("DEF456");
+
+        Assert.True(segundo.AbreBarrera);
+        Assert.Equal(2, carril.Eventos.Eventos.Count);
+        Assert.Equal(2, (await carril.Sedes.ConsultarOcupacionAsync(TestContext.Current.CancellationToken)).Carros);
+    }
+
+    [Fact]
+    public async Task Carro_no_entra_con_cupo_lleno_y_no_se_guarda_ingreso_ni_cobro()
+    {
+        carril.ConfigurarCupos(cupoCarros: 1, cupoMotos: 1);
+        var primero = await carril.IngresarAsync("ABC123");
+        Assert.True(primero.AbreBarrera);
+
+        carril.Reloj.Advance(TimeSpan.FromSeconds(1));
+        var lleno = await carril.IngresarAsync("DEF456");
+
+        Assert.False(lleno.AbreBarrera);
+        Assert.Equal("LLENO: carros", lleno.Motivo);
+        Assert.Null(lleno.Ingreso);
+        Assert.Single(carril.Eventos.Eventos);
+        Assert.Single(carril.Cobros.Cobros);
+    }
+
+    [Fact]
+    public async Task Un_pase_vigente_no_permite_entrar_si_el_cupo_de_carros_esta_lleno()
+    {
+        carril.ConfigurarCupos(cupoCarros: 1, cupoMotos: 1);
+        Assert.True((await carril.IngresarAsync("ABC123")).AbreBarrera);
+        carril.Cobros.PagarEnEfectivo(Assert.Single(carril.Cobros.Cobros));
+        carril.Reloj.Advance(TimeSpan.FromSeconds(1));
+
+        var resultado = await carril.IngresarAsync("ABC123");
+
+        Assert.False(resultado.AbreBarrera);
+        Assert.Equal("LLENO: carros", resultado.Motivo);
+        Assert.Single(carril.Eventos.Eventos);
+    }
+
+    [Fact]
+    public async Task Cupo_de_moto_es_independiente_del_cupo_lleno_de_carros()
+    {
+        carril.ConfigurarCupos(cupoCarros: 1, cupoMotos: 1);
+        Assert.True((await carril.IngresarAsync("ABC123")).AbreBarrera);
+
+        carril.Reloj.Advance(TimeSpan.FromSeconds(1));
+        var moto = await carril.IngresarAsync("XYZ12D");
+
+        Assert.True(moto.AbreBarrera);
+        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync(TestContext.Current.CancellationToken)).Carros);
+        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync(TestContext.Current.CancellationToken)).Motos);
+    }
+
+    [Fact]
+    public async Task Salida_libera_el_cupo_para_otro_carro()
+    {
+        carril.ConfigurarCupos(cupoCarros: 1, cupoMotos: 1);
+        Assert.True((await carril.IngresarAsync("ABC123")).AbreBarrera);
+        carril.RegistrarSalida("ABC123", TipoDeVehiculo.Carro);
+
+        var siguiente = await carril.IngresarAsync("DEF456");
+
+        Assert.True(siguiente.AbreBarrera);
+        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync(TestContext.Current.CancellationToken)).Carros);
+    }
+
+    [Fact]
+    public async Task Cupo_cero_rechaza_todos_los_ingresos_de_ese_tipo()
+    {
+        carril.ConfigurarCupos(cupoCarros: 0, cupoMotos: 1);
+
+        var resultado = await carril.IngresarAsync("ABC123");
+
+        Assert.False(resultado.AbreBarrera);
+        Assert.Equal("LLENO: carros", resultado.Motivo);
+        Assert.Empty(carril.Eventos.Eventos);
+        Assert.Empty(carril.Cobros.Cobros);
+    }
 }

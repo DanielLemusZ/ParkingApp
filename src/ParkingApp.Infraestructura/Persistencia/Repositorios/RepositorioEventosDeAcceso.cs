@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 using ParkingApp.Aplicacion.Accesos;
 using ParkingApp.Dominio.Accesos;
 
@@ -19,5 +21,21 @@ internal sealed class RepositorioEventosDeAcceso : IRepositorioEventosDeAcceso
     {
         contexto.EventosDeAcceso.Add(evento);
         await contexto.SaveChangesAsync(cancelacion);
+    }
+
+    public async Task<IReadOnlyList<VehiculoAdentro>> ListarAdentroAsync(Guid sedeId, CancellationToken cancelacion = default)
+    {
+        // La misma regla de la ocupación (RepositorioSedes): está adentro si no hay un evento posterior de la misma placa.
+        var ultimosIngresos = await contexto.EventosDeAcceso
+            .AsNoTracking()
+            .Where(ultimo => ultimo.SedeId == sedeId && ultimo.Tipo == TipoDeEvento.Ingreso &&
+                !contexto.EventosDeAcceso.Any(posterior =>
+                    posterior.Placa == ultimo.Placa && posterior.FechaHora > ultimo.FechaHora))
+            .ToListAsync(cancelacion);
+
+        // El record se arma en memoria, porque la placa es un value object con conversión.
+        return ultimosIngresos
+            .Select(ingreso => new VehiculoAdentro(ingreso.Placa, ingreso.TipoDeVehiculo, ingreso.FechaHora))
+            .ToList();
     }
 }

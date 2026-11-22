@@ -109,7 +109,7 @@ public class RegistrarIngresoTests
 
         Assert.True(segundo.AbreBarrera);
         Assert.Equal(2, carril.Eventos.Eventos.Count);
-        Assert.Equal(2, (await carril.Sedes.ConsultarOcupacionAsync()).Carros);
+        Assert.Equal(2, (await carril.Sedes.ConsultarOcupacionAsync(TestContext.Current.CancellationToken)).Carros);
     }
 
     [Fact]
@@ -154,8 +154,8 @@ public class RegistrarIngresoTests
         var moto = await carril.IngresarAsync("XYZ12D");
 
         Assert.True(moto.AbreBarrera);
-        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync()).Carros);
-        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync()).Motos);
+        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync(TestContext.Current.CancellationToken)).Carros);
+        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync(TestContext.Current.CancellationToken)).Motos);
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class RegistrarIngresoTests
         var siguiente = await carril.IngresarAsync("DEF456");
 
         Assert.True(siguiente.AbreBarrera);
-        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync()).Carros);
+        Assert.Equal(1, (await carril.Sedes.ConsultarOcupacionAsync(TestContext.Current.CancellationToken)).Carros);
     }
 
     [Fact]

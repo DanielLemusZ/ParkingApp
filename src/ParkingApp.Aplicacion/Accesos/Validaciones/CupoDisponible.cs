@@ -35,7 +35,7 @@ public sealed class CupoDisponible : ValidacionDeIngreso
         {
             TipoDeVehiculo.Carro => (ocupacion.Carros, sede.CupoCarros),
             TipoDeVehiculo.Moto => (ocupacion.Motos, sede.CupoMotos),
-            _ => throw new ArgumentOutOfRangeException(nameof(tipo)),
+            _ => throw new InvalidOperationException("No hay cupo configurado para este tipo de vehículo."),
         };
 
         return cantidad >= cupo

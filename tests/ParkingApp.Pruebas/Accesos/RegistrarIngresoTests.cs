@@ -51,7 +51,7 @@ public class RegistrarIngresoTests
     [InlineData("ABC1234")]
     [InlineData("123ABC")]
     [InlineData("ABC12")]
-    public async Task Una_placa_sin_formato_reconocido_se_rechaza_sin_guardarse(string placa)
+    public async Task Una_placa_sin_formato_reconocido_no_ingresa_y_queda_pendiente(string placa)
     {
         var resultado = await carril.IngresarAsync(placa);
 
@@ -59,6 +59,8 @@ public class RegistrarIngresoTests
         Assert.Equal(ClasificacionDeVehiculoValida.FormatoNoReconocido, resultado.Motivo);
         Assert.Null(resultado.Ingreso);
         Assert.Empty(carril.Eventos.Eventos);
+        Assert.True(resultado.PendienteDeValidacion);
+        Assert.Equal(MotivoDeLecturaPendiente.FormatoNoReconocido, Assert.Single(carril.Lecturas.Lecturas).Motivo);
     }
 
     [Fact]
@@ -95,6 +97,7 @@ public class RegistrarIngresoTests
         Assert.False(resultado.AbreBarrera);
         Assert.Equal(LecturaValida.ConfianzaFueraDeRango, resultado.Motivo);
         Assert.Empty(carril.Eventos.Eventos);
+        Assert.Empty(carril.Lecturas.Lecturas);
     }
 
     [Fact]

@@ -34,6 +34,8 @@ public static class ServiciosDeAplicacion
 
         servicios.AddScoped<RegistrarIngreso>();
         servicios.AddScoped<RegistrarSalida>();
+        servicios.AddScoped<ListarLecturasPendientes>();
+        servicios.AddScoped<ValidarLectura>();
         servicios.AddScoped<AdministrarTarifas>();
         servicios.AddScoped<IServicioConsultas, ConsultarEventos>();
         servicios.AddScoped<ConfigurarSede>();
@@ -47,7 +49,7 @@ public static class ServiciosDeAplicacion
 
     /// <summary>
     /// Arma la cadena de validaciones del carril de entrada.
-    /// Orden: lectura válida → clasificación por formato → umbral de confianza → cupo → cobro o pase vigente.
+    /// Orden: lectura válida → umbral de confianza → clasificación por formato → cupo → cobro o pase vigente.
     /// Cada historia agrega su eslabón en su lugar de la lista.
     /// </summary>
     /// <param name="proveedor">Proveedor de servicios, para los eslabones que necesiten consultar algo.</param>
@@ -56,6 +58,7 @@ public static class ServiciosDeAplicacion
     {
         return CadenaDeValidacionesDeIngreso.Crear(
             new LecturaValida(),
+            new ConfianzaSuficiente(proveedor.GetRequiredService<IRepositorioSedes>()),
             new ClasificacionDeVehiculoValida(),
             new CupoDisponible(proveedor.GetRequiredService<IRepositorioSedes>()),
             new TarifaVigente(

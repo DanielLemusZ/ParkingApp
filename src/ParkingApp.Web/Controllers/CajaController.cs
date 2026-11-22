@@ -3,14 +3,17 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using ParkingApp.Aplicacion.Accesos;
 using ParkingApp.Aplicacion.Cobros;
 using ParkingApp.Aplicacion.Identidad;
 using ParkingApp.Aplicacion.Pagos;
+using ParkingApp.Dominio.Accesos;
 
 namespace ParkingApp.Web.Controllers;
 
 /// <summary>
-/// API de la caja: lista los cobros pendientes y registra su pago en efectivo (F-04).
+/// API de la caja: lista los cobros pendientes y registra su pago en efectivo (F-04), y lista y valida las lecturas
+/// de placa dudosas (F-06).
 /// La usan el Operador y el Administrador (F-10): sin sesión responde 401.
 /// </summary>
 [Authorize(Roles = Roles.OperadorOAdministrador)]
@@ -20,16 +23,26 @@ public sealed class CajaController : ControllerBase
 {
     private readonly ListarCobrosPendientes listarCobrosPendientes;
     private readonly RegistrarPagoEnEfectivo registrarPagoEnEfectivo;
+    private readonly ListarLecturasPendientes listarLecturasPendientes;
+    private readonly ValidarLectura validarLectura;
 
     /// <summary>
     /// Crea el controlador con los casos de uso de la caja, los mismos que usa la pantalla.
     /// </summary>
     /// <param name="listarCobrosPendientes">Caso de uso que lista los cobros pendientes.</param>
     /// <param name="registrarPagoEnEfectivo">Caso de uso que registra el pago en efectivo.</param>
-    public CajaController(ListarCobrosPendientes listarCobrosPendientes, RegistrarPagoEnEfectivo registrarPagoEnEfectivo)
+    /// <param name="listarLecturasPendientes">Caso de uso que lista las placas por revisar.</param>
+    /// <param name="validarLectura">Caso de uso que valida una lectura.</param>
+    public CajaController(
+        ListarCobrosPendientes listarCobrosPendientes,
+        RegistrarPagoEnEfectivo registrarPagoEnEfectivo,
+        ListarLecturasPendientes listarLecturasPendientes,
+        ValidarLectura validarLectura)
     {
         this.listarCobrosPendientes = listarCobrosPendientes;
         this.registrarPagoEnEfectivo = registrarPagoEnEfectivo;
+        this.listarLecturasPendientes = listarLecturasPendientes;
+        this.validarLectura = validarLectura;
     }
 
     /// <summary>
@@ -74,12 +87,72 @@ public sealed class CajaController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
-        // El operador del pago es el usuario de la sesión (su correo). [Authorize] garantiza que hay uno.
-        var operador = User.Identity?.Name ?? throw new InvalidOperationException("La solicitud no tiene un usuario con sesión.");
+        // El operador del pago es el usuario de la sesión (su correo).
+        var operador = OperadorDeLaSesion();
 
         var resultado = await registrarPagoEnEfectivo.EjecutarAsync(cobroId, referencia, operador, cancelacion);
         return resultado;
     }
+
+    /// <summary>
+    /// Lista las lecturas que esperan validación, de la más antigua a la más reciente.
+    /// </summary>
+    /// <param name="cancelacion">Se cancela si el cliente cierra la conexión.</param>
+    /// <returns>Las lecturas pendientes, con la hora de la sede.</returns>
+    [HttpGet("lecturas-pendientes")]
+    [ProducesResponseType<IReadOnlyList<LecturaPorRevisar>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<LecturaPorRevisar>>> ListarLecturasPendientesAsync(CancellationToken cancelacion)
+    {
+        var pendientes = await listarLecturasPendientes.EjecutarAsync(cancelacion);
+        return Ok(pendientes);
+    }
+
+    /// <summary>
+    /// Confirma o corrige la placa de una lectura pendiente. El vehículo sigue el flujo de su carril y el evento queda
+    /// como lectura manual. La lectura queda validada aunque la barrera no abra; una segunda validación se rechaza.
+    /// </summary>
+    /// <param name="id">Lectura que se valida.</param>
+    /// <param name="solicitud">Placa validada y, si su formato no se reconoce en la entrada, el tipo de vehículo.</param>
+    /// <param name="cancelacion">Se cancela si el cliente cierra la conexión.</param>
+    /// <returns>Si la lectura se validó, si la barrera abre y el motivo.</returns>
+    [HttpPost("lecturas-pendientes/{id:guid}/validacion")]
+    [ProducesResponseType<ResultadoDeValidarLectura>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ResultadoDeValidarLectura>> ValidarLecturaAsync(
+        Guid id,
+        SolicitudDeValidacionHttp solicitud,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(solicitud);
+
+        var operador = OperadorDeLaSesion();
+
+        var resultado = await validarLectura.EjecutarAsync(id, solicitud.Placa, solicitud.TipoDeVehiculo, operador, cancelacion);
+        return resultado;
+    }
+
+    // [Authorize] garantiza que hay un usuario.
+    private string OperadorDeLaSesion()
+    {
+        return User.Identity?.Name ?? throw new InvalidOperationException("La solicitud no tiene un usuario con sesión.");
+    }
+}
+
+/// <summary>
+/// Cuerpo de la solicitud que valida una lectura. Si falta la placa, la API responde 400.
+/// </summary>
+public sealed class SolicitudDeValidacionHttp
+{
+    /// <summary>
+    /// Placa confirmada o digitada. Solo admite letras y números; los espacios y los guiones se quitan.
+    /// </summary>
+    [Required(ErrorMessage = "La placa es obligatoria")]
+    public string? Placa { get; init; }
+
+    /// <summary>
+    /// 0 = carro, 1 = moto. Solo hace falta en la entrada, si el formato de la placa no se reconoce.
+    /// </summary>
+    public TipoDeVehiculo? TipoDeVehiculo { get; init; }
 }
 
 /// <summary>

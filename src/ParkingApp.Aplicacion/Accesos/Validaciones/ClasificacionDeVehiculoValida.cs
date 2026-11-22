@@ -3,7 +3,8 @@ using ParkingApp.Dominio.Accesos;
 namespace ParkingApp.Aplicacion.Accesos.Validaciones;
 
 /// <summary>
-/// Rechaza las placas que no coinciden con un formato de carro o moto reconocido.
+/// Envía a la caja las placas que no coinciden con un formato de carro o moto reconocido, salvo que el operador
+/// ya haya indicado el tipo de vehículo al validarlas.
 /// </summary>
 public sealed class ClasificacionDeVehiculoValida : ValidacionDeIngreso
 {
@@ -16,9 +17,8 @@ public sealed class ClasificacionDeVehiculoValida : ValidacionDeIngreso
     protected override Task<ResultadoDeValidacion> RevisarAsync(SolicitudDeIngreso solicitud, CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(solicitud);
-        var placa = Placa.Crear(solicitud.Placa);
-        var resultado = ClasificadorDeVehiculo.Clasificar(placa) is null
-            ? ResultadoDeValidacion.Rechazar(FormatoNoReconocido)
+        var resultado = solicitud.ObtenerTipoDeVehiculo() is null
+            ? ResultadoDeValidacion.EnviarACaja(FormatoNoReconocido, MotivoDeLecturaPendiente.FormatoNoReconocido)
             : ResultadoDeValidacion.Aceptar();
 
         return Task.FromResult(resultado);

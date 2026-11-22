@@ -55,7 +55,7 @@ public class RegistrarSalidaTests
     [Fact]
     public async Task Placa_diplomatica_de_ingreso_manual_que_pago_abre_con_cobro_pagado_sin_exigir_formato()
     {
-        // El ingreso manual llega con su propia historia: aquí el cobro de CD1234 se guarda directamente.
+        // Aquí el cobro de CD1234 se guarda directamente; el recorrido por la caja está en ValidarLecturaTests.
         var tarifa = new Tarifa(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 8000m, new DateOnly(2026, 11, 1));
         var cobro = Cobro.Generar(Placa.Crear("CD1234"), TipoDeVehiculo.Carro, entrada.Sede.Id, new DateOnly(2026, 11, 18), tarifa, MiercolesALas0800);
         await entrada.Cobros.AgregarAsync(cobro, TestContext.Current.CancellationToken);
@@ -141,6 +141,8 @@ public class RegistrarSalidaTests
         Assert.False(resultado.AbreBarrera);
         Assert.Equal("No abre: confianza baja, la placa se valida en la caja", resultado.Motivo);
         Assert.Empty(entrada.Eventos.Eventos);
+        Assert.True(resultado.PendienteDeValidacion);
+        Assert.Equal(TipoDeEvento.Salida, Assert.Single(entrada.Lecturas.Lecturas).Tipo);
     }
 
     [Fact]

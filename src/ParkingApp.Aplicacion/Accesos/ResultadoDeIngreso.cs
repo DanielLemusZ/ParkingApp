@@ -10,7 +10,8 @@ namespace ParkingApp.Aplicacion.Accesos;
 /// <param name="AbreBarrera">Si la barrera se abre.</param>
 /// <param name="Motivo">Motivo que se muestra en el carril.</param>
 /// <param name="Ingreso">El ingreso registrado, o nada si la barrera no abre.</param>
-public sealed record ResultadoDeIngreso(bool AbreBarrera, string Motivo, IngresoRegistrado? Ingreso);
+/// <param name="PendienteDeValidacion">Si la lectura quedó en la caja para que el operador la valide.</param>
+public sealed record ResultadoDeIngreso(bool AbreBarrera, string Motivo, IngresoRegistrado? Ingreso, bool PendienteDeValidacion = false);
 
 /// <summary>
 /// Datos de un ingreso registrado, para mostrarlos en el carril.
@@ -20,7 +21,7 @@ public sealed record ResultadoDeIngreso(bool AbreBarrera, string Motivo, Ingreso
 /// <param name="FechaHora">Fecha y hora del ingreso, en la hora de la sede.</param>
 /// <param name="Carril">Número del carril.</param>
 /// <param name="Confianza">Confianza de la lectura.</param>
-/// <param name="TipoDeVehiculo">Tipo de vehículo identificado por la placa.</param>
+/// <param name="TipoDeVehiculo">Tipo de vehículo identificado por la placa o indicado por el operador.</param>
 /// <param name="Cobro">El cobro generado en este ingreso, o nada si no se generó.</param>
 public sealed record IngresoRegistrado(Guid Id, string Placa, DateTimeOffset FechaHora, int Carril, int Confianza, TipoDeVehiculo TipoDeVehiculo, CobroGenerado? Cobro);
 

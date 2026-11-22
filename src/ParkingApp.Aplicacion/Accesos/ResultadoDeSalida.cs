@@ -8,7 +8,8 @@ namespace ParkingApp.Aplicacion.Accesos;
 /// <param name="AbreBarrera">Si la barrera se abre.</param>
 /// <param name="Motivo">Motivo que se muestra en el carril.</param>
 /// <param name="Salida">La salida registrada, o nada si la barrera no abre.</param>
-public sealed record ResultadoDeSalida(bool AbreBarrera, string Motivo, SalidaRegistrada? Salida);
+/// <param name="PendienteDeValidacion">Si la lectura quedó en la caja para que el operador la valide.</param>
+public sealed record ResultadoDeSalida(bool AbreBarrera, string Motivo, SalidaRegistrada? Salida, bool PendienteDeValidacion = false);
 
 /// <summary>
 /// Datos de una salida registrada, para mostrarlos en el carril.

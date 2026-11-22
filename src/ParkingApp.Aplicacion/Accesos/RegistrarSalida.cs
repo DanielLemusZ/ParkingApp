@@ -7,7 +7,8 @@ namespace ParkingApp.Aplicacion.Accesos;
 
 /// <summary>
 /// Caso de uso del carril de salida (F-05): la barrera abre solo si el vehículo no tiene cobros pendientes (RN-06)
-/// y, si abre, registra la salida. Lo usan la pantalla del carril y la API.
+/// y, si abre, registra la salida. Si la lectura es dudosa, la deja pendiente en la caja (F-06). Lo usan la pantalla
+/// del carril, la API y la validación de la caja.
 /// </summary>
 public sealed class RegistrarSalida
 {
@@ -24,9 +25,10 @@ public sealed class RegistrarSalida
     /// <summary>
     /// Motivo cuando la confianza de la lectura es menor que el umbral de la sede: el operador valida la placa en la caja (F-06).
     /// </summary>
-    public const string ConfianzaBaja = "No abre: confianza baja, la placa se valida en la caja";
+    public const string ConfianzaBaja = ConfianzaSuficiente.ConfianzaBaja;
 
     private readonly IRepositorioEventosDeAcceso eventos;
+    private readonly IRepositorioLecturasPendientes lecturas;
     private readonly IRepositorioCobros cobros;
     private readonly IRepositorioSedes sedes;
     private readonly ISedeActual sede;
@@ -37,6 +39,7 @@ public sealed class RegistrarSalida
     /// Crea el caso de uso con sus dependencias.
     /// </summary>
     /// <param name="eventos">Donde se guardan las salidas.</param>
+    /// <param name="lecturas">Donde quedan las lecturas que debe validar el operador.</param>
     /// <param name="cobros">Donde se consultan los cobros del vehículo.</param>
     /// <param name="sedes">Donde se consulta el umbral de confianza de la sede.</param>
     /// <param name="sede">Sede donde corre el carril.</param>
@@ -44,6 +47,7 @@ public sealed class RegistrarSalida
     /// <param name="reloj">Reloj del sistema; en las pruebas, uno falso.</param>
     public RegistrarSalida(
         IRepositorioEventosDeAcceso eventos,
+        IRepositorioLecturasPendientes lecturas,
         IRepositorioCobros cobros,
         IRepositorioSedes sedes,
         ISedeActual sede,
@@ -51,6 +55,7 @@ public sealed class RegistrarSalida
         TimeProvider reloj)
     {
         this.eventos = eventos;
+        this.lecturas = lecturas;
         this.cobros = cobros;
         this.sedes = sedes;
         this.sede = sede;
@@ -95,14 +100,58 @@ public sealed class RegistrarSalida
         // 2. Una lectura con confianza menor que el umbral de la sede pasa a la caja para validar la placa (F-06).
         var configuracion = await sedes.ObtenerAsync(cancelacion);
 
+        var placaDelVehiculo = Placa.Crear(placaLeida);
+
         if (confianza < configuracion.UmbralConfianza)
         {
-            return Rechazar(ConfianzaBaja);
+            var lectura = LecturaPendiente.Registrar(
+                TipoDeEvento.Salida,
+                MotivoDeLecturaPendiente.ConfianzaBaja,
+                placaDelVehiculo,
+                sede.Id,
+                carril,
+                confianza,
+                ahoraEnUtc);
+            await lecturas.AgregarAsync(lectura, cancelacion);
+
+            return new ResultadoDeSalida(false, ConfianzaBaja, null, PendienteDeValidacion: true);
         }
 
+        return await RevisarCobrosYRegistrarAsync(placaDelVehiculo, confianza, carril, ahoraEnUtc, null, cancelacion);
+    }
+
+    /// <summary>
+    /// Sigue la salida de una lectura que validó el operador (F-06): revisa los cobros sin volver a revisar la confianza
+    /// y, si abre, la salida queda como lectura manual.
+    /// </summary>
+    /// <param name="placa">Placa que validó el operador.</param>
+    /// <param name="confianza">Confianza de la lectura original.</param>
+    /// <param name="carril">Número del carril de salida.</param>
+    /// <param name="operador">Operador que validó la placa.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>Si la barrera abre, el motivo y la salida registrada.</returns>
+    public Task<ResultadoDeSalida> EjecutarLecturaValidadaAsync(
+        Placa placa,
+        int confianza,
+        int carril,
+        string operador,
+        CancellationToken cancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(placa);
+
+        return RevisarCobrosYRegistrarAsync(placa, confianza, carril, reloj.GetUtcNow(), operador, cancelacion);
+    }
+
+    private async Task<ResultadoDeSalida> RevisarCobrosYRegistrarAsync(
+        Placa placaDelVehiculo,
+        int confianza,
+        int carril,
+        DateTimeOffset ahoraEnUtc,
+        string? validadoPor,
+        CancellationToken cancelacion)
+    {
         // 3. RN-06: cualquier cobro pendiente impide salir, también uno de un día operativo anterior.
         // La placa no necesita un formato reconocido, porque el vehículo pudo entrar por ingreso manual.
-        var placaDelVehiculo = Placa.Crear(placaLeida);
         var pendiente = await cobros.SumarPendientesAsync(placaDelVehiculo, sede.Id, cancelacion);
 
         if (pendiente > 0)
@@ -114,7 +163,7 @@ public sealed class RegistrarSalida
         var momento = await calendario.UbicarAsync(ahoraEnUtc, cancelacion);
         var pagado = await cobros.ExistePagadoDelDiaAsync(placaDelVehiculo, sede.Id, momento.DiaOperativo, cancelacion);
         var tipoDeVehiculo = ClasificadorDeVehiculo.Clasificar(placaDelVehiculo) ?? TipoDeVehiculo.NoClasificado;
-        var salida = EventoDeAcceso.RegistrarSalida(placaDelVehiculo, tipoDeVehiculo, sede.Id, carril, confianza, ahoraEnUtc);
+        var salida = EventoDeAcceso.RegistrarSalida(placaDelVehiculo, tipoDeVehiculo, sede.Id, carril, confianza, ahoraEnUtc, validadoPor);
         await eventos.AgregarAsync(salida, cancelacion);
 
         // 5. Se responde con la hora de la sede, que es la que ve el operador.
@@ -141,6 +190,11 @@ public sealed class RegistrarSalida
         if (placa.Length > Placa.LargoMaximo)
         {
             return $"La placa no puede tener más de {Placa.LargoMaximo} caracteres";
+        }
+
+        if (!Placa.SePuedeGuardar(placa))
+        {
+            return LecturaValida.CaracteresNoValidos;
         }
 
         if (confianza < EventoDeAcceso.ConfianzaMinima || confianza > EventoDeAcceso.ConfianzaMaxima)

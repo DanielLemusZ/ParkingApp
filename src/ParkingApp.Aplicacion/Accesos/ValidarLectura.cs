@@ -163,6 +163,59 @@ public sealed class ValidarLectura
         return resultado;
     }
 
+    /// <summary>
+    /// Registra una placa que el operador escribe en el carril porque la imagen no se pudo leer. No hubo lectura, así
+    /// que la confianza queda en 0; el evento queda como lectura manual, con el operador, y sigue el flujo del carril.
+    /// </summary>
+    /// <param name="sentido">Si es un ingreso o una salida.</param>
+    /// <param name="carril">Número del carril.</param>
+    /// <param name="placa">Placa escrita, sin normalizar.</param>
+    /// <param name="tipoIndicado">Carro o moto, si el formato de la placa no se reconoce en la entrada.</param>
+    /// <param name="operador">Operador que la escribe.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>Si se registró, si la barrera abre y el motivo.</returns>
+    /// <exception cref="ArgumentException">Falta el operador.</exception>
+    public async Task<ResultadoDeValidarLectura> RegistrarLecturaManualAsync(
+        TipoDeEvento sentido,
+        int carril,
+        string? placa,
+        TipoDeVehiculo? tipoIndicado,
+        string operador,
+        CancellationToken cancelacion = default)
+    {
+        if (carril < 1)
+        {
+            return Rechazar("El carril debe ser 1 o mayor");
+        }
+
+        var placaDigitada = Placa.Normalizar(placa);
+        var errorDePlaca = RevisarPlaca(placaDigitada);
+
+        if (errorDePlaca != null)
+        {
+            return Rechazar(errorDePlaca);
+        }
+
+        var esCarroOMoto = tipoIndicado is TipoDeVehiculo.Carro or TipoDeVehiculo.Moto;
+
+        if (NecesitaTipoDeVehiculo(sentido, placaDigitada) && !esCarroOMoto)
+        {
+            return Rechazar(FaltaElTipoDeVehiculo);
+        }
+
+        var placaValidada = Placa.Crear(placaDigitada);
+
+        if (sentido == TipoDeEvento.Ingreso)
+        {
+            var validacion = new ValidacionDelOperador(operador, tipoIndicado);
+            var ingreso = await registrarIngreso.EjecutarLecturaValidadaAsync(placaValidada, EventoDeAcceso.ConfianzaMinima, carril, validacion, cancelacion);
+            return new ResultadoDeValidarLectura(true, ingreso.AbreBarrera, ingreso.Motivo, ingreso.Ingreso, null);
+        }
+
+        var salida = await registrarSalida.EjecutarLecturaValidadaAsync(placaValidada, EventoDeAcceso.ConfianzaMinima, carril, operador, cancelacion);
+        return new ResultadoDeValidarLectura(true, salida.AbreBarrera, salida.Motivo, null, salida.Salida);
+    }
+
     // Devuelve el motivo del rechazo, o null si la placa sirve.
     private static string? RevisarPlaca(string placa)
     {

@@ -104,7 +104,7 @@ public sealed class LecturaPendiente
     /// <returns>La lectura pendiente.</returns>
     /// <exception cref="ArgumentOutOfRangeException">El carril o la confianza están fuera de rango.</exception>
     /// <exception cref="ArgumentException">
-    /// El formato no reconocido se usó en una salida, o la fecha y la hora no están en UTC.
+    /// El formato no reconocido se usó en una salida, "no figura adentro" se usó en un ingreso, o la fecha y la hora no están en UTC.
     /// </exception>
     public static LecturaPendiente Registrar(
         TipoDeEvento tipo,
@@ -120,6 +120,11 @@ public sealed class LecturaPendiente
         if (tipo == TipoDeEvento.Salida && motivo == MotivoDeLecturaPendiente.FormatoNoReconocido)
         {
             throw new ArgumentException("La salida no exige un formato de placa reconocido.", nameof(motivo));
+        }
+
+        if (tipo == TipoDeEvento.Ingreso && motivo == MotivoDeLecturaPendiente.NoFiguraAdentro)
+        {
+            throw new ArgumentException("Solo la salida revisa si la placa figura adentro.", nameof(motivo));
         }
 
         EventoDeAcceso.ValidarLectura(carril, confianza, fechaHora);

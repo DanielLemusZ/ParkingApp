@@ -55,7 +55,10 @@ public class RegistrarSalidaTests
     [Fact]
     public async Task Placa_diplomatica_de_ingreso_manual_que_pago_abre_con_cobro_pagado_sin_exigir_formato()
     {
-        // Aquí el cobro de CD1234 se guarda directamente; el recorrido por la caja está en ValidarLecturaTests.
+        // Aquí el ingreso y el cobro de CD1234 se guardan directamente; el recorrido por la caja está en ValidarLecturaTests.
+        var ingreso = EventoDeAcceso.RegistrarIngreso(
+            Placa.Crear("CD1234"), TipoDeVehiculo.Carro, entrada.Sede.Id, 1, 0, MiercolesALas0800.AddHours(-1), "operador");
+        await entrada.Eventos.AgregarAsync(ingreso, TestContext.Current.CancellationToken);
         var tarifa = new Tarifa(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 8000m, new DateOnly(2026, 11, 1));
         var cobro = Cobro.Generar(Placa.Crear("CD1234"), TipoDeVehiculo.Carro, entrada.Sede.Id, new DateOnly(2026, 11, 18), tarifa, MiercolesALas0800);
         await entrada.Cobros.AgregarAsync(cobro, TestContext.Current.CancellationToken);
@@ -124,12 +127,59 @@ public class RegistrarSalidaTests
     }
 
     [Fact]
-    public async Task Una_placa_sin_ingreso_registrado_sale_como_sin_cobro()
+    public async Task Una_placa_sin_ingreso_registrado_no_abre_y_queda_para_validar_la_lectura()
     {
         var resultado = await salida.SalirAsync("DEF456");
 
-        Assert.True(resultado.AbreBarrera);
-        Assert.Equal("Abre: sin cobro", resultado.Motivo);
+        Assert.False(resultado.AbreBarrera);
+        Assert.Equal("No abre: la placa no figura adentro, hay que validar la lectura", resultado.Motivo);
+        Assert.True(resultado.PendienteDeValidacion);
+        Assert.Empty(entrada.Eventos.Eventos);
+
+        var lectura = Assert.Single(entrada.Lecturas.Lecturas);
+        Assert.Equal(TipoDeEvento.Salida, lectura.Tipo);
+        Assert.Equal(MotivoDeLecturaPendiente.NoFiguraAdentro, lectura.Motivo);
+        Assert.Equal(lectura.Id, resultado.LecturaPendiente?.Id);
+    }
+
+    // El caso que se vio en las pruebas manuales: la foto de la salida se leyó incompleta.
+    [Fact]
+    public async Task Una_lectura_incompleta_de_un_vehiculo_que_esta_adentro_no_abre_aunque_el_pagara()
+    {
+        await entrada.IngresarAsync("AHF723");
+        entrada.Cobros.PagarEnEfectivo(entrada.Cobros.Cobros[0]);
+        entrada.Reloj.Advance(TimeSpan.FromHours(2));
+
+        var resultado = await salida.SalirAsync("AHF7", confianza: 99);
+
+        Assert.False(resultado.AbreBarrera);
+        Assert.Equal(RegistrarSalida.NoFiguraAdentro, resultado.Motivo);
+        Assert.Single(entrada.Eventos.Eventos);
+    }
+
+    [Fact]
+    public async Task Un_vehiculo_que_ya_salio_no_figura_adentro()
+    {
+        await entrada.IngresarAsync("XYZ12D");
+        entrada.Reloj.Advance(TimeSpan.FromHours(1));
+        var primera = await salida.SalirAsync("XYZ12D");
+        entrada.Reloj.Advance(TimeSpan.FromMinutes(1));
+
+        var segunda = await salida.SalirAsync("XYZ12D");
+
+        Assert.True(primera.AbreBarrera);
+        Assert.False(segunda.AbreBarrera);
+        Assert.Equal(RegistrarSalida.NoFiguraAdentro, segunda.Motivo);
+        Assert.Equal(2, entrada.Eventos.Eventos.Count);
+    }
+
+    [Fact]
+    public void Solo_la_salida_puede_quedar_pendiente_porque_la_placa_no_figura_adentro()
+    {
+        var excepcion = Assert.Throws<ArgumentException>(() => LecturaPendiente.Registrar(
+            TipoDeEvento.Ingreso, MotivoDeLecturaPendiente.NoFiguraAdentro, Placa.Crear("ABC123"), entrada.Sede.Id, 1, 99, MiercolesALas0800));
+
+        Assert.Equal("motivo", excepcion.ParamName);
     }
 
     [Fact]
@@ -139,7 +189,7 @@ public class RegistrarSalidaTests
         var resultado = await salida.SalirAsync("XYZ12D", confianza: 50);
 
         Assert.False(resultado.AbreBarrera);
-        Assert.Equal("No abre: confianza baja, la placa se valida en la caja", resultado.Motivo);
+        Assert.Equal("No abre: confianza baja, hay que validar la lectura", resultado.Motivo);
         Assert.Empty(entrada.Eventos.Eventos);
         Assert.True(resultado.PendienteDeValidacion);
         Assert.Equal(TipoDeEvento.Salida, Assert.Single(entrada.Lecturas.Lecturas).Tipo);
@@ -168,16 +218,20 @@ public class RegistrarSalidaTests
     [Fact]
     public async Task La_salida_se_registra_con_la_sede_el_carril_y_la_hora_de_la_sede()
     {
+        await entrada.IngresarAsync("XYZ12D");
+        entrada.Reloj.Advance(TimeSpan.FromHours(1));
+
         var resultado = await salida.SalirAsync("XYZ12D", carril: 2);
 
-        var evento = Assert.Single(entrada.Eventos.Eventos);
+        Assert.Equal(2, entrada.Eventos.Eventos.Count);
+        var evento = entrada.Eventos.Eventos[1];
         Assert.Equal(TipoDeEvento.Salida, evento.Tipo);
         Assert.Equal(entrada.Sede.Id, evento.SedeId);
         Assert.Equal(2, evento.Carril);
-        Assert.Equal(MiercolesALas0800, evento.FechaHora);
+        Assert.Equal(MiercolesALas0800.AddHours(1), evento.FechaHora);
 
         var registrada = Assert.IsType<SalidaRegistrada>(resultado.Salida);
         Assert.Equal(TimeSpan.FromHours(-5), registrada.FechaHora.Offset);
-        Assert.Equal(8, registrada.FechaHora.Hour);
+        Assert.Equal(9, registrada.FechaHora.Hour);
     }
 }

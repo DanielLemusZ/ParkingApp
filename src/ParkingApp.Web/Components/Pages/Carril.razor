@@ -4,6 +4,7 @@
 @using ParkingApp.Aplicacion.Accesos
 @using ParkingApp.Aplicacion.Cobros
 @using ParkingApp.Dominio.Accesos
+@using ParkingApp.Web.Components.Lecturas
 @inject IServiceScopeFactory FabricaDeAlcances
 
 <PageTitle>Carril</PageTitle>
@@ -19,14 +20,21 @@
                 <MudSelectItem T="int" Value="1">Carril 1</MudSelectItem>
                 <MudSelectItem T="int" Value="2">Carril 2</MudSelectItem>
             </MudSelect>
-            <MudTextField T="string" Label="Placa" @bind-Value="placa" Immediate="true" />
-            <MudNumericField T="int" Label="Confianza de la lectura (0 a 100)" @bind-Value="confianza" Immediate="true"
-                             Min="EventoDeAcceso.ConfianzaMinima" Max="EventoDeAcceso.ConfianzaMaxima" />
+            <SubirImagenDePlaca AlLeer="UsarLecturaDeEntradaAsync" />
 
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
-                       Disabled="registrando" OnClick="RegistrarIngresoAsync">
-                Registrar ingreso
-            </MudButton>
+            @* La placa y la confianza salen de la imagen; la confianza mínima la configura el Administrador. *@
+            @if (escribirEntrada)
+            {
+                @* No hubo lectura: no hay confianza que mostrar. *@
+                <LecturaManualDelCarril Sentido="TipoDeEvento.Ingreso" Carril="carril" Escribir="true" AlRegistrar="MostrarIngresoManual" />
+            }
+            else
+            {
+                <MudTextField T="string" Label="Placa" Value="placa" ReadOnly="true" Disabled="true" />
+                <MudTextField T="string" Label="Confianza de la lectura" Value="@TextoDeConfianza(confianza)" ReadOnly="true" Disabled="true" />
+            }
+            <LecturaManualDelCarril Sentido="TipoDeEvento.Ingreso" Carril="carril" Pendiente="resultado?.LecturaPendiente"
+                                    AlRegistrar="MostrarIngresoManual" />
 
             @if (resultado != null)
             {
@@ -79,14 +87,21 @@
                 <MudSelectItem T="int" Value="1">Carril 1</MudSelectItem>
                 <MudSelectItem T="int" Value="2">Carril 2</MudSelectItem>
             </MudSelect>
-            <MudTextField T="string" Label="Placa" @bind-Value="placaSalida" Immediate="true" />
-            <MudNumericField T="int" Label="Confianza de la lectura (0 a 100)" @bind-Value="confianzaSalida" Immediate="true"
-                             Min="EventoDeAcceso.ConfianzaMinima" Max="EventoDeAcceso.ConfianzaMaxima" />
+            <SubirImagenDePlaca AlLeer="UsarLecturaDeSalidaAsync" />
 
-            <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="mt-4"
-                       Disabled="registrandoSalida" OnClick="RegistrarSalidaAsync">
-                Registrar salida
-            </MudButton>
+            @* La placa y la confianza salen de la imagen; la confianza mínima la configura el Administrador. *@
+            @if (escribirSalida)
+            {
+                @* No hubo lectura: no hay confianza que mostrar. *@
+                <LecturaManualDelCarril Sentido="TipoDeEvento.Salida" Carril="carrilSalida" Escribir="true" AlRegistrar="MostrarSalidaManual" />
+            }
+            else
+            {
+                <MudTextField T="string" Label="Placa" Value="placaSalida" ReadOnly="true" Disabled="true" />
+                <MudTextField T="string" Label="Confianza de la lectura" Value="@TextoDeConfianza(confianzaSalida)" ReadOnly="true" Disabled="true" />
+            }
+            <LecturaManualDelCarril Sentido="TipoDeEvento.Salida" Carril="carrilSalida" Pendiente="resultadoSalida?.LecturaPendiente"
+                                    AlRegistrar="MostrarSalidaManual" />
 
             @if (resultadoSalida != null)
             {
@@ -129,18 +144,26 @@
 @code {
     private int carril = 1;
     private string? placa;
-    private int confianza = 95;
+    private int? confianza;
+    private bool escribirEntrada;
     private bool registrando;
     private ResultadoDeIngreso? resultado;
 
     private int carrilSalida = 1;
     private string? placaSalida;
-    private int confianzaSalida = 95;
+    private int? confianzaSalida;
+    private bool escribirSalida;
     private bool registrandoSalida;
     private ResultadoDeSalida? resultadoSalida;
 
     private async Task RegistrarIngresoAsync()
     {
+        // Una segunda foto mientras se registra la primera no crea otro registro.
+        if (registrando)
+        {
+            return;
+        }
+
         registrando = true;
 
         try
@@ -149,7 +172,7 @@
             // y el contexto de la base de datos no debe acumular datos entre un registro y otro.
             await using var alcance = FabricaDeAlcances.CreateAsyncScope();
             var registrarIngreso = alcance.ServiceProvider.GetRequiredService<RegistrarIngreso>();
-            resultado = await registrarIngreso.EjecutarAsync(placa, confianza, carril);
+            resultado = await registrarIngreso.EjecutarAsync(placa, confianza ?? 0, carril);
         }
         finally
         {
@@ -159,18 +182,81 @@
 
     private async Task RegistrarSalidaAsync()
     {
+        if (registrandoSalida)
+        {
+            return;
+        }
+
         registrandoSalida = true;
 
         try
         {
             await using var alcance = FabricaDeAlcances.CreateAsyncScope();
             var registrarSalida = alcance.ServiceProvider.GetRequiredService<RegistrarSalida>();
-            resultadoSalida = await registrarSalida.EjecutarAsync(placaSalida, confianzaSalida, carrilSalida);
+            resultadoSalida = await registrarSalida.EjecutarAsync(placaSalida, confianzaSalida ?? 0, carrilSalida);
         }
         finally
         {
             registrandoSalida = false;
         }
+    }
+
+    // Con la placa leída se registra el ingreso, como lo haría la cámara. Si la foto no se pudo leer, se habilita
+    // escribir la placa; si la lectura no alcanza el umbral, el registro la deja pendiente para validarla.
+    private async Task UsarLecturaDeEntradaAsync(LecturaDeImagen lectura)
+    {
+        resultado = null;
+        escribirEntrada = !lectura.Leida;
+        placa = lectura.Leida ? lectura.Placa : null;
+        confianza = lectura.Leida ? lectura.Confianza : null;
+
+        if (lectura.Leida)
+        {
+            await RegistrarIngresoAsync();
+        }
+    }
+
+    private async Task UsarLecturaDeSalidaAsync(LecturaDeImagen lectura)
+    {
+        resultadoSalida = null;
+        escribirSalida = !lectura.Leida;
+        placaSalida = lectura.Leida ? lectura.Placa : null;
+        confianzaSalida = lectura.Leida ? lectura.Confianza : null;
+
+        if (lectura.Leida)
+        {
+            await RegistrarSalidaAsync();
+        }
+    }
+
+    // La placa validada o escrita a mano ya siguió el flujo del carril: solo se muestra el resultado.
+    private void MostrarIngresoManual(ResultadoDeValidarLectura validada)
+    {
+        escribirEntrada = false;
+        resultado = new ResultadoDeIngreso(validada.AbreBarrera, validada.Motivo, validada.Ingreso);
+
+        if (validada.Ingreso is not null)
+        {
+            placa = validada.Ingreso.Placa;
+            confianza = validada.Ingreso.Confianza;
+        }
+    }
+
+    private void MostrarSalidaManual(ResultadoDeValidarLectura validada)
+    {
+        escribirSalida = false;
+        resultadoSalida = new ResultadoDeSalida(validada.AbreBarrera, validada.Motivo, validada.Salida);
+
+        if (validada.Salida is not null)
+        {
+            placaSalida = validada.Salida.Placa;
+            confianzaSalida = validada.Salida.Confianza;
+        }
+    }
+
+    private static string TextoDeConfianza(int? valor)
+    {
+        return valor is null ? string.Empty : $"{valor} %";
     }
 
     private static string FormatearFecha(DateTimeOffset fechaHora)

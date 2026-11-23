@@ -99,6 +99,17 @@ dotnet ef migrations script --idempotent --project src/ParkingApp.Infraestructur
 
 **Sin Docker:** instala PostgreSQL 18.7 nativo, con el mismo puerto, usuario, contraseña y base de tu `.env`.
 
+### Lectura de placas (OCR)
+
+En *Carril*, cada panel tiene **Subir imagen de la placa** (JPG o PNG, hasta 5 MB). La placa se lee en el mismo equipo, sin internet ni cuenta, y se registra el ingreso o la salida. La placa y la confianza se muestran, pero no se escriben: la confianza mínima la configura el Administrador en *Configuración*.
+
+- Si la confianza no alcanza ese umbral, o el formato no se reconoce, aparece **Validar lectura** (ver *Lectura manual*).
+- Si la foto no se puede leer, el motivo aparece en pantalla y la placa se escribe a mano. Queda como lectura manual, con el correo del operador y confianza 0, porque no hubo lectura.
+
+- Lee con los modelos de [fast-alpr](https://github.com/ankandrew/fast-alpr): un detector ubica la placa y un OCR la lee, para carros y motos. La confianza es la del carácter más dudoso, de 0 a 100.
+- Los modelos van en `src/ParkingApp.Infraestructura/LecturaDePlacas/Modelos`, junto con [su origen y sus licencias](src/ParkingApp.Infraestructura/LecturaDePlacas/Modelos/LICENCIAS.md). Al compilar se copian a la carpeta `Modelos` de la aplicación.
+- La imagen no se guarda ni sale del equipo.
+
 ### Usuarios y roles
 
 Todas las pantallas y la API piden iniciar sesión, en `/cuenta/iniciar-sesion`. No hay registro público: los usuarios iniciales los crea la aplicación al arrancar.
@@ -140,7 +151,7 @@ En cada pago queda el correo del usuario que lo registró en la caja.
 - Solo se borra un usuario que nunca registró un pago; si registró pagos, hay que desactivarlo.
 - Nadie puede desactivarse, borrarse ni cambiarse el rol a sí mismo, así que siempre queda un Administrador activo.
 
-**Lectura manual.** Si la confianza de una lectura es menor que el umbral de *Configuración*, o si en la entrada la placa no tiene un formato reconocido, la barrera no abre y la lectura pasa a *Placas por revisar*, en la caja.
+**Lectura manual.** Si la confianza de una lectura es menor que el umbral de *Configuración*, o si en la entrada la placa no tiene un formato reconocido, la barrera no abre y la lectura se valida con **Validar lectura**. En la salida pasa lo mismo si la placa leída no figura adentro, por ejemplo por una lectura incompleta. Se valida en el mismo carril o en *Placas por revisar*, en la caja. Vale la primera confirmación.
 
 - El operador confirma o corrige la placa. En la entrada, si el formato no se reconoce, indica carro o moto. El ingreso o la salida queda como lectura manual, con su correo.
 - Al confirmar, la lectura se cierra aunque la barrera no abra (LLENO o cobro pendiente): después se vuelve a leer la placa en el carril. En la salida conviene cobrar antes de confirmar.

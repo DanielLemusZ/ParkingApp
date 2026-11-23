@@ -34,14 +34,7 @@ public sealed class ListarLecturasPendientes
 
         foreach (var lectura in pendientes)
         {
-            resultado.Add(new LecturaPorRevisar(
-                lectura.Id,
-                lectura.Tipo,
-                lectura.PlacaLeida.Valor,
-                lectura.Confianza,
-                lectura.Motivo,
-                lectura.Carril,
-                TimeZoneInfo.ConvertTime(lectura.FechaHora, sede.ZonaHoraria)));
+            resultado.Add(LecturaPorRevisar.Crear(lectura, sede.ZonaHoraria));
         }
 
         return resultado;
@@ -65,4 +58,25 @@ public sealed record LecturaPorRevisar(
     int Confianza,
     MotivoDeLecturaPendiente Motivo,
     int Carril,
-    DateTimeOffset FechaHora);
+    DateTimeOffset FechaHora)
+{
+    /// <summary>
+    /// Arma la lectura que ve el operador a partir de la lectura guardada.
+    /// </summary>
+    /// <param name="lectura">Lectura pendiente.</param>
+    /// <param name="zonaHoraria">Zona horaria de la sede.</param>
+    /// <returns>La lectura, con la hora de la sede.</returns>
+    public static LecturaPorRevisar Crear(LecturaPendiente lectura, TimeZoneInfo zonaHoraria)
+    {
+        ArgumentNullException.ThrowIfNull(lectura);
+
+        return new LecturaPorRevisar(
+            lectura.Id,
+            lectura.Tipo,
+            lectura.PlacaLeida.Valor,
+            lectura.Confianza,
+            lectura.Motivo,
+            lectura.Carril,
+            TimeZoneInfo.ConvertTime(lectura.FechaHora, zonaHoraria));
+    }
+}

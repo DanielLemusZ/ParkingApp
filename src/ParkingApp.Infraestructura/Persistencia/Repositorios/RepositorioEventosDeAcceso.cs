@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 using ParkingApp.Aplicacion.Accesos;
 using ParkingApp.Dominio.Accesos;
 
@@ -19,5 +21,18 @@ internal sealed class RepositorioEventosDeAcceso : IRepositorioEventosDeAcceso
     {
         contexto.EventosDeAcceso.Add(evento);
         await contexto.SaveChangesAsync(cancelacion);
+    }
+
+    public async Task<bool> FiguraAdentroAsync(Placa placa, Guid sedeId, CancellationToken cancelacion = default)
+    {
+        // Se pide el tipo como opcional: sin eventos llega null, y no el primer valor del enum (Ingreso).
+        var ultimo = await contexto.EventosDeAcceso
+            .AsNoTracking()
+            .Where(evento => evento.Placa == placa && evento.SedeId == sedeId)
+            .OrderByDescending(evento => evento.FechaHora)
+            .Select(evento => (TipoDeEvento?)evento.Tipo)
+            .FirstOrDefaultAsync(cancelacion);
+
+        return ultimo == TipoDeEvento.Ingreso;
     }
 }

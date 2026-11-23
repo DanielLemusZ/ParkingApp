@@ -7,8 +7,8 @@ namespace ParkingApp.Aplicacion.Accesos;
 
 /// <summary>
 /// Caso de uso del carril de salida (F-05): la barrera abre solo si el vehículo no tiene cobros pendientes (RN-06)
-/// y, si abre, registra la salida. Si la lectura es dudosa, la deja pendiente en la caja (F-06). Lo usan la pantalla
-/// del carril, la API y la validación de la caja.
+/// y, si abre, registra la salida. Si la lectura es dudosa, o la placa no figura adentro, la deja pendiente para que el
+/// operador la valide (F-06). Lo usan la pantalla del carril, la API y la validación de la caja.
 /// </summary>
 public sealed class RegistrarSalida
 {
@@ -26,6 +26,11 @@ public sealed class RegistrarSalida
     /// Motivo cuando la confianza de la lectura es menor que el umbral de la sede: el operador valida la placa en la caja (F-06).
     /// </summary>
     public const string ConfianzaBaja = ConfianzaSuficiente.ConfianzaBaja;
+
+    /// <summary>
+    /// Motivo cuando la placa leída no figura adentro, por ejemplo por una lectura incompleta: el operador la valida.
+    /// </summary>
+    public const string NoFiguraAdentro = "No abre: la placa no figura adentro, hay que validar la lectura";
 
     private readonly IRepositorioEventosDeAcceso eventos;
     private readonly IRepositorioLecturasPendientes lecturas;
@@ -97,24 +102,21 @@ public sealed class RegistrarSalida
             return Rechazar(errorDeLectura);
         }
 
-        // 2. Una lectura con confianza menor que el umbral de la sede pasa a la caja para validar la placa (F-06).
+        // 2. Una lectura con confianza menor que el umbral de la sede queda pendiente para validar la placa (F-06).
         var configuracion = await sedes.ObtenerAsync(cancelacion);
 
         var placaDelVehiculo = Placa.Crear(placaLeida);
 
         if (confianza < configuracion.UmbralConfianza)
         {
-            var lectura = LecturaPendiente.Registrar(
-                TipoDeEvento.Salida,
-                MotivoDeLecturaPendiente.ConfianzaBaja,
-                placaDelVehiculo,
-                sede.Id,
-                carril,
-                confianza,
-                ahoraEnUtc);
-            await lecturas.AgregarAsync(lectura, cancelacion);
+            return await DejarPendienteAsync(MotivoDeLecturaPendiente.ConfianzaBaja, ConfianzaBaja, placaDelVehiculo, carril, confianza, ahoraEnUtc, cancelacion);
+        }
 
-            return new ResultadoDeSalida(false, ConfianzaBaja, null, PendienteDeValidacion: true);
+        // 3. Una placa que no figura adentro puede ser una lectura incompleta o equivocada. Abrir con ella dejaría salir
+        // a un vehículo sin revisar sus cobros (RN-06), y el verdadero seguiría ocupando un cupo: el operador la valida.
+        if (!await eventos.FiguraAdentroAsync(placaDelVehiculo, sede.Id, cancelacion))
+        {
+            return await DejarPendienteAsync(MotivoDeLecturaPendiente.NoFiguraAdentro, NoFiguraAdentro, placaDelVehiculo, carril, confianza, ahoraEnUtc, cancelacion);
         }
 
         return await RevisarCobrosYRegistrarAsync(placaDelVehiculo, confianza, carril, ahoraEnUtc, null, cancelacion);
@@ -150,7 +152,7 @@ public sealed class RegistrarSalida
         string? validadoPor,
         CancellationToken cancelacion)
     {
-        // 3. RN-06: cualquier cobro pendiente impide salir, también uno de un día operativo anterior.
+        // 4. RN-06: cualquier cobro pendiente impide salir, también uno de un día operativo anterior.
         // La placa no necesita un formato reconocido, porque el vehículo pudo entrar por ingreso manual.
         var pendiente = await cobros.SumarPendientesAsync(placaDelVehiculo, sede.Id, cancelacion);
 
@@ -159,14 +161,14 @@ public sealed class RegistrarSalida
             return Rechazar(NoAbrePorCobroPendiente(pendiente));
         }
 
-        // 4. La barrera abre, con el cobro del día pagado o sin cobro, y se registra la salida.
+        // 5. La barrera abre, con el cobro del día pagado o sin cobro, y se registra la salida.
         var momento = await calendario.UbicarAsync(ahoraEnUtc, cancelacion);
         var pagado = await cobros.ExistePagadoDelDiaAsync(placaDelVehiculo, sede.Id, momento.DiaOperativo, cancelacion);
         var tipoDeVehiculo = ClasificadorDeVehiculo.Clasificar(placaDelVehiculo) ?? TipoDeVehiculo.NoClasificado;
         var salida = EventoDeAcceso.RegistrarSalida(placaDelVehiculo, tipoDeVehiculo, sede.Id, carril, confianza, ahoraEnUtc, validadoPor);
         await eventos.AgregarAsync(salida, cancelacion);
 
-        // 5. Se responde con la hora de la sede, que es la que ve el operador.
+        // 6. Se responde con la hora de la sede, que es la que ve el operador.
         var registrada = new SalidaRegistrada(
             salida.Id,
             salida.Placa.Valor,
@@ -177,6 +179,23 @@ public sealed class RegistrarSalida
         var motivo = pagado ? AbreConCobroPagado : AbreSinCobro;
 
         return new ResultadoDeSalida(true, motivo, registrada);
+    }
+
+    // La barrera no abre y la lectura queda pendiente, para validarla en el carril o en la caja.
+    private async Task<ResultadoDeSalida> DejarPendienteAsync(
+        MotivoDeLecturaPendiente motivo,
+        string texto,
+        Placa placa,
+        int carril,
+        int confianza,
+        DateTimeOffset ahoraEnUtc,
+        CancellationToken cancelacion)
+    {
+        var lectura = LecturaPendiente.Registrar(TipoDeEvento.Salida, motivo, placa, sede.Id, carril, confianza, ahoraEnUtc);
+        await lecturas.AgregarAsync(lectura, cancelacion);
+
+        var porRevisar = LecturaPorRevisar.Crear(lectura, sede.ZonaHoraria);
+        return new ResultadoDeSalida(false, texto, null, PendienteDeValidacion: true, LecturaPendiente: porRevisar);
     }
 
     // Las mismas reglas de lectura del carril de entrada. Devuelve el motivo del rechazo, o null si la lectura sirve.

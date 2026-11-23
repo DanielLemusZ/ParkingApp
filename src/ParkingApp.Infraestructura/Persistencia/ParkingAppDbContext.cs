@@ -36,6 +36,11 @@ public sealed class ParkingAppDbContext : IdentityDbContext<Usuario, IdentityRol
     public DbSet<EventoDeAcceso> EventosDeAcceso => Set<EventoDeAcceso>();
 
     /// <summary>
+    /// Lecturas que valida el operador en la caja, pendientes o ya validadas.
+    /// </summary>
+    public DbSet<LecturaPendiente> LecturasPendientes => Set<LecturaPendiente>();
+
+    /// <summary>
     /// Versiones históricas de las tarifas.
     /// </summary>
     public DbSet<Tarifa> Tarifas => Set<Tarifa>();

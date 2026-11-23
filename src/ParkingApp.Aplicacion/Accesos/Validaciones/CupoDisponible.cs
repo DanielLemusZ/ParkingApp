@@ -28,7 +28,7 @@ public sealed class CupoDisponible : ValidacionDeIngreso
     {
         ArgumentNullException.ThrowIfNull(solicitud);
 
-        var tipo = ClasificadorDeVehiculo.Clasificar(Placa.Crear(solicitud.Placa))!.Value;
+        var tipo = solicitud.ObtenerTipoDeVehiculo()!.Value;
         var sede = await sedes.ObtenerAsync(cancelacion);
         var ocupacion = await sedes.ConsultarOcupacionAsync(cancelacion);
         var (cantidad, cupo) = tipo switch

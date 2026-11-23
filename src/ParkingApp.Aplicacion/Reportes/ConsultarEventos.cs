@@ -66,9 +66,8 @@ public class ConsultarEventos : IServicioConsultas
                 TipoEvento = evento.Tipo.ToString(),
                 FechaHora = TimeZoneInfo.ConvertTime(evento.FechaHora, _sedeActual.ZonaHoraria).DateTime,
                 Carril = evento.Carril.ToString(CultureInfo.InvariantCulture),
-
-                // Todavía no existe el ingreso manual en la caja. Cuando llegue, este dato saldrá del evento.
-                EsLecturaManual = false,
+                EsLecturaManual = evento.EsLecturaManual,
+                ValidadoPor = evento.ValidadoPor,
             });
         }
 

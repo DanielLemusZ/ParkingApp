@@ -8,12 +8,14 @@ namespace ParkingApp.Aplicacion.Accesos;
 
 /// <summary>
 /// Caso de uso del carril de entrada: valida la lectura de la placa y, si pasa todas las validaciones,
-/// registra el ingreso, genera el cobro del día si corresponde y abre la barrera. Lo usan la pantalla del carril y la API.
+/// registra el ingreso, genera el cobro del día si corresponde y abre la barrera. Si la lectura es dudosa, la deja
+/// pendiente en la caja (F-06). Lo usan la pantalla del carril, la API y la validación de la caja.
 /// </summary>
 public sealed class RegistrarIngreso
 {
     private readonly ValidacionDeIngreso validaciones;
     private readonly IRepositorioEventosDeAcceso eventos;
+    private readonly IRepositorioLecturasPendientes lecturas;
     private readonly IRepositorioTarifas tarifas;
     private readonly IRepositorioCobros cobros;
     private readonly ISedeActual sede;
@@ -25,6 +27,7 @@ public sealed class RegistrarIngreso
     /// </summary>
     /// <param name="validaciones">Primer eslabón de la cadena de validaciones del carril de entrada.</param>
     /// <param name="eventos">Donde se guardan los ingresos.</param>
+    /// <param name="lecturas">Donde quedan las lecturas que debe validar el operador.</param>
     /// <param name="tarifas">Donde se consulta la tarifa vigente.</param>
     /// <param name="cobros">Donde se guardan y consultan los cobros.</param>
     /// <param name="sede">Sede donde corre el carril.</param>
@@ -33,6 +36,7 @@ public sealed class RegistrarIngreso
     public RegistrarIngreso(
         ValidacionDeIngreso validaciones,
         IRepositorioEventosDeAcceso eventos,
+        IRepositorioLecturasPendientes lecturas,
         IRepositorioTarifas tarifas,
         IRepositorioCobros cobros,
         ISedeActual sede,
@@ -41,6 +45,7 @@ public sealed class RegistrarIngreso
     {
         this.validaciones = validaciones;
         this.eventos = eventos;
+        this.lecturas = lecturas;
         this.tarifas = tarifas;
         this.cobros = cobros;
         this.sede = sede;
@@ -63,19 +68,78 @@ public sealed class RegistrarIngreso
         CancellationToken cancelacion = default)
     {
         // 1. Se toma la hora una sola vez y la lectura recorre la cadena de validaciones.
-        var ahoraEnUtc = reloj.GetUtcNow();
-        var solicitud = new SolicitudDeIngreso(Placa.Normalizar(placa), confianza, carril, ahoraEnUtc);
+        var solicitud = new SolicitudDeIngreso(Placa.Normalizar(placa), confianza, carril, reloj.GetUtcNow());
         var validacion = await validaciones.ValidarAsync(solicitud, cancelacion);
 
-        if (!validacion.Permite)
+        if (validacion.Permite)
+        {
+            return await RegistrarAsync(solicitud, cancelacion);
+        }
+
+        // La barrera no abre. Una lectura dudosa, además, queda pendiente en la caja.
+        if (validacion.MotivoPendiente is null)
         {
             return new ResultadoDeIngreso(false, validacion.Motivo, null);
         }
 
+        var pendiente = LecturaPendiente.Registrar(
+            TipoDeEvento.Ingreso,
+            validacion.MotivoPendiente.Value,
+            Placa.Crear(solicitud.Placa),
+            sede.Id,
+            carril,
+            confianza,
+            solicitud.FechaHora);
+        await lecturas.AgregarAsync(pendiente, cancelacion);
+
+        return new ResultadoDeIngreso(false, validacion.Motivo, null, PendienteDeValidacion: true);
+    }
+
+    /// <summary>
+    /// Sigue el flujo normal, con cupo y cobro, de una lectura que validó el operador (F-06). El ingreso ocurre al
+    /// confirmar, con esa hora, y queda como lectura manual.
+    /// </summary>
+    /// <param name="placa">Placa que validó el operador.</param>
+    /// <param name="confianza">Confianza de la lectura original.</param>
+    /// <param name="carril">Número del carril de entrada.</param>
+    /// <param name="validacion">El operador y, si el formato no se reconoce, el tipo de vehículo que indicó.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>Si la barrera abre, el motivo, el ingreso registrado y el cobro generado.</returns>
+    public async Task<ResultadoDeIngreso> EjecutarLecturaValidadaAsync(
+        Placa placa,
+        int confianza,
+        int carril,
+        ValidacionDelOperador validacion,
+        CancellationToken cancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(placa);
+        ArgumentNullException.ThrowIfNull(validacion);
+
+        var solicitud = new SolicitudDeIngreso(placa.Valor, confianza, carril, reloj.GetUtcNow(), validacion);
+        var resultado = await validaciones.ValidarAsync(solicitud, cancelacion);
+
+        if (!resultado.Permite)
+        {
+            return new ResultadoDeIngreso(false, resultado.Motivo, null);
+        }
+
+        return await RegistrarAsync(solicitud, cancelacion);
+    }
+
+    private async Task<ResultadoDeIngreso> RegistrarAsync(SolicitudDeIngreso solicitud, CancellationToken cancelacion)
+    {
         // 2. Se registra el ingreso.
+        var ahoraEnUtc = solicitud.FechaHora;
         var placaNormalizada = Placa.Crear(solicitud.Placa);
-        var tipoDeVehiculo = ClasificadorDeVehiculo.Clasificar(placaNormalizada)!.Value;
-        var ingreso = EventoDeAcceso.RegistrarIngreso(placaNormalizada, tipoDeVehiculo, sede.Id, carril, confianza, ahoraEnUtc);
+        var tipoDeVehiculo = solicitud.ObtenerTipoDeVehiculo()!.Value;
+        var ingreso = EventoDeAcceso.RegistrarIngreso(
+            placaNormalizada,
+            tipoDeVehiculo,
+            sede.Id,
+            solicitud.Carril,
+            solicitud.Confianza,
+            ahoraEnUtc,
+            solicitud.Validacion?.Operador);
         await eventos.AgregarAsync(ingreso, cancelacion);
 
         // 3. Se genera el cobro del día si la tarifa cobra y es el primer ingreso del día operativo.

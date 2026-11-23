@@ -1,0 +1,113 @@
+@using ParkingApp.Aplicacion.Accesos
+@using ParkingApp.Dominio.Accesos
+@inject IServiceScopeFactory FabricaDeAlcances
+
+<MudDialog>
+    <DialogContent>
+        <MudText><b>Placa leída:</b> @Lectura.Placa (confianza @Lectura.Confianza)</MudText>
+
+        <MudTextField T="string" Label="Placa correcta" @bind-Value="placa" @bind-Value:after="BorrarError" Immediate="true" Class="mt-3" />
+
+        @if (ValidarLectura.NecesitaTipoDeVehiculo(Lectura.Tipo, placa))
+        {
+            <MudSelect T="TipoDeVehiculo?" Label="Tipo de vehículo" @bind-Value="tipoIndicado" @bind-Value:after="BorrarError" Class="mt-3">
+                <MudSelectItem T="TipoDeVehiculo?" Value="@(TipoDeVehiculo.Carro)">Carro</MudSelectItem>
+                <MudSelectItem T="TipoDeVehiculo?" Value="@(TipoDeVehiculo.Moto)">Moto</MudSelectItem>
+            </MudSelect>
+        }
+
+        @if (Lectura.Tipo == TipoDeEvento.Salida)
+        {
+            <MudAlert Class="mt-3" Severity="Severity.Info" Dense="true">
+                Si el vehículo tiene un cobro pendiente, registra el pago antes de confirmar.
+            </MudAlert>
+        }
+
+        <MudAlert Class="mt-3" Severity="Severity.Warning" Dense="true">
+            Quedará marcado como lectura manual, con tu usuario.
+        </MudAlert>
+
+        @if (error is not null)
+        {
+            <MudAlert Class="mt-3" Severity="Severity.Error" Dense="true">@error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Disabled="validando" OnClick="Cancelar">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="validando" OnClick="ConfirmarAsync">
+            @(validando ? "Validando…" : "Confirmar")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private string? placa;
+    private TipoDeVehiculo? tipoIndicado;
+    private string? error;
+    private bool validando;
+
+    /// <summary>
+    /// Lectura que se valida.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public LecturaPorRevisar Lectura { get; set; } = default!;
+
+    [CascadingParameter]
+    private IMudDialogInstance Dialogo { get; set; } = default!;
+
+    // El usuario de la sesión, que llega en cascada desde AddCascadingAuthenticationState.
+    [CascadingParameter]
+    private Task<AuthenticationState> EstadoDeSesion { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        // Empieza con la placa leída: confirmar es un clic y corregir es editarla.
+        placa = Lectura.Placa;
+    }
+
+    private async Task ConfirmarAsync()
+    {
+        if (validando)
+        {
+            return;
+        }
+
+        validando = true;
+        error = null;
+
+        try
+        {
+            var sesion = await EstadoDeSesion;
+            var operador = sesion.User.Identity?.Name ?? throw new InvalidOperationException("No hay un usuario con sesión.");
+
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var validarLectura = alcance.ServiceProvider.GetRequiredService<ValidarLectura>();
+            var resultado = await validarLectura.EjecutarAsync(Lectura.Id, placa, tipoIndicado, operador);
+
+            if (resultado.Validada)
+            {
+                Dialogo.Close(DialogResult.Ok(resultado));
+            }
+            else
+            {
+                // Un dato mal digitado no cierra el diálogo: el operador lo corrige aquí mismo.
+                error = resultado.Motivo;
+            }
+        }
+        finally
+        {
+            validando = false;
+        }
+    }
+
+    // Al corregir el dato, el error anterior ya no aplica.
+    private void BorrarError()
+    {
+        error = null;
+    }
+
+    private void Cancelar()
+    {
+        Dialogo.Cancel();
+    }
+}

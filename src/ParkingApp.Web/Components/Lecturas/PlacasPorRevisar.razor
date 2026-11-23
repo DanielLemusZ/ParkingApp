@@ -1,0 +1,109 @@
+@using System.Globalization
+@using ParkingApp.Aplicacion.Accesos
+@using ParkingApp.Dominio.Accesos
+@inject IServiceScopeFactory FabricaDeAlcances
+@inject IDialogService Dialogos
+
+<MudPaper Class="pa-4 mb-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+        <MudText Typo="Typo.h6">Placas por revisar (@lecturas.Count)</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="CargarAsync" aria-label="Actualizar placas por revisar" />
+    </MudStack>
+
+    <MudTable Items="lecturas" Dense="true" Hover="true" T="LecturaPorRevisar">
+        <HeaderContent>
+            <MudTh>Fecha y hora</MudTh>
+            <MudTh>Carril</MudTh>
+            <MudTh>Placa leída</MudTh>
+            <MudTh>Confianza</MudTh>
+            <MudTh>Motivo</MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Fecha y hora">@context.FechaHora.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</MudTd>
+            <MudTd DataLabel="Carril">@NombreDeCarril(context.Tipo, context.Carril)</MudTd>
+            <MudTd DataLabel="Placa leída">@context.Placa</MudTd>
+            <MudTd DataLabel="Confianza">@context.Confianza</MudTd>
+            <MudTd DataLabel="Motivo">
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning">@NombreDeMotivo(context.Motivo)</MudChip>
+            </MudTd>
+            <MudTd>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => RevisarAsync(context))">
+                    Validar lectura
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No hay placas por revisar.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    @if (resultado is not null)
+    {
+        <MudAlert Class="mt-4" Severity="@(resultado.AbreBarrera ? Severity.Success : Severity.Error)"
+                  Icon="@(resultado.AbreBarrera ? Icons.Material.Filled.LockOpen : Icons.Material.Filled.Lock)">
+            <b>@(resultado.AbreBarrera ? "Barrera abierta" : "Barrera cerrada")</b>: @resultado.Motivo
+            @if (!resultado.AbreBarrera)
+            {
+                <br />
+                <small>La lectura ya quedó validada. Cuando se resuelva, vuelve a leer la placa en el carril.</small>
+            }
+        </MudAlert>
+    }
+</MudPaper>
+
+@code {
+    private IReadOnlyList<LecturaPorRevisar> lecturas = Array.Empty<LecturaPorRevisar>();
+    private ResultadoDeValidarLectura? resultado;
+
+    /// <summary>
+    /// Avisa a la caja que se validó una lectura, porque un ingreso puede generar un cobro.
+    /// </summary>
+    [Parameter]
+    public EventCallback AlValidar { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        return CargarAsync();
+    }
+
+    private async Task RevisarAsync(LecturaPorRevisar lectura)
+    {
+        resultado = null;
+
+        var parametros = new DialogParameters();
+        parametros.Add(nameof(DialogoValidarLectura.Lectura), lectura);
+        var opciones = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+
+        var dialogo = await Dialogos.ShowAsync<DialogoValidarLectura>("Validar lectura", parametros, opciones);
+        var cierre = await dialogo.Result;
+
+        // Se recarga también al cancelar: otro operador pudo validar la lectura mientras el diálogo estaba abierto.
+        await CargarAsync();
+
+        if (cierre?.Data is ResultadoDeValidarLectura validacion)
+        {
+            resultado = validacion;
+            await AlValidar.InvokeAsync();
+        }
+    }
+
+    private async Task CargarAsync()
+    {
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var listar = alcance.ServiceProvider.GetRequiredService<ListarLecturasPendientes>();
+        lecturas = await listar.EjecutarAsync();
+    }
+
+    private static string NombreDeCarril(TipoDeEvento tipo, int carril)
+    {
+        var nombre = tipo == TipoDeEvento.Ingreso ? "Entrada" : "Salida";
+        return $"{nombre} {carril}";
+    }
+
+    private static string NombreDeMotivo(MotivoDeLecturaPendiente motivo)
+    {
+        return motivo == MotivoDeLecturaPendiente.ConfianzaBaja ? "Baja confianza" : "Formato no reconocido";
+    }
+}

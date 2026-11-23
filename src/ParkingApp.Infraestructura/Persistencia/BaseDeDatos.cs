@@ -55,6 +55,7 @@ public static class BaseDeDatos
         });
 
         servicios.AddScoped<IRepositorioEventosDeAcceso, RepositorioEventosDeAcceso>();
+        servicios.AddScoped<IRepositorioLecturasPendientes, RepositorioLecturasPendientes>();
         servicios.AddScoped<IRepositorioTarifas, RepositorioTarifas>();
         servicios.AddScoped<IRepositorioConsultas, RepositorioConsultas>();
         servicios.AddScoped<IRepositorioCobros, RepositorioCobros>();

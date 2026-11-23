@@ -34,6 +34,8 @@ internal sealed class CarrilDeEntradaDePrueba
 
     public RepositorioEventosDeAccesoEnMemoria Eventos { get; } = new RepositorioEventosDeAccesoEnMemoria();
 
+    public RepositorioLecturasPendientesEnMemoria Lecturas { get; } = new RepositorioLecturasPendientesEnMemoria();
+
     public RepositorioCobrosEnMemoria Cobros { get; } = new RepositorioCobrosEnMemoria();
 
     public RepositorioTarifasEnMemoria Tarifas { get; } = new RepositorioTarifasEnMemoria();
@@ -53,6 +55,12 @@ internal sealed class CarrilDeEntradaDePrueba
     public void ConfigurarCupos(int cupoCarros, int cupoMotos)
     {
         var error = SedeConfigurada.Configurar(new TimeOnly(6, 0), new TimeOnly(18, 0), cupoCarros, cupoMotos, 80);
+        Assert.Null(error);
+    }
+
+    public void ConfigurarUmbral(int umbral)
+    {
+        var error = SedeConfigurada.Configurar(new TimeOnly(6, 0), new TimeOnly(18, 0), SedeConfigurada.CupoCarros, SedeConfigurada.CupoMotos, umbral);
         Assert.Null(error);
     }
 
@@ -78,11 +86,12 @@ internal sealed class CarrilDeEntradaDePrueba
         // Cada caso de uso lleva su propia cadena, como en cada alcance de la aplicación.
         var validaciones = CadenaDeValidacionesDeIngreso.Crear(
             new LecturaValida(),
+            new ConfianzaSuficiente(Sedes),
             new ClasificacionDeVehiculoValida(),
             new CupoDisponible(Sedes),
             new TarifaVigente(Tarifas, Calendario));
 
-        return new RegistrarIngreso(validaciones, Eventos, Tarifas, Cobros, Sede, Calendario, Reloj);
+        return new RegistrarIngreso(validaciones, Eventos, Lecturas, Tarifas, Cobros, Sede, Calendario, Reloj);
     }
 
     private OcupacionActual ConsultarOcupacion()

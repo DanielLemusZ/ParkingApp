@@ -90,6 +90,27 @@ public class ConsultarEventosTests
         Assert.Equal(new DateTime(2026, 11, 18, 23, 0, 0), acceso.FechaHora);
         Assert.Equal("1", acceso.Carril);
         Assert.False(acceso.EsLecturaManual);
+        Assert.Null(acceso.ValidadoPor);
+    }
+
+    [Fact]
+    public async Task La_consulta_muestra_el_operador_de_la_lectura_manual()
+    {
+        var ingreso = EventoDeAcceso.RegistrarIngreso(
+            Placa.Crear("CD1234"),
+            TipoDeVehiculo.Carro,
+            sede.Id,
+            1,
+            95,
+            new DateTimeOffset(2026, 11, 19, 13, 0, 0, TimeSpan.Zero),
+            "operador@parkingapp.local");
+        repositorio.Eventos.Add(ingreso);
+
+        var accesos = await consultas.ConsultarAccesosAsync(new FiltrosConsultaDto(), TestContext.Current.CancellationToken);
+
+        var acceso = Assert.Single(accesos);
+        Assert.True(acceso.EsLecturaManual);
+        Assert.Equal("operador@parkingapp.local", acceso.ValidadoPor);
     }
 
     [Fact]

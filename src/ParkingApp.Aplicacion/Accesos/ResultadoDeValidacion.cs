@@ -1,3 +1,5 @@
+using ParkingApp.Dominio.Accesos;
+
 namespace ParkingApp.Aplicacion.Accesos;
 
 /// <summary>
@@ -5,7 +7,8 @@ namespace ParkingApp.Aplicacion.Accesos;
 /// </summary>
 /// <param name="Permite">Si el vehículo puede seguir.</param>
 /// <param name="Motivo">Por qué se detiene. Vacío si el vehículo puede seguir.</param>
-public sealed record ResultadoDeValidacion(bool Permite, string Motivo)
+/// <param name="MotivoPendiente">Si tiene valor, la lectura pasa a la caja para que el operador la valide.</param>
+public sealed record ResultadoDeValidacion(bool Permite, string Motivo, MotivoDeLecturaPendiente? MotivoPendiente = null)
 {
     /// <summary>
     /// El vehículo puede seguir al siguiente eslabón.
@@ -24,5 +27,16 @@ public sealed record ResultadoDeValidacion(bool Permite, string Motivo)
     public static ResultadoDeValidacion Rechazar(string motivo)
     {
         return new ResultadoDeValidacion(false, motivo);
+    }
+
+    /// <summary>
+    /// El vehículo se detiene aquí y su lectura queda pendiente de validación en la caja.
+    /// </summary>
+    /// <param name="motivo">Motivo que se muestra en el carril.</param>
+    /// <param name="motivoPendiente">Por qué la debe revisar el operador.</param>
+    /// <returns>Un resultado que detiene el paso y envía la lectura a la caja.</returns>
+    public static ResultadoDeValidacion EnviarACaja(string motivo, MotivoDeLecturaPendiente motivoPendiente)
+    {
+        return new ResultadoDeValidacion(false, motivo, motivoPendiente);
     }
 }

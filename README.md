@@ -140,6 +140,12 @@ En cada pago queda el correo del usuario que lo registró en la caja.
 - Solo se borra un usuario que nunca registró un pago; si registró pagos, hay que desactivarlo.
 - Nadie puede desactivarse, borrarse ni cambiarse el rol a sí mismo, así que siempre queda un Administrador activo.
 
+**Lectura manual.** Si la confianza de una lectura es menor que el umbral de *Configuración*, o si en la entrada la placa no tiene un formato reconocido, la barrera no abre y la lectura pasa a *Placas por revisar*, en la caja.
+
+- El operador confirma o corrige la placa. En la entrada, si el formato no se reconoce, indica carro o moto. El ingreso o la salida queda como lectura manual, con su correo.
+- Al confirmar, la lectura se cierra aunque la barrera no abra (LLENO o cobro pendiente): después se vuelve a leer la placa en el carril. En la salida conviene cobrar antes de confirmar.
+- En la API: `GET api/caja/lecturas-pendientes` y `POST api/caja/lecturas-pendientes/{id}/validacion`, con `placa` y, si hace falta, `tipoDeVehiculo` (0 = carro, 1 = moto).
+
 **Probar la API desde Swagger:** inicia sesión en la aplicación y abre `/swagger` en el mismo navegador. Swagger envía la cookie de la sesión, así que cada endpoint responde según tu rol.
 
 ---

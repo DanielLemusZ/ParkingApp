@@ -1,5 +1,4 @@
 using ParkingApp.Aplicacion.Accesos;
-using ParkingApp.Dominio.Configuracion;
 
 namespace ParkingApp.Pruebas.Dobles;
 
@@ -14,17 +13,21 @@ internal sealed class CarrilDeSalidaDePrueba
     public CarrilDeSalidaDePrueba(CarrilDeEntradaDePrueba entrada)
     {
         this.entrada = entrada;
-        Sedes = new RepositorioSedesEnMemoria(new Sede("Sede de prueba", "America/Bogota"));
+        Sedes = entrada.Sedes;
     }
 
     /// <summary>
-    /// La sede guardada, con el umbral de confianza inicial de 80.
+    /// La misma sede de la entrada, con el umbral de confianza inicial de 80.
     /// </summary>
     public RepositorioSedesEnMemoria Sedes { get; }
 
     public Task<ResultadoDeSalida> SalirAsync(string? placa, int confianza = 97, int carril = 1)
     {
-        var registrarSalida = new RegistrarSalida(entrada.Eventos, entrada.Cobros, Sedes, entrada.Sede, entrada.Calendario, entrada.Reloj);
-        return registrarSalida.EjecutarAsync(placa, confianza, carril, TestContext.Current.CancellationToken);
+        return CrearCasoDeUso().EjecutarAsync(placa, confianza, carril, TestContext.Current.CancellationToken);
+    }
+
+    public RegistrarSalida CrearCasoDeUso()
+    {
+        return new RegistrarSalida(entrada.Eventos, entrada.Lecturas, entrada.Cobros, Sedes, entrada.Sede, entrada.Calendario, entrada.Reloj);
     }
 }

@@ -73,6 +73,50 @@ public sealed record Placa
         return new Placa(valor);
     }
 
+    /// <summary>
+    /// Indica si un texto ya normalizado solo tiene letras de la A a la Z y números, como exige una placa que digita el operador.
+    /// </summary>
+    /// <param name="texto">Texto normalizado.</param>
+    /// <returns><see langword="true"/> si no tiene otros caracteres.</returns>
+    public static bool SoloTieneLetrasYNumeros(string texto)
+    {
+        ArgumentNullException.ThrowIfNull(texto);
+
+        foreach (var caracter in texto)
+        {
+            var esLetra = caracter is >= 'A' and <= 'Z';
+            var esNumero = caracter is >= '0' and <= '9';
+
+            if (!esLetra && !esNumero)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Indica si un texto leído se puede guardar como texto: sin caracteres de control ni mitades de un carácter
+    /// especial, que la base de datos no acepta.
+    /// </summary>
+    /// <param name="texto">Texto normalizado.</param>
+    /// <returns><see langword="true"/> si se puede guardar.</returns>
+    public static bool SePuedeGuardar(string texto)
+    {
+        ArgumentNullException.ThrowIfNull(texto);
+
+        foreach (var caracter in texto)
+        {
+            if (char.IsControl(caracter) || char.IsSurrogate(caracter))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /// <inheritdoc />
     public override string ToString()
     {

@@ -44,8 +44,8 @@ Proyecto del curso Ingeniería de Software II. Grupo **ParkingApp**.
 ```powershell
 dotnet tool restore                        # instala dotnet-ef en la versión del repositorio
 dotnet build                               # compila; debe terminar con 0 advertencias
-dotnet test                                # corre las pruebas unitarias
-dotnet test --output Detailed              # lo mismo, con el nombre de cada prueba
+dotnet test                                # corre las pruebas unitarias en segundos, sin Docker ni base de datos
+dotnet test --output Detailed              # comando para la demo: muestra el nombre descriptivo de cada prueba
 dotnet format                              # corrige el formato según .editorconfig
 dotnet run --project src/ParkingApp.Web    # levanta la aplicación
 ```

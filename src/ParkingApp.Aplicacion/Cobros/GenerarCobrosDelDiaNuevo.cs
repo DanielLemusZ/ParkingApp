@@ -77,9 +77,17 @@ public sealed class GenerarCobrosDelDiaNuevo
                     continue;
                 }
 
-                // El cobro queda con la hora en que empezó su día (06:00), aunque se genere más tarde.
+                // El cobro queda con la hora en que empezó su día (06:00), aunque se genere más tarde, y guarda por qué
+                // se cobra y desde cuándo está adentro el vehículo.
                 var inicioDelDia = HorarioDeOperacion.InicioEnUtc(dia, sede.ZonaHoraria);
-                var cobro = Cobro.Generar(vehiculo.Placa, vehiculo.TipoDeVehiculo, sede.Id, dia, tarifa, inicioDelDia);
+                var cobro = Cobro.GenerarPorPermanencia(
+                    vehiculo.Placa,
+                    vehiculo.TipoDeVehiculo,
+                    sede.Id,
+                    dia,
+                    tarifa,
+                    vehiculo.FechaHoraDeIngreso,
+                    inicioDelDia);
 
                 // false: otra corrida guardó primero el cobro del día, y la restricción única evitó el duplicado.
                 if (await cobros.AgregarAsync(cobro, cancelacion))

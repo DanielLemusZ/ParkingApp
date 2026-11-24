@@ -34,6 +34,7 @@ internal sealed class CobroConfiguracion : IEntityTypeConfiguration<Cobro>
         builder.Property(cobro => cobro.TipoDeVehiculo).HasConversion<string>().HasMaxLength(20);
         builder.Property(cobro => cobro.Franja).HasConversion<string>().HasMaxLength(10);
         builder.Property(cobro => cobro.Estado).HasConversion<string>().HasMaxLength(10);
+        builder.Property(cobro => cobro.Motivo).HasConversion<string>().HasMaxLength(20);
 
         // Cada cobro pertenece a una sede y guarda la versión de tarifa con la que se calculó (RN-07).
         // Ni la sede ni una tarifa usada se pueden borrar.

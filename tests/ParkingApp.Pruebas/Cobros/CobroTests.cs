@@ -119,6 +119,46 @@ public class CobroTests
         Assert.False(cobro.DaPaseVigenteEn(martes));
     }
 
+    [Fact]
+    public void El_cobro_por_ingreso_guarda_el_motivo_y_la_hora_del_ingreso()
+    {
+        var cobro = CobroDiurnoDe8000();
+
+        Assert.Equal(MotivoDeCobro.Ingreso, cobro.Motivo);
+        Assert.Equal(LunesALas8EnUtc, cobro.FechaHoraDeIngreso);
+        Assert.Equal(LunesALas8EnUtc, cobro.FechaHora);
+    }
+
+    [Fact]
+    public void El_cobro_por_seguir_adentro_guarda_el_motivo_y_desde_cuando_esta_adentro()
+    {
+        // Entró el domingo 15 a las 20:00 en Bogotá (lunes 01:00 UTC); el lunes empieza a las 06:00 (11:00 UTC).
+        var ingreso = new DateTimeOffset(2026, 11, 16, 1, 0, 0, TimeSpan.Zero);
+        var inicioDelLunes = new DateTimeOffset(2026, 11, 16, 11, 0, 0, TimeSpan.Zero);
+        var tarifa = new Tarifa(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 8000m, new DateOnly(2026, 11, 1));
+
+        var cobro = Cobro.GenerarPorPermanencia(Carro, TipoDeVehiculo.Carro, Guid.CreateVersion7(), Lunes, tarifa, ingreso, inicioDelLunes);
+
+        Assert.Equal(MotivoDeCobro.SigueAdentro, cobro.Motivo);
+        Assert.Equal(ingreso, cobro.FechaHoraDeIngreso);
+        Assert.Equal(inicioDelLunes, cobro.FechaHora);
+        Assert.Equal(EstadoDeCobro.Pendiente, cobro.Estado);
+        Assert.Equal(FranjaTarifaria.Diurna, cobro.Franja);
+    }
+
+    [Fact]
+    public void El_cobro_por_seguir_adentro_no_acepta_tarifa_nocturna_ni_un_ingreso_posterior_al_inicio_del_dia()
+    {
+        var inicioDelLunes = new DateTimeOffset(2026, 11, 16, 11, 0, 0, TimeSpan.Zero);
+        var nocturna = new Tarifa(TipoDeVehiculo.Carro, FranjaTarifaria.Nocturna, 5000m, new DateOnly(2026, 11, 1));
+        var diurna = new Tarifa(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 8000m, new DateOnly(2026, 11, 1));
+
+        Assert.Throws<ArgumentException>(() => Cobro.GenerarPorPermanencia(
+            Carro, TipoDeVehiculo.Carro, Guid.CreateVersion7(), Lunes, nocturna, inicioDelLunes.AddHours(-10), inicioDelLunes));
+        Assert.Throws<ArgumentException>(() => Cobro.GenerarPorPermanencia(
+            Carro, TipoDeVehiculo.Carro, Guid.CreateVersion7(), Lunes, diurna, inicioDelLunes, inicioDelLunes));
+    }
+
     private static Cobro CobroDiurnoDe8000()
     {
         var tarifa = new Tarifa(TipoDeVehiculo.Carro, FranjaTarifaria.Diurna, 8000m, new DateOnly(2026, 11, 1));

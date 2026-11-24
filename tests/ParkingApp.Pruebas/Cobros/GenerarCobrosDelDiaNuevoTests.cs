@@ -82,6 +82,10 @@ public class GenerarCobrosDelDiaNuevoTests
 
         // Queda con la hora en que empezó el día (06:00 en Bogotá = 11:00 UTC), no con la hora en que se generó.
         Assert.Equal(new DateTimeOffset(2026, 11, 17, 11, 0, 0, TimeSpan.Zero), diurno.FechaHora);
+
+        // Y guarda por qué se cobra y desde cuándo está adentro: el lunes a las 18:00 en Bogotá.
+        Assert.Equal(MotivoDeCobro.SigueAdentro, diurno.Motivo);
+        Assert.Equal(new DateTimeOffset(2026, 11, 16, 23, 0, 0, TimeSpan.Zero), diurno.FechaHoraDeIngreso);
     }
 
     [Fact]

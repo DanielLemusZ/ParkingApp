@@ -9,7 +9,15 @@ namespace ParkingApp.Dominio.Cobros;
 /// </summary>
 public sealed class Cobro
 {
-    private Cobro(Placa placa, TipoDeVehiculo tipoDeVehiculo, Guid sedeId, DateOnly diaOperativo, Tarifa tarifa, DateTimeOffset fechaHora)
+    private Cobro(
+        Placa placa,
+        TipoDeVehiculo tipoDeVehiculo,
+        Guid sedeId,
+        DateOnly diaOperativo,
+        Tarifa tarifa,
+        MotivoDeCobro motivo,
+        DateTimeOffset fechaHoraDeIngreso,
+        DateTimeOffset fechaHora)
     {
         Id = Guid.CreateVersion7();
         Placa = placa;
@@ -20,6 +28,8 @@ public sealed class Cobro
         TarifaId = tarifa.Id;
         Valor = tarifa.Valor;
         Estado = EstadoDeCobro.Pendiente;
+        Motivo = motivo;
+        FechaHoraDeIngreso = fechaHoraDeIngreso;
         FechaHora = fechaHora;
     }
 
@@ -76,7 +86,18 @@ public sealed class Cobro
     public EstadoDeCobro Estado { get; private set; }
 
     /// <summary>
-    /// Fecha y hora en que se generó el cobro, en UTC.
+    /// Por qué se generó el cobro: por el ingreso o porque el vehículo seguía adentro en un día nuevo.
+    /// </summary>
+    public MotivoDeCobro Motivo { get; private set; }
+
+    /// <summary>
+    /// Fecha y hora en que entró el vehículo en la estadía que generó el cobro, en UTC. En un cobro por ingreso es la
+    /// misma <see cref="FechaHora"/>; en uno por seguir adentro es la del ingreso de días anteriores.
+    /// </summary>
+    public DateTimeOffset FechaHoraDeIngreso { get; private set; }
+
+    /// <summary>
+    /// Fecha y hora del cobro, en UTC: la del ingreso, o las 06:00 del día operativo si el vehículo seguía adentro.
     /// </summary>
     public DateTimeOffset FechaHora { get; private set; }
 
@@ -96,30 +117,54 @@ public sealed class Cobro
     /// </exception>
     public static Cobro Generar(Placa placa, TipoDeVehiculo tipoDeVehiculo, Guid sedeId, DateOnly diaOperativo, Tarifa tarifa, DateTimeOffset fechaHora)
     {
-        ArgumentNullException.ThrowIfNull(placa);
-        ArgumentNullException.ThrowIfNull(tarifa);
+        Validar(placa, tipoDeVehiculo, diaOperativo, tarifa, fechaHora, nameof(fechaHora));
 
-        if (!tarifa.GeneraCobro)
+        return new Cobro(placa, tipoDeVehiculo, sedeId, diaOperativo, tarifa, MotivoDeCobro.Ingreso, fechaHora, fechaHora);
+    }
+
+    /// <summary>
+    /// Genera el cobro diurno pendiente de un día operativo nuevo para un vehículo que seguía adentro a las 06:00
+    /// (S-05, D-28). Guarda cuándo entró el vehículo, para que la caja muestre desde cuándo está adentro.
+    /// </summary>
+    /// <param name="placa">Placa del vehículo.</param>
+    /// <param name="tipoDeVehiculo">Tipo de vehículo, que debe coincidir con el de la tarifa.</param>
+    /// <param name="sedeId">Sede donde sigue el vehículo.</param>
+    /// <param name="diaOperativo">Día operativo nuevo que cubre el cobro.</param>
+    /// <param name="tarifa">Tarifa diurna vigente en ese día para el tipo de vehículo.</param>
+    /// <param name="fechaHoraDeIngreso">Fecha y hora en que entró el vehículo, en UTC.</param>
+    /// <param name="inicioDelDia">Las 06:00 del día operativo, en UTC.</param>
+    /// <returns>El cobro diurno pendiente, con motivo <see cref="MotivoDeCobro.SigueAdentro"/>.</returns>
+    /// <exception cref="ArgumentException">
+    /// La tarifa no genera cobro, no es diurna, no corresponde al tipo de vehículo o no está vigente en el día; las
+    /// fechas no están en UTC, o el ingreso no es anterior al inicio del día.
+    /// </exception>
+    public static Cobro GenerarPorPermanencia(
+        Placa placa,
+        TipoDeVehiculo tipoDeVehiculo,
+        Guid sedeId,
+        DateOnly diaOperativo,
+        Tarifa tarifa,
+        DateTimeOffset fechaHoraDeIngreso,
+        DateTimeOffset inicioDelDia)
+    {
+        Validar(placa, tipoDeVehiculo, diaOperativo, tarifa, inicioDelDia, nameof(inicioDelDia));
+
+        if (tarifa.Franja != FranjaTarifaria.Diurna)
         {
-            throw new ArgumentException("Una tarifa de $0 no genera cobro.", nameof(tarifa));
+            throw new ArgumentException("El cobro de un día nuevo usa la tarifa diurna (D-28).", nameof(tarifa));
         }
 
-        if (tarifa.TipoDeVehiculo != tipoDeVehiculo)
+        if (fechaHoraDeIngreso.Offset != TimeSpan.Zero)
         {
-            throw new ArgumentException("La tarifa no corresponde al tipo de vehículo.", nameof(tarifa));
+            throw new ArgumentException("La fecha y la hora deben estar en UTC", nameof(fechaHoraDeIngreso));
         }
 
-        if (!tarifa.EstaVigenteEn(diaOperativo))
+        if (fechaHoraDeIngreso >= inicioDelDia)
         {
-            throw new ArgumentException("La tarifa no está vigente en el día operativo.", nameof(tarifa));
+            throw new ArgumentException("El vehículo debe haber entrado antes de que empezara el día.", nameof(fechaHoraDeIngreso));
         }
 
-        if (fechaHora.Offset != TimeSpan.Zero)
-        {
-            throw new ArgumentException("La fecha y la hora deben estar en UTC", nameof(fechaHora));
-        }
-
-        return new Cobro(placa, tipoDeVehiculo, sedeId, diaOperativo, tarifa, fechaHora);
+        return new Cobro(placa, tipoDeVehiculo, sedeId, diaOperativo, tarifa, MotivoDeCobro.SigueAdentro, fechaHoraDeIngreso, inicioDelDia);
     }
 
     /// <summary>
@@ -157,5 +202,38 @@ public sealed class Cobro
     public bool DaPaseVigenteEn(DateOnly diaOperativo)
     {
         return Estado == EstadoDeCobro.Pagado && DiaOperativo == diaOperativo;
+    }
+
+    // Reglas que comparten los dos motivos de cobro: tarifa con valor, del tipo de vehículo y vigente, y hora en UTC.
+    private static void Validar(
+        Placa placa,
+        TipoDeVehiculo tipoDeVehiculo,
+        DateOnly diaOperativo,
+        Tarifa tarifa,
+        DateTimeOffset fechaHora,
+        string nombreDeLaFecha)
+    {
+        ArgumentNullException.ThrowIfNull(placa);
+        ArgumentNullException.ThrowIfNull(tarifa);
+
+        if (!tarifa.GeneraCobro)
+        {
+            throw new ArgumentException("Una tarifa de $0 no genera cobro.", nameof(tarifa));
+        }
+
+        if (tarifa.TipoDeVehiculo != tipoDeVehiculo)
+        {
+            throw new ArgumentException("La tarifa no corresponde al tipo de vehículo.", nameof(tarifa));
+        }
+
+        if (!tarifa.EstaVigenteEn(diaOperativo))
+        {
+            throw new ArgumentException("La tarifa no está vigente en el día operativo.", nameof(tarifa));
+        }
+
+        if (fechaHora.Offset != TimeSpan.Zero)
+        {
+            throw new ArgumentException("La fecha y la hora deben estar en UTC", nombreDeLaFecha);
+        }
     }
 }

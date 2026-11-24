@@ -149,11 +149,18 @@ En cada pago queda el correo del usuario que lo registró en la caja.
 **Cobro del día nuevo.** A las 06:00 empieza un nuevo día operativo. Cada vehículo que sigue adentro recibe el cobro diurno Pendiente de ese día, para que un pago no cubra estadías de varios días (supuesto S-05, decisión D-28; la docente aún no lo confirma).
 
 - Lo genera una tarea en segundo plano que corre **al arrancar** la aplicación y después **cada día a las 06:00** de la sede. Si la aplicación estuvo apagada, genera los cobros de todos los días que faltan.
-- Se genera un cobro por cada día operativo que el vehículo pasa adentro, con la tarifa diurna vigente de ese día. La hora del cobro en la caja es las 06:00 de su día.
+- Se genera un cobro por cada día operativo que el vehículo pasa adentro, con la tarifa diurna vigente de ese día. El vehículo **no** vuelve a entrar: sigue siendo la misma estadía y solo necesita una salida.
+- Cada cobro guarda su **motivo** (`Ingreso` o `SigueAdentro`) y la hora en que entró el vehículo, para saber por qué se cobra.
 - No hay margen de minutos: un carro que estaba adentro a las 06:00 paga el día nuevo aunque salga a las 06:10. Las motos ($0) siguen sin cobro.
 - Si la tarea corre dos veces, no duplica cobros: la base de datos permite un solo cobro por placa, sede y día.
-- El cobro aparece en la caja desde que se genera, y la salida no abre hasta que se pague (cualquier cobro pendiente bloquea la barrera).
+- La salida no abre hasta que se pague todo (cualquier cobro pendiente bloquea la barrera).
 - La terminal muestra cuántos cobros se generaron en cada corrida: *Cobros del día nuevo: N generados, M omitidos*.
+
+**Pago en la caja.** La caja muestra una fila por vehículo: placa, desde cuándo está adentro, cuántos cobros debe y el total. Al elegirlo se ve el detalle día por día con su motivo (*Ingreso (nocturna)*, *Sigue adentro desde 2026-11-19 23:15 (diurna)*), y un solo botón paga **todo** lo pendiente.
+
+- Cada cobro queda con su propio pago, y todos se guardan juntos: se pagan todos o ninguno. Se pide una sola factura por el total.
+- Un doble clic o un reintento no cobra dos veces: responde *El pago ya estaba registrado*.
+- En la API: `POST api/caja/pagos/placa`, con `placa` y `referencia`. El endpoint `POST api/caja/pagos`, que paga un solo cobro, se mantiene.
 
 **Probar la API desde Swagger:** inicia sesión en la aplicación y abre `/swagger` en el mismo navegador. Swagger envía la cookie de la sesión, así que cada endpoint responde según tu rol.
 

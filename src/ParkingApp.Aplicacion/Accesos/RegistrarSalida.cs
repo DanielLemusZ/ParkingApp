@@ -123,6 +123,19 @@ public sealed class RegistrarSalida
     }
 
     /// <summary>
+    /// Indica si la placa figura adentro de la sede: tiene un ingreso sin su salida.
+    /// </summary>
+    /// <param name="placa">Placa del vehículo.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns><see langword="true"/> si la placa figura adentro.</returns>
+    public Task<bool> FiguraAdentroAsync(Placa placa, CancellationToken cancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(placa);
+
+        return eventos.FiguraAdentroAsync(placa, sede.Id, cancelacion);
+    }
+
+    /// <summary>
     /// Sigue la salida de una lectura que validó el operador (F-06): revisa los cobros sin volver a revisar la confianza
     /// y, si abre, la salida queda como lectura manual.
     /// </summary>

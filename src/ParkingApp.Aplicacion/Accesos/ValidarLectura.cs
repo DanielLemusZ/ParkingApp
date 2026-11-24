@@ -31,6 +31,11 @@ public sealed class ValidarLectura
     /// </summary>
     public const string FaltaElTipoDeVehiculo = "Indica si es carro o moto";
 
+    /// <summary>
+    /// Respuesta cuando la placa escrita o corregida en la salida no figura adentro, por ejemplo por un error al digitarla.
+    /// </summary>
+    public const string PlacaEscritaNoFiguraAdentro = "No abre: la placa no figura adentro, revisa que esté bien escrita";
+
     private readonly IRepositorioLecturasPendientes lecturas;
     private readonly RegistrarIngreso registrarIngreso;
     private readonly RegistrarSalida registrarSalida;
@@ -129,8 +134,16 @@ public sealed class ValidarLectura
             return Rechazar(FaltaElTipoDeVehiculo);
         }
 
-        // 3. Se cierra la lectura antes de abrir: si dos operadores confirman a la vez, solo el primero sigue.
         var placaValidada = Placa.Crear(placaDigitada);
+
+        // En la salida, una placa corregida que no figura adentro (AHF732 en vez de AHF723) abriría "sin cobro" y el
+        // vehículo real saldría sin pagar (RN-06). Se trata como un dato mal digitado: la lectura sigue pendiente.
+        if (lectura.Tipo == TipoDeEvento.Salida && !await registrarSalida.FiguraAdentroAsync(placaValidada, cancelacion))
+        {
+            return Rechazar(PlacaEscritaNoFiguraAdentro);
+        }
+
+        // 3. Se cierra la lectura antes de abrir: si dos operadores confirman a la vez, solo el primero sigue.
         lectura.Validar(placaValidada, operador, reloj.GetUtcNow());
 
         if (!await lecturas.GuardarValidacionAsync(lectura, cancelacion))
@@ -166,6 +179,7 @@ public sealed class ValidarLectura
     /// <summary>
     /// Registra una placa que el operador escribe en el carril porque la imagen no se pudo leer. No hubo lectura, así
     /// que la confianza queda en 0; el evento queda como lectura manual, con el operador, y sigue el flujo del carril.
+    /// En la salida, la placa debe figurar adentro.
     /// </summary>
     /// <param name="sentido">Si es un ingreso o una salida.</param>
     /// <param name="carril">Número del carril.</param>
@@ -210,6 +224,13 @@ public sealed class ValidarLectura
             var validacion = new ValidacionDelOperador(operador, tipoIndicado);
             var ingreso = await registrarIngreso.EjecutarLecturaValidadaAsync(placaValidada, EventoDeAcceso.ConfianzaMinima, carril, validacion, cancelacion);
             return new ResultadoDeValidarLectura(true, ingreso.AbreBarrera, ingreso.Motivo, ingreso.Ingreso, null);
+        }
+
+        // Una placa mal escrita (AHF732 en vez de AHF723) no tiene cobros y abriría "sin cobro": el vehículo real saldría
+        // sin pagar (RN-06). Si no figura adentro, se rechaza para que el operador revise lo que escribió.
+        if (!await registrarSalida.FiguraAdentroAsync(placaValidada, cancelacion))
+        {
+            return Rechazar(PlacaEscritaNoFiguraAdentro);
         }
 
         var salida = await registrarSalida.EjecutarLecturaValidadaAsync(placaValidada, EventoDeAcceso.ConfianzaMinima, carril, operador, cancelacion);

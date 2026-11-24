@@ -144,10 +144,11 @@
             var sesion = await EstadoDeSesion;
             var operador = sesion.User.Identity?.Name ?? throw new InvalidOperationException("No hay un usuario con sesión.");
 
-            resultado = await registrarPago.EjecutarAsync(elegida.Placa, referencia, operador);
+            // Se manda el total que ve el operador: si cambió mientras tanto, el caso de uso no cobra y avisa el nuevo.
+            resultado = await registrarPago.EjecutarAsync(elegida.Placa, elegida.Total, referencia, operador);
 
-            // Se recarga con cualquier respuesta: si el pago ya estaba registrado, esa placa ya no debe nada.
-            elegida = null;
+            // Se recarga con cualquier respuesta: si se pagó, la placa sale de la lista; si el total cambió, el panel
+            // muestra el detalle nuevo para volver a cobrar.
             await CargarAsync();
         }
         finally
@@ -168,16 +169,38 @@
         var listar = alcance.ServiceProvider.GetRequiredService<ListarCobrosPendientes>();
         var pendientes = await listar.EjecutarAsync(busqueda);
 
-        // Una fila por vehículo, con todo lo que debe desde que entró, en el orden en que entraron.
-        deudas = pendientes
-            .GroupBy(cobro => cobro.Placa)
-            .Select(grupo => new DeudaDeVehiculo(
-                grupo.Key,
-                grupo.Min(cobro => cobro.HoraDeIngreso),
-                grupo.OrderBy(cobro => cobro.DiaOperativo).ToList(),
-                grupo.Sum(cobro => cobro.Valor)))
-            .OrderBy(deuda => deuda.AdentroDesde)
-            .ToList();
+        // Se juntan los cobros de cada placa: un vehículo debe todos sus cobros pendientes desde que entró.
+        var cobrosPorPlaca = new Dictionary<string, List<CobroPendiente>>();
+
+        foreach (var cobro in pendientes)
+        {
+            if (!cobrosPorPlaca.TryGetValue(cobro.Placa, out var cobrosDeLaPlaca))
+            {
+                cobrosDeLaPlaca = new List<CobroPendiente>();
+                cobrosPorPlaca.Add(cobro.Placa, cobrosDeLaPlaca);
+            }
+
+            cobrosDeLaPlaca.Add(cobro);
+        }
+
+        // Una fila por vehículo, en el orden en que entraron, con sus cobros del día más antiguo al más reciente.
+        var nuevas = new List<DeudaDeVehiculo>();
+
+        foreach (var (placa, cobrosDeLaPlaca) in cobrosPorPlaca)
+        {
+            var adentroDesde = cobrosDeLaPlaca.Min(cobro => cobro.HoraDeIngreso);
+            var porDia = cobrosDeLaPlaca.OrderBy(cobro => cobro.DiaOperativo).ToList();
+            nuevas.Add(new DeudaDeVehiculo(placa, adentroDesde, porDia, porDia.Sum(cobro => cobro.Valor)));
+        }
+
+        deudas = nuevas.OrderBy(deuda => deuda.AdentroDesde).ToList();
+
+        // El panel muestra siempre lo que se va a cobrar: si cambió lo que debe el vehículo elegido, se actualiza, y si
+        // ya no debe nada, se cierra.
+        if (elegida is not null)
+        {
+            elegida = deudas.FirstOrDefault(deuda => deuda.Placa == elegida.Placa);
+        }
     }
 
     private string ClaseDeFila(DeudaDeVehiculo deuda, int indice)

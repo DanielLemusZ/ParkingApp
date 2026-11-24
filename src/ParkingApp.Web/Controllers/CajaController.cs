@@ -102,7 +102,7 @@ public sealed class CajaController : ControllerBase
     /// Paga en efectivo, de una vez, todos los cobros pendientes de una placa, de cualquier día operativo (#17). Es
     /// idempotente: si la misma solicitud llega otra vez con la misma referencia, responde "El pago ya estaba registrado".
     /// </summary>
-    /// <param name="solicitud">Placa que paga y referencia única de la solicitud.</param>
+    /// <param name="solicitud">Placa que paga, total que se recibió y referencia única de la solicitud.</param>
     /// <param name="cancelacion">Se cancela si el cliente cierra la conexión.</param>
     /// <returns>Si el pago se registró, el motivo y el pago con el total.</returns>
     [HttpPost("pagos/placa")]
@@ -125,7 +125,15 @@ public sealed class CajaController : ControllerBase
 
         var operador = OperadorDeLaSesion();
 
-        var resultado = await registrarPagoDeLaPlacaEnEfectivo.EjecutarAsync(solicitud.Placa, referencia, operador, cancelacion);
+        // Si faltaba el total, [Required] ya respondió 400.
+        var totalEsperado = solicitud.Total.GetValueOrDefault();
+
+        var resultado = await registrarPagoDeLaPlacaEnEfectivo.EjecutarAsync(
+            solicitud.Placa,
+            totalEsperado,
+            referencia,
+            operador,
+            cancelacion);
         return resultado;
     }
 
@@ -218,6 +226,14 @@ public sealed class SolicitudDePagoDeLaPlacaHttp
     /// </summary>
     [Required(ErrorMessage = "La placa es obligatoria")]
     public string? Placa { get; init; }
+
+    /// <summary>
+    /// Total que se le mostró al conductor y se recibió, en pesos colombianos. Si lo que debe la placa cambió, no se
+    /// registra el pago y la respuesta trae el total nuevo.
+    /// </summary>
+    [Required(ErrorMessage = "El total es obligatorio")]
+    [Range(1, 100_000_000, ErrorMessage = "El total debe ser mayor que cero")]
+    public decimal? Total { get; init; }
 
     /// <summary>
     /// Referencia única de la solicitud. El cliente la genera una vez por intento de pago y la repite en los reintentos.

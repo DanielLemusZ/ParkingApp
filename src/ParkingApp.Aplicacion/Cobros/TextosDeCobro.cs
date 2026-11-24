@@ -106,6 +106,17 @@ public static class TextosDeCobro
     }
 
     /// <summary>
+    /// Respuesta de la caja cuando lo que debe la placa cambió desde que el operador la eligió, por ejemplo
+    /// <c>No se registró el pago: el total cambió a $37.000. Revisa el detalle y vuelve a cobrar</c>.
+    /// </summary>
+    /// <param name="totalActual">Lo que debe ahora la placa.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string TotalCambio(decimal totalActual)
+    {
+        return $"No se registró el pago: el total cambió a {Pesos(totalActual)}. Revisa el detalle y vuelve a cobrar";
+    }
+
+    /// <summary>
     /// Explica por qué existe un cobro, por ejemplo <c>Ingreso (nocturna)</c> o
     /// <c>Sigue adentro desde 2026-11-19 23:15 (diurna)</c>.
     /// </summary>

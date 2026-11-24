@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Security.Cryptography;
 
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +12,7 @@ namespace ParkingApp.Aplicacion.Pagos;
 
 /// <summary>
 /// Caso de uso de la caja: paga en efectivo, de una vez, todo lo que debe una placa desde que entró, aunque hayan pasado
-/// varios días (S-05). Como cualquier cobro pendiente bloquea la salida (D-19), se paga siempre el total.
+/// varios días (S-05). Como cualquier cobro pendiente bloquea la salida, se paga siempre el total.
 /// Es idempotente: la misma solicitud repetida no registra un segundo pago.
 /// </summary>
 public sealed partial class RegistrarPagoDeLaPlacaEnEfectivo
@@ -55,12 +54,17 @@ public sealed partial class RegistrarPagoDeLaPlacaEnEfectivo
     /// propio pago, y todos se guardan juntos: o se pagan todos o ninguno.
     /// </summary>
     /// <param name="placa">Placa del vehículo, sin importar mayúsculas, espacios ni guiones.</param>
+    /// <param name="totalEsperado">
+    /// Total que el operador vio y recibió. Si los pendientes cambiaron desde entonces (por ejemplo, a las 06:00 se
+    /// generó el cobro del día nuevo), no se paga nada y se avisa el total nuevo.
+    /// </param>
     /// <param name="referencia">Referencia única de la solicitud; se repite en los reintentos.</param>
     /// <param name="operador">Operador que registra el pago.</param>
     /// <param name="cancelacion">Permite cancelar la operación.</param>
     /// <returns>Si el pago se registró, el motivo y el pago con el total.</returns>
     public async Task<ResultadoDePagoDeLaPlaca> EjecutarAsync(
         string? placa,
+        decimal totalEsperado,
         Guid referencia,
         string operador,
         CancellationToken cancelacion = default)
@@ -87,27 +91,34 @@ public sealed partial class RegistrarPagoDeLaPlacaEnEfectivo
             return Rechazar(TextosDeCobro.SinCobrosPendientes(placaNormalizada));
         }
 
-        // 3. Cada cobro crea su pago y pasa a Pagado. El primero lleva la referencia de la solicitud, para reconocer
-        // un reintento; los demás, una referencia que se calcula a partir de ella y del cobro.
+        // 3. Se cobra lo que el operador vio: si mientras tanto apareció un cobro (o se pagó alguno), no se paga nada.
+        var total = pendientes.Sum(cobro => cobro.Valor);
+
+        if (total != totalEsperado)
+        {
+            return Rechazar(TextosDeCobro.TotalCambio(total));
+        }
+
+        // 4. Cada cobro crea su pago y pasa a Pagado. El primero lleva la referencia de la solicitud, para reconocer
+        // un reintento; los demás, una nueva. Un doble clic lo frenan los índices únicos de referencia y de cobro.
         var ahora = reloj.GetUtcNow();
-        var pagosNuevos = pendientes
-            .Select((cobro, posicion) => cobro.Pagar(
-                MedioDePago.Efectivo,
-                operador,
-                posicion == 0 ? referencia : ReferenciaDelCobro(referencia, cobro.Id),
-                ahora))
-            .ToList();
+        var pagosNuevos = new List<Pago>();
+
+        foreach (var cobro in pendientes)
+        {
+            var referenciaDelPago = pagosNuevos.Count == 0 ? referencia : Guid.CreateVersion7();
+            pagosNuevos.Add(cobro.Pagar(MedioDePago.Efectivo, operador, referenciaDelPago, ahora));
+        }
 
         if (!await pagos.AgregarVariosAsync(pagosNuevos, cancelacion))
         {
             return Rechazar(TextosDeCobro.PagoYaRegistrado);
         }
 
-        // 4. Una sola factura por el total (#24). Si falla, el pago sigue registrado.
-        var total = pagosNuevos.Sum(pago => pago.Valor);
+        // 5. Una sola factura por el total (#24). Si falla, el pago sigue registrado.
         await SolicitarFacturaAsync(placaNormalizada, pendientes, total, referencia, ahora, cancelacion);
 
-        // 5. Se responde con la hora de la sede, que es la que ve el operador.
+        // 6. Se responde con la hora de la sede, que es la que ve el operador.
         var registrado = new PagoDeLaPlaca(
             placaNormalizada,
             total,
@@ -118,19 +129,6 @@ public sealed partial class RegistrarPagoDeLaPlacaEnEfectivo
             TimeZoneInfo.ConvertTime(ahora, sede.ZonaHoraria));
 
         return new ResultadoDePagoDeLaPlaca(true, TextosDeCobro.PagoRegistrado(total, pagosNuevos.Count), registrado);
-    }
-
-    // La misma solicitud y el mismo cobro dan siempre la misma referencia, distinta para cada cobro.
-    private static Guid ReferenciaDelCobro(Guid referencia, Guid cobroId)
-    {
-        Span<byte> datos = stackalloc byte[32];
-        referencia.TryWriteBytes(datos[..16]);
-        cobroId.TryWriteBytes(datos[16..]);
-
-        Span<byte> resumen = stackalloc byte[32];
-        SHA256.HashData(datos, resumen);
-
-        return new Guid(resumen[..16]);
     }
 
     private static ResultadoDePagoDeLaPlaca Rechazar(string motivo)

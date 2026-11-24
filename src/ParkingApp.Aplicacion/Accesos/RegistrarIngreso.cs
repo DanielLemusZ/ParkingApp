@@ -92,7 +92,8 @@ public sealed class RegistrarIngreso
             solicitud.FechaHora);
         await lecturas.AgregarAsync(pendiente, cancelacion);
 
-        return new ResultadoDeIngreso(false, validacion.Motivo, null, PendienteDeValidacion: true);
+        var porRevisar = LecturaPorRevisar.Crear(pendiente, sede.ZonaHoraria);
+        return new ResultadoDeIngreso(false, validacion.Motivo, null, PendienteDeValidacion: true, LecturaPendiente: porRevisar);
     }
 
     /// <summary>

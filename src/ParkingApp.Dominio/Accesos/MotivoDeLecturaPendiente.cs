@@ -14,4 +14,10 @@ public enum MotivoDeLecturaPendiente
     /// La placa no tiene un formato de carro o moto. Aplica solo a la entrada.
     /// </summary>
     FormatoNoReconocido,
+
+    /// <summary>
+    /// La placa leída en la salida no tiene un ingreso sin su salida: puede ser una lectura incompleta o equivocada.
+    /// Aplica solo a la salida.
+    /// </summary>
+    NoFiguraAdentro,
 }

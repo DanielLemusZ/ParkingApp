@@ -209,6 +209,7 @@ public class ValidarLecturaTests
     [InlineData(80, false)]
     public async Task Con_79_queda_pendiente_y_con_80_pasa(int confianza, bool quedaPendiente)
     {
+        await entrada.IngresarAsync("XYZ12D");
         var ingreso = await entrada.IngresarAsync("ABC123", confianza);
         var salidaDeMoto = await salida.SalirAsync("XYZ12D", confianza);
 
@@ -249,10 +250,17 @@ public class ValidarLecturaTests
     [Fact]
     public async Task La_salida_no_exige_formato_reconocido()
     {
+        // CD1234 entró con la validación del operador, como moto, y sale sin otra validación.
+        await entrada.IngresarAsync("CD1234", confianza: 95);
+        await ValidarLaUltimaAsync("CD1234", TipoDeVehiculo.Moto);
+
         var automatica = await salida.SalirAsync("CD1234", confianza: 95);
         Assert.True(automatica.AbreBarrera);
-        Assert.Empty(entrada.Lecturas.Lecturas);
+        Assert.Single(entrada.Lecturas.Lecturas);
 
+        // CD5678 también entró validada como moto; su salida tiene confianza baja y se valida.
+        await entrada.IngresarAsync("CD5678", confianza: 95);
+        await ValidarLaUltimaAsync("CD5678", TipoDeVehiculo.Moto);
         await salida.SalirAsync("CD5678", confianza: 60);
         var validada = await ValidarLaUltimaAsync("CD5678");
 
@@ -396,6 +404,165 @@ public class ValidarLecturaTests
         Assert.Equal(EstadoDeCobro.Pendiente, cobro.Estado);
         entrada.Cobros.PagarEnEfectivo(cobro);
         Assert.True((await salida.SalirAsync("ABC123")).AbreBarrera);
+    }
+
+    // Una placa que no figura adentro en la salida: el operador corrige la lectura y se revisan los cobros del vehículo real.
+
+    [Fact]
+    public async Task Al_corregir_una_lectura_incompleta_de_la_salida_sale_el_vehiculo_real()
+    {
+        await entrada.IngresarAsync("AHF723");
+        entrada.Cobros.PagarEnEfectivo(Assert.Single(entrada.Cobros.Cobros));
+        entrada.Reloj.Advance(TimeSpan.FromHours(2));
+
+        var leida = await salida.SalirAsync("AHF7", confianza: 99);
+        var pendientes = await ListarAsync();
+        var resultado = await ValidarAsync(leida.LecturaPendiente!.Id, "AHF723");
+
+        Assert.Equal(MotivoDeLecturaPendiente.NoFiguraAdentro, Assert.Single(pendientes).Motivo);
+        Assert.True(resultado.AbreBarrera);
+        Assert.Equal("Abre: cobro pagado", resultado.Motivo);
+        Assert.Equal("AHF723", resultado.Salida?.Placa);
+        Assert.Equal(Operador, entrada.Eventos.Eventos[1].ValidadoPor);
+        Assert.Empty(await ListarAsync());
+    }
+
+    [Fact]
+    public async Task Corregir_la_salida_con_una_placa_que_no_figura_adentro_la_deja_pendiente()
+    {
+        await entrada.IngresarAsync("AHF723");
+        entrada.Cobros.PagarEnEfectivo(Assert.Single(entrada.Cobros.Cobros));
+        var leida = await salida.SalirAsync("AHF7", confianza: 99);
+
+        // AHF732 en vez de AHF723: se rechaza como un dato mal digitado y la lectura sigue pendiente.
+        var malEscrita = await ValidarAsync(leida.LecturaPendiente!.Id, "AHF732");
+        var pendientes = await ListarAsync();
+        var bienEscrita = await ValidarAsync(leida.LecturaPendiente.Id, "AHF723");
+
+        Assert.False(malEscrita.Validada);
+        Assert.Equal(ValidarLectura.PlacaEscritaNoFiguraAdentro, malEscrita.Motivo);
+        Assert.Single(pendientes);
+        Assert.True(bienEscrita.AbreBarrera);
+        Assert.Equal("AHF723", bienEscrita.Salida?.Placa);
+    }
+
+    [Fact]
+    public async Task Al_corregir_la_lectura_de_la_salida_a_un_vehiculo_con_deuda_no_abre()
+    {
+        await entrada.IngresarAsync("AHF723");
+        var leida = await salida.SalirAsync("AHF7", confianza: 99);
+
+        var resultado = await ValidarAsync(leida.LecturaPendiente!.Id, "AHF723");
+
+        Assert.True(resultado.Validada);
+        Assert.False(resultado.AbreBarrera);
+        Assert.Equal("No abre: cobro pendiente de $8.000", resultado.Motivo);
+        Assert.Single(entrada.Eventos.Eventos);
+    }
+
+    // Lo manual en el carril: validar la lectura pendiente ahí mismo, o escribir la placa si la foto no se pudo leer.
+
+    [Fact]
+    public async Task Una_lectura_dudosa_del_carril_devuelve_la_lectura_pendiente_para_validarla_ahi()
+    {
+        var ingreso = await entrada.IngresarAsync("ABC123", confianza: 60, carril: 2);
+        var salidaDudosa = await salida.SalirAsync("XYZ12D", confianza: 60);
+
+        var pendiente = Assert.IsType<LecturaPorRevisar>(ingreso.LecturaPendiente);
+        Assert.Equal(entrada.Lecturas.Lecturas[0].Id, pendiente.Id);
+        Assert.Equal("ABC123", pendiente.Placa);
+        Assert.Equal(60, pendiente.Confianza);
+        Assert.Equal(2, pendiente.Carril);
+        Assert.Equal(TipoDeEvento.Salida, salidaDudosa.LecturaPendiente?.Tipo);
+
+        var resultado = await ValidarAsync(pendiente.Id, "ABC123");
+        Assert.True(resultado.AbreBarrera);
+    }
+
+    [Fact]
+    public async Task Una_lectura_que_alcanza_el_umbral_no_deja_nada_pendiente()
+    {
+        var ingreso = await entrada.IngresarAsync("ABC123", confianza: 95);
+
+        Assert.True(ingreso.AbreBarrera);
+        Assert.Null(ingreso.LecturaPendiente);
+    }
+
+    [Fact]
+    public async Task Escribir_a_mano_sin_lectura_registra_el_ingreso_como_lectura_manual_con_confianza_0()
+    {
+        var resultado = await CrearValidarLectura(entrada).RegistrarLecturaManualAsync(
+            TipoDeEvento.Ingreso, 1, " abc-123 ", null, Operador, TestContext.Current.CancellationToken);
+
+        Assert.True(resultado.Validada);
+        Assert.True(resultado.AbreBarrera);
+
+        var ingreso = Assert.Single(entrada.Eventos.Eventos);
+        Assert.Equal("ABC123", ingreso.Placa.Valor);
+        Assert.Equal(TipoDeVehiculo.Carro, ingreso.TipoDeVehiculo);
+        Assert.Equal(0, ingreso.Confianza);
+        Assert.Equal(Operador, ingreso.ValidadoPor);
+        Assert.Single(entrada.Cobros.Cobros);
+    }
+
+    [Fact]
+    public async Task Escribir_a_mano_una_placa_sin_formato_exige_carro_o_moto()
+    {
+        var validar = CrearValidarLectura(entrada);
+
+        var sinTipo = await validar.RegistrarLecturaManualAsync(TipoDeEvento.Ingreso, 1, "CD1234", null, Operador, TestContext.Current.CancellationToken);
+        var conTipo = await validar.RegistrarLecturaManualAsync(TipoDeEvento.Ingreso, 1, "CD1234", TipoDeVehiculo.Moto, Operador, TestContext.Current.CancellationToken);
+
+        Assert.Equal(ValidarLectura.FaltaElTipoDeVehiculo, sinTipo.Motivo);
+        Assert.True(conTipo.AbreBarrera);
+        Assert.Equal(TipoDeVehiculo.Moto, Assert.Single(entrada.Eventos.Eventos).TipoDeVehiculo);
+    }
+
+    [Theory]
+    [InlineData("AB#12", "La placa solo admite letras y números")]
+    [InlineData("  ", "La placa es obligatoria")]
+    public async Task Escribir_a_mano_una_placa_invalida_no_registra_nada(string placa, string motivo)
+    {
+        var resultado = await CrearValidarLectura(entrada).RegistrarLecturaManualAsync(
+            TipoDeEvento.Ingreso, 1, placa, null, Operador, TestContext.Current.CancellationToken);
+
+        Assert.False(resultado.Validada);
+        Assert.Equal(motivo, resultado.Motivo);
+        Assert.Empty(entrada.Eventos.Eventos);
+    }
+
+    [Fact]
+    public async Task Escribir_a_mano_en_la_salida_revisa_los_cobros()
+    {
+        await entrada.IngresarAsync("ABC123");
+        var validar = CrearValidarLectura(entrada);
+
+        var conDeuda = await validar.RegistrarLecturaManualAsync(TipoDeEvento.Salida, 1, "ABC123", null, Operador, TestContext.Current.CancellationToken);
+        entrada.Cobros.PagarEnEfectivo(Assert.Single(entrada.Cobros.Cobros));
+        var pagado = await validar.RegistrarLecturaManualAsync(TipoDeEvento.Salida, 1, "ABC123", null, Operador, TestContext.Current.CancellationToken);
+
+        Assert.False(conDeuda.AbreBarrera);
+        Assert.Equal("No abre: cobro pendiente de $8.000", conDeuda.Motivo);
+        Assert.True(pagado.AbreBarrera);
+        Assert.Equal(Operador, entrada.Eventos.Eventos[1].ValidadoPor);
+    }
+
+    [Fact]
+    public async Task Escribir_mal_la_placa_en_la_salida_no_deja_salir_al_vehiculo_sin_pagar()
+    {
+        await entrada.IngresarAsync("AHF723");
+        var validar = CrearValidarLectura(entrada);
+
+        // AHF732 no tiene cobros: si se registrara, la barrera abriría "sin cobro" y AHF723 saldría sin pagar.
+        var malEscrita = await validar.RegistrarLecturaManualAsync(TipoDeEvento.Salida, 1, "AHF732", null, Operador, TestContext.Current.CancellationToken);
+        var bienEscrita = await validar.RegistrarLecturaManualAsync(TipoDeEvento.Salida, 1, "AHF723", null, Operador, TestContext.Current.CancellationToken);
+
+        Assert.False(malEscrita.Validada);
+        Assert.False(malEscrita.AbreBarrera);
+        Assert.Equal(ValidarLectura.PlacaEscritaNoFiguraAdentro, malEscrita.Motivo);
+        Assert.False(bienEscrita.AbreBarrera);
+        Assert.Equal("No abre: cobro pendiente de $8.000", bienEscrita.Motivo);
+        Assert.Single(entrada.Eventos.Eventos);
     }
 
     // Reglas propias de la lectura en el dominio.

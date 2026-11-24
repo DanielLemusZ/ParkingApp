@@ -11,7 +11,7 @@ public sealed class ClasificacionDeVehiculoValida : ValidacionDeIngreso
     /// <summary>
     /// Motivo mostrado cuando la placa no tiene un formato reconocido.
     /// </summary>
-    public const string FormatoNoReconocido = "Formato no reconocido: ingreso manual en caja";
+    public const string FormatoNoReconocido = "Formato no reconocido: hay que validar la lectura";
 
     /// <inheritdoc />
     protected override Task<ResultadoDeValidacion> RevisarAsync(SolicitudDeIngreso solicitud, CancellationToken cancelacion)

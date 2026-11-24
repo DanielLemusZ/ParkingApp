@@ -11,7 +11,13 @@ namespace ParkingApp.Aplicacion.Accesos;
 /// <param name="Motivo">Motivo que se muestra en el carril.</param>
 /// <param name="Ingreso">El ingreso registrado, o nada si la barrera no abre.</param>
 /// <param name="PendienteDeValidacion">Si la lectura quedó en la caja para que el operador la valide.</param>
-public sealed record ResultadoDeIngreso(bool AbreBarrera, string Motivo, IngresoRegistrado? Ingreso, bool PendienteDeValidacion = false);
+/// <param name="LecturaPendiente">La lectura que quedó pendiente, para validarla también desde el carril.</param>
+public sealed record ResultadoDeIngreso(
+    bool AbreBarrera,
+    string Motivo,
+    IngresoRegistrado? Ingreso,
+    bool PendienteDeValidacion = false,
+    LecturaPorRevisar? LecturaPendiente = null);
 
 /// <summary>
 /// Datos de un ingreso registrado, para mostrarlos en el carril.

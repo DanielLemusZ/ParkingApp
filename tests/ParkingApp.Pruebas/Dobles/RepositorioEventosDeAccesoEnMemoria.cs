@@ -30,4 +30,19 @@ internal sealed class RepositorioEventosDeAccesoEnMemoria : IRepositorioEventosD
 
         return Task.FromResult(adentro);
     }
+
+    public Task<bool> FiguraAdentroAsync(Placa placa, Guid sedeId, CancellationToken cancelacion = default)
+    {
+        EventoDeAcceso? ultimo = null;
+
+        foreach (var evento in eventos)
+        {
+            if (evento.Placa == placa && evento.SedeId == sedeId && (ultimo is null || evento.FechaHora >= ultimo.FechaHora))
+            {
+                ultimo = evento;
+            }
+        }
+
+        return Task.FromResult(ultimo is not null && ultimo.Tipo == TipoDeEvento.Ingreso);
+    }
 }

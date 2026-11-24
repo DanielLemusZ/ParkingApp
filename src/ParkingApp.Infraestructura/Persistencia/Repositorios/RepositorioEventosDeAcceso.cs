@@ -38,4 +38,17 @@ internal sealed class RepositorioEventosDeAcceso : IRepositorioEventosDeAcceso
             .Select(ingreso => new VehiculoAdentro(ingreso.Placa, ingreso.TipoDeVehiculo, ingreso.FechaHora))
             .ToList();
     }
+
+    public async Task<bool> FiguraAdentroAsync(Placa placa, Guid sedeId, CancellationToken cancelacion = default)
+    {
+        // Se pide el tipo como opcional: sin eventos llega null, y no el primer valor del enum (Ingreso).
+        var ultimo = await contexto.EventosDeAcceso
+            .AsNoTracking()
+            .Where(evento => evento.Placa == placa && evento.SedeId == sedeId)
+            .OrderByDescending(evento => evento.FechaHora)
+            .Select(evento => (TipoDeEvento?)evento.Tipo)
+            .FirstOrDefaultAsync(cancelacion);
+
+        return ultimo == TipoDeEvento.Ingreso;
+    }
 }

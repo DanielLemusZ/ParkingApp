@@ -6,6 +6,13 @@
     <DialogContent>
         <MudText><b>Placa leída:</b> @Lectura.Placa (confianza @Lectura.Confianza)</MudText>
 
+        @if (Lectura.Motivo == MotivoDeLecturaPendiente.NoFiguraAdentro)
+        {
+            <MudAlert Class="mt-3" Severity="Severity.Info" Dense="true">
+                No hay un vehículo adentro con esa placa: revisa que la lectura esté completa y corrígela.
+            </MudAlert>
+        }
+
         <MudTextField T="string" Label="Placa correcta" @bind-Value="placa" @bind-Value:after="BorrarError" Immediate="true" Class="mt-3" />
 
         @if (ValidarLectura.NecesitaTipoDeVehiculo(Lectura.Tipo, placa))

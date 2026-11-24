@@ -1,0 +1,133 @@
+@using ParkingApp.Aplicacion.Accesos
+@using ParkingApp.Dominio.Accesos
+@inject IServiceScopeFactory FabricaDeAlcances
+@inject IDialogService Dialogos
+
+@* Lo manual del carril: validar una lectura que no alcanzó el umbral, o escribir la placa si la foto no se pudo leer. *@
+@if (Pendiente is not null)
+{
+    <MudButton Class="mt-3" Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.FactCheck"
+               OnClick="ValidarAsync">
+        Validar lectura
+    </MudButton>
+}
+else if (Escribir)
+{
+    <MudTextField T="string" Label="Placa (escríbela a mano)" @bind-Value="placa" @bind-Value:after="BorrarError" Immediate="true" />
+
+    @if (ValidarLectura.NecesitaTipoDeVehiculo(Sentido, placa))
+    {
+        <MudSelect T="TipoDeVehiculo?" Label="Tipo de vehículo" @bind-Value="tipoIndicado" @bind-Value:after="BorrarError">
+            <MudSelectItem T="TipoDeVehiculo?" Value="@(TipoDeVehiculo.Carro)">Carro</MudSelectItem>
+            <MudSelectItem T="TipoDeVehiculo?" Value="@(TipoDeVehiculo.Moto)">Moto</MudSelectItem>
+        </MudSelect>
+    }
+
+    <MudButton Class="mt-3" Variant="Variant.Filled" Color="Color.Primary" Disabled="registrando" OnClick="RegistrarAsync">
+        @(Sentido == TipoDeEvento.Ingreso ? "Registrar ingreso" : "Registrar salida")
+    </MudButton>
+
+    @if (error is not null)
+    {
+        <MudAlert Class="mt-2" Severity="Severity.Error" Dense="true">@error</MudAlert>
+    }
+}
+
+@code {
+    private string? placa;
+    private TipoDeVehiculo? tipoIndicado;
+    private string? error;
+    private bool registrando;
+
+    /// <summary>
+    /// Si el carril es de entrada (ingreso) o de salida.
+    /// </summary>
+    [Parameter]
+    public TipoDeEvento Sentido { get; set; }
+
+    /// <summary>
+    /// Número del carril.
+    /// </summary>
+    [Parameter]
+    public int Carril { get; set; }
+
+    /// <summary>
+    /// Lectura que no alcanzó el umbral o tiene un formato no reconocido: se valida con la misma ventana de la caja.
+    /// </summary>
+    [Parameter]
+    public LecturaPorRevisar? Pendiente { get; set; }
+
+    /// <summary>
+    /// Si la foto no se pudo leer y el operador debe escribir la placa.
+    /// </summary>
+    [Parameter]
+    public bool Escribir { get; set; }
+
+    /// <summary>
+    /// Recibe el resultado, para mostrar si la barrera abre.
+    /// </summary>
+    [Parameter]
+    public EventCallback<ResultadoDeValidarLectura> AlRegistrar { get; set; }
+
+    // El usuario de la sesión, que llega en cascada desde AddCascadingAuthenticationState.
+    [CascadingParameter]
+    private Task<AuthenticationState> EstadoDeSesion { get; set; } = default!;
+
+    private async Task ValidarAsync()
+    {
+        var parametros = new DialogParameters();
+        parametros.Add(nameof(DialogoValidarLectura.Lectura), Pendiente);
+        var opciones = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+
+        var dialogo = await Dialogos.ShowAsync<DialogoValidarLectura>("Validar lectura", parametros, opciones);
+        var cierre = await dialogo.Result;
+
+        if (cierre?.Data is ResultadoDeValidarLectura resultado)
+        {
+            await AlRegistrar.InvokeAsync(resultado);
+        }
+    }
+
+    private async Task RegistrarAsync()
+    {
+        if (registrando)
+        {
+            return;
+        }
+
+        registrando = true;
+        error = null;
+
+        try
+        {
+            var sesion = await EstadoDeSesion;
+            var operador = sesion.User.Identity?.Name ?? throw new InvalidOperationException("No hay un usuario con sesión.");
+
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var validarLectura = alcance.ServiceProvider.GetRequiredService<ValidarLectura>();
+            var resultado = await validarLectura.RegistrarLecturaManualAsync(Sentido, Carril, placa, tipoIndicado, operador);
+
+            if (resultado.Validada)
+            {
+                placa = null;
+                tipoIndicado = null;
+                await AlRegistrar.InvokeAsync(resultado);
+            }
+            else
+            {
+                // Un dato mal escrito no registra nada: el operador lo corrige aquí mismo.
+                error = resultado.Motivo;
+            }
+        }
+        finally
+        {
+            registrando = false;
+        }
+    }
+
+    // Al corregir el dato, el error anterior ya no aplica.
+    private void BorrarError()
+    {
+        error = null;
+    }
+}

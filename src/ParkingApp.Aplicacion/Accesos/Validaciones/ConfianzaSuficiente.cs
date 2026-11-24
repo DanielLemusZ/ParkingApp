@@ -12,7 +12,7 @@ public sealed class ConfianzaSuficiente : ValidacionDeIngreso
     /// <summary>
     /// Motivo cuando la confianza es menor que el umbral. Lo muestran los dos carriles.
     /// </summary>
-    public const string ConfianzaBaja = "No abre: confianza baja, la placa se valida en la caja";
+    public const string ConfianzaBaja = "No abre: confianza baja, hay que validar la lectura";
 
     private readonly IRepositorioSedes sedes;
 

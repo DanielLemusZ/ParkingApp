@@ -124,7 +124,7 @@ public sealed class Cobro
 
     /// <summary>
     /// Genera el cobro diurno pendiente de un día operativo nuevo para un vehículo que seguía adentro a las 06:00
-    /// (S-05, D-28). Guarda cuándo entró el vehículo, para que la caja muestre desde cuándo está adentro.
+    /// (S-05). Guarda cuándo entró el vehículo, para que la caja muestre desde cuándo está adentro.
     /// </summary>
     /// <param name="placa">Placa del vehículo.</param>
     /// <param name="tipoDeVehiculo">Tipo de vehículo, que debe coincidir con el de la tarifa.</param>
@@ -151,7 +151,7 @@ public sealed class Cobro
 
         if (tarifa.Franja != FranjaTarifaria.Diurna)
         {
-            throw new ArgumentException("El cobro de un día nuevo usa la tarifa diurna (D-28).", nameof(tarifa));
+            throw new ArgumentException("El cobro de un día nuevo usa la tarifa diurna.", nameof(tarifa));
         }
 
         if (fechaHoraDeIngreso.Offset != TimeSpan.Zero)

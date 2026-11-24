@@ -27,7 +27,7 @@ builder.Services.AgregarBaseDeDatos(builder.Configuration, builder.Environment.I
 builder.Services.AgregarServiciosExternos();
 builder.Services.AgregarIdentidad();
 
-// Cobro del día nuevo (D-28): corre al arrancar y cada día a las 06:00 de la sede.
+// Cobro del día nuevo: corre al arrancar y cada día a las 06:00 de la sede.
 builder.Services.AddHostedService<TareaCobrosDelDiaNuevo>();
 
 // Pone el usuario que inició sesión al alcance de todas las pantallas (<AuthorizeView>, [Authorize]).

@@ -157,7 +157,7 @@ En cada pago queda el correo del usuario que lo registró en la caja.
 - Al confirmar, la lectura se cierra aunque la barrera no abra (LLENO o cobro pendiente): después se vuelve a leer la placa en el carril. En la salida conviene cobrar antes de confirmar.
 - En la API: `GET api/caja/lecturas-pendientes` y `POST api/caja/lecturas-pendientes/{id}/validacion`, con `placa` y, si hace falta, `tipoDeVehiculo` (0 = carro, 1 = moto).
 
-**Cobro del día nuevo.** A las 06:00 empieza un nuevo día operativo. Cada vehículo que sigue adentro recibe el cobro diurno Pendiente de ese día, para que un pago no cubra estadías de varios días (supuesto S-05, decisión D-28; la docente aún no lo confirma).
+**Cobro del día nuevo.** A las 06:00 empieza un nuevo día operativo. Cada vehículo que sigue adentro recibe el cobro diurno Pendiente de ese día, para que un pago no cubra estadías de varios días (supuesto S-05; la docente aún no lo confirma).
 
 - Lo genera una tarea en segundo plano que corre **al arrancar** la aplicación y después **cada día a las 06:00** de la sede. Si la aplicación estuvo apagada, genera los cobros de todos los días que faltan.
 - Se genera un cobro por cada día operativo que el vehículo pasa adentro, con la tarifa diurna vigente de ese día. El vehículo **no** vuelve a entrar: sigue siendo la misma estadía y solo necesita una salida.

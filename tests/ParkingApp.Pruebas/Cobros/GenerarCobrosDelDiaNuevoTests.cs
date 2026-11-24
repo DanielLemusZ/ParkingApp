@@ -6,7 +6,7 @@ using ParkingApp.Pruebas.Dobles;
 
 namespace ParkingApp.Pruebas.Cobros;
 
-// Escenarios del issue #17 (S-05, D-28): cobro del día nuevo para los vehículos que siguen adentro.
+// Escenarios del issue #17 (S-05): cobro del día nuevo para los vehículos que siguen adentro.
 // Bogotá es UTC-5: las 06:00 en Bogotá son las 11:00 UTC. El lunes es el 16 de noviembre de 2026.
 public class GenerarCobrosDelDiaNuevoTests
 {

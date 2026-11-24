@@ -11,7 +11,7 @@ public enum MotivoDeCobro
     Ingreso,
 
     /// <summary>
-    /// El vehículo seguía adentro cuando empezó un nuevo día operativo a las 06:00 (S-05, D-28).
+    /// El vehículo seguía adentro cuando empezó un nuevo día operativo a las 06:00 (S-05).
     /// </summary>
     SigueAdentro,
 }

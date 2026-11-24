@@ -5,7 +5,7 @@ using ParkingApp.Dominio.Configuracion;
 namespace ParkingApp.Web.Tareas;
 
 /// <summary>
-/// Genera el cobro del día nuevo de los vehículos que siguen adentro (S-05, D-28): una vez al arrancar, por si la
+/// Genera el cobro del día nuevo de los vehículos que siguen adentro (S-05): una vez al arrancar, por si la
 /// aplicación estaba apagada a las 06:00, y después cada día a las 06:00 de la sede. Solo decide cuándo correr;
 /// qué se cobra lo decide el caso de uso <see cref="GenerarCobrosDelDiaNuevo"/>.
 /// </summary>

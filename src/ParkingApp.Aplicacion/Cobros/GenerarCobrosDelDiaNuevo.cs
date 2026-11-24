@@ -7,7 +7,7 @@ using ParkingApp.Dominio.Configuracion;
 namespace ParkingApp.Aplicacion.Cobros;
 
 /// <summary>
-/// Genera el cobro diurno de cada día operativo nuevo para los vehículos que siguen adentro (S-05, D-28),
+/// Genera el cobro diurno de cada día operativo nuevo para los vehículos que siguen adentro (S-05),
 /// para que un pago no cubra estadías de varios días. Se puede correr varias veces sin duplicar cobros (RN-04).
 /// </summary>
 public sealed class GenerarCobrosDelDiaNuevo
@@ -70,7 +70,7 @@ public sealed class GenerarCobrosDelDiaNuevo
 
                 var tarifa = await tarifas.ObtenerVigenteAsync(vehiculo.TipoDeVehiculo, FranjaTarifaria.Diurna, dia, cancelacion);
 
-                // D-16: las motos ($0) no generan cobro. Sin tarifa vigente tampoco: se omite sin detener la tarea.
+                // Las motos ($0) no generan cobro. Sin tarifa vigente tampoco: se omite sin detener la tarea.
                 if (tarifa is null || !tarifa.GeneraCobro)
                 {
                     omitidos++;

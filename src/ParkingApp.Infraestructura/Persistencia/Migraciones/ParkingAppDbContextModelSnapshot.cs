@@ -598,6 +598,11 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .HasColumnType("uuid")
                         .HasColumnName("referencia");
 
+                    b.Property<string>("TransaccionDeLaPasarela")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("transaccion_de_la_pasarela");
+
                     b.Property<decimal>("Valor")
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("valor");

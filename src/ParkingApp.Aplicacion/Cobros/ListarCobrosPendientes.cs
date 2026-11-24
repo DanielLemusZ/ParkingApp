@@ -1,5 +1,6 @@
 using ParkingApp.Aplicacion.Configuracion;
 using ParkingApp.Dominio.Accesos;
+using ParkingApp.Dominio.Cobros;
 using ParkingApp.Dominio.Configuracion;
 
 namespace ParkingApp.Aplicacion.Cobros;
@@ -38,10 +39,11 @@ public sealed class ListarCobrosPendientes
             .Select(cobro => new CobroPendiente(
                 cobro.Id,
                 cobro.Placa.Valor,
-                TimeZoneInfo.ConvertTime(cobro.FechaHora, sede.ZonaHoraria),
+                TimeZoneInfo.ConvertTime(cobro.FechaHoraDeIngreso, sede.ZonaHoraria),
                 cobro.Franja,
                 cobro.Valor,
-                cobro.DiaOperativo))
+                cobro.DiaOperativo,
+                cobro.Motivo))
             .ToList();
     }
 }
@@ -51,8 +53,16 @@ public sealed class ListarCobrosPendientes
 /// </summary>
 /// <param name="Id">Identificador del cobro.</param>
 /// <param name="Placa">Placa del vehículo.</param>
-/// <param name="HoraDeIngreso">Hora del ingreso que generó el cobro, en la hora de la sede.</param>
+/// <param name="HoraDeIngreso">Hora en que entró el vehículo, en la hora de la sede; en un cobro por seguir adentro es la de días anteriores.</param>
 /// <param name="Franja">Franja del cobro.</param>
 /// <param name="Valor">Valor en pesos colombianos.</param>
 /// <param name="DiaOperativo">Día operativo que cubre el cobro.</param>
-public sealed record CobroPendiente(Guid Id, string Placa, DateTimeOffset HoraDeIngreso, FranjaTarifaria Franja, decimal Valor, DateOnly DiaOperativo);
+/// <param name="Motivo">Por qué se generó: por el ingreso o porque el vehículo seguía adentro en un día nuevo.</param>
+public sealed record CobroPendiente(
+    Guid Id,
+    string Placa,
+    DateTimeOffset HoraDeIngreso,
+    FranjaTarifaria Franja,
+    decimal Valor,
+    DateOnly DiaOperativo,
+    MotivoDeCobro Motivo);

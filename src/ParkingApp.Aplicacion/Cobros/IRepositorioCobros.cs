@@ -64,4 +64,14 @@ public interface IRepositorioCobros
     /// <param name="cancelacion">Permite cancelar la operación.</param>
     /// <returns>Los cobros pendientes que cumplen el filtro.</returns>
     Task<IReadOnlyList<Cobro>> ListarPendientesAsync(Guid sedeId, string placaContiene, CancellationToken cancelacion = default);
+
+    /// <summary>
+    /// Busca todos los cobros pendientes de una placa en la sede, de cualquier día operativo, para pagarlos juntos.
+    /// Los cambios se guardan con los pagos.
+    /// </summary>
+    /// <param name="placa">Placa del vehículo.</param>
+    /// <param name="sedeId">Sede de los cobros.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>Los cobros pendientes, del día operativo más antiguo al más reciente; vacío si no debe nada.</returns>
+    Task<IReadOnlyList<Cobro>> ObtenerPendientesDeLaPlacaAsync(Placa placa, Guid sedeId, CancellationToken cancelacion = default);
 }

@@ -1,4 +1,5 @@
 using ParkingApp.Aplicacion.Cobros;
+using ParkingApp.Dominio.Cobros;
 using ParkingApp.Dominio.Configuracion;
 using ParkingApp.Pruebas.Dobles;
 
@@ -52,6 +53,25 @@ public class ListarCobrosPendientesTests
         var resultado = await ListarAsync(null);
 
         Assert.Equal("XYZ789", Assert.Single(resultado).Placa);
+    }
+
+    [Fact]
+    public async Task El_cobro_de_un_dia_nuevo_muestra_la_hora_real_de_ingreso_y_que_sigue_adentro()
+    {
+        // Issue #17: entra el martes 17 a las 18:00 en Bogotá (23:00 UTC) y sigue adentro el miércoles a las 06:00.
+        var carril = new CarrilDeEntradaDePrueba(new DateTimeOffset(2026, 11, 17, 23, 0, 0, TimeSpan.Zero));
+        await carril.IngresarAsync("ABC123");
+        carril.Reloj.SetUtcNow(MiercolesALas0800);
+        var cobrosDelDiaNuevo = new GenerarCobrosDelDiaNuevo(carril.Eventos, carril.Cobros, carril.Tarifas, carril.Calendario, carril.Sede, carril.Reloj);
+        await cobrosDelDiaNuevo.EjecutarAsync(TestContext.Current.CancellationToken);
+
+        var resultado = await new ListarCobrosPendientes(carril.Cobros, carril.Sede).EjecutarAsync(null, TestContext.Current.CancellationToken);
+
+        var diurno = Assert.Single(resultado, cobro => cobro.Motivo == MotivoDeCobro.SigueAdentro);
+        Assert.Equal(new DateTime(2026, 11, 17, 18, 0, 0), diurno.HoraDeIngreso.DateTime);
+        Assert.Equal(new DateOnly(2026, 11, 18), diurno.DiaOperativo);
+        Assert.Equal("Sigue adentro desde 2026-11-17 18:00 (diurna)", TextosDeCobro.Motivo(diurno.Motivo, diurno.Franja, diurno.HoraDeIngreso));
+        Assert.Equal(MotivoDeCobro.Ingreso, Assert.Single(resultado, cobro => cobro.DiaOperativo == new DateOnly(2026, 11, 17)).Motivo);
     }
 
     private Task<IReadOnlyList<CobroPendiente>> ListarAsync(string? placa)

@@ -90,6 +90,15 @@ internal sealed class RepositorioCobros : IRepositorioCobros
             .ToListAsync(cancelacion);
     }
 
+    public async Task<IReadOnlyList<Cobro>> ObtenerPendientesDeLaPlacaAsync(Placa placa, Guid sedeId, CancellationToken cancelacion = default)
+    {
+        // Con seguimiento: el cambio a Pagado se guarda junto con los pagos, en el mismo SaveChanges.
+        return await contexto.Cobros
+            .Where(cobro => cobro.Placa == placa && cobro.SedeId == sedeId && cobro.Estado == EstadoDeCobro.Pendiente)
+            .OrderBy(cobro => cobro.DiaOperativo)
+            .ToListAsync(cancelacion);
+    }
+
     // PostgreSQL responde con el código 23505 cuando se viola la restricción única del cobro del día.
     private static bool EsCobroDelDiaDuplicado(DbUpdateException error)
     {

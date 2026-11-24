@@ -39,6 +39,18 @@ internal sealed class RepositorioPagosEnMemoria : IRepositorioPagos
     /// <summary>
     /// Guarda un pago como si lo hubiera registrado otra solicitud, para simular un doble clic.
     /// </summary>
+    public Task<bool> AgregarVariosAsync(IReadOnlyList<Pago> pagosNuevos, CancellationToken cancelacion = default)
+    {
+        // Como la restricción única de PostgreSQL: si una referencia o un cobro ya tiene pago, no se guarda ninguno.
+        if (pagosNuevos.Any(nuevo => pagos.Any(guardado => guardado.Referencia == nuevo.Referencia || guardado.CobroId == nuevo.CobroId)))
+        {
+            return Task.FromResult(false);
+        }
+
+        pagos.AddRange(pagosNuevos);
+        return Task.FromResult(true);
+    }
+
     public Task<bool> ExistenDelOperadorAsync(string operador, CancellationToken cancelacion = default)
     {
         foreach (var pago in pagos)

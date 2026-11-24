@@ -82,6 +82,16 @@ internal sealed class RepositorioCobrosEnMemoria : IRepositorioCobros
         return Task.FromResult(pendientes);
     }
 
+    public Task<IReadOnlyList<Cobro>> ObtenerPendientesDeLaPlacaAsync(Placa placa, Guid sedeId, CancellationToken cancelacion = default)
+    {
+        IReadOnlyList<Cobro> pendientes = cobros
+            .Where(cobro => cobro.Placa == placa && cobro.SedeId == sedeId && cobro.Estado == EstadoDeCobro.Pendiente)
+            .OrderBy(cobro => cobro.DiaOperativo)
+            .ToList();
+
+        return Task.FromResult(pendientes);
+    }
+
     private bool Existe(Placa placa, Guid sedeId, DateOnly diaOperativo)
     {
         return cobros.Any(cobro => cobro.Placa == placa && cobro.SedeId == sedeId && cobro.DiaOperativo == diaOperativo);

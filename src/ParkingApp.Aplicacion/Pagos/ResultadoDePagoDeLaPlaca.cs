@@ -20,6 +20,7 @@ public sealed record ResultadoDePagoDeLaPlaca(bool Registrado, string Motivo, Pa
 /// <param name="Operador">Operador que registró el pago.</param>
 /// <param name="Referencia">Referencia única de la solicitud.</param>
 /// <param name="FechaHora">Fecha y hora del pago, en la hora de la sede.</param>
+/// <param name="TransaccionDeLaPasarela">Transacción de la pasarela, o <see langword="null"/> si se pagó en efectivo.</param>
 public sealed record PagoDeLaPlaca(
     string Placa,
     decimal Total,
@@ -27,4 +28,5 @@ public sealed record PagoDeLaPlaca(
     MedioDePago Medio,
     string Operador,
     Guid Referencia,
-    DateTimeOffset FechaHora);
+    DateTimeOffset FechaHora,
+    string? TransaccionDeLaPasarela = null);

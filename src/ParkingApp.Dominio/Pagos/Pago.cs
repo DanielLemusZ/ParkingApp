@@ -11,7 +11,19 @@ public sealed class Pago
     /// </summary>
     public const int LargoMaximoOperador = 100;
 
-    private Pago(Guid cobroId, decimal valor, MedioDePago medio, string operador, Guid referencia, DateTimeOffset fechaHora)
+    /// <summary>
+    /// Largo máximo de la transacción que devuelve la pasarela de pagos.
+    /// </summary>
+    public const int LargoMaximoTransaccion = 100;
+
+    private Pago(
+        Guid cobroId,
+        decimal valor,
+        MedioDePago medio,
+        string operador,
+        Guid referencia,
+        DateTimeOffset fechaHora,
+        string? transaccionDeLaPasarela)
     {
         Id = Guid.CreateVersion7();
         CobroId = cobroId;
@@ -20,6 +32,7 @@ public sealed class Pago
         Operador = operador;
         Referencia = referencia;
         FechaHora = fechaHora;
+        TransaccionDeLaPasarela = transaccionDeLaPasarela;
     }
 
     // Permite reconstruir un pago ya guardado.
@@ -66,6 +79,12 @@ public sealed class Pago
     public DateTimeOffset FechaHora { get; private set; }
 
     /// <summary>
+    /// Transacción que devolvió la pasarela de pagos, o <see langword="null"/> si se pagó en efectivo. Cuando se paga
+    /// todo lo pendiente de una placa, todos sus pagos llevan la misma transacción.
+    /// </summary>
+    public string? TransaccionDeLaPasarela { get; private set; }
+
+    /// <summary>
     /// Crea el pago de un cobro. Solo lo llama el cobro, que antes comprobó que estaba pendiente.
     /// </summary>
     /// <param name="cobroId">Cobro que se paga.</param>
@@ -74,11 +93,20 @@ public sealed class Pago
     /// <param name="operador">Operador que registra el pago.</param>
     /// <param name="referencia">Referencia única de la solicitud de pago.</param>
     /// <param name="fechaHora">Fecha y hora del pago, en UTC.</param>
+    /// <param name="transaccionDeLaPasarela">Transacción de la pasarela; solo con el medio <see cref="MedioDePago.Pasarela"/>.</param>
     /// <returns>El pago registrado.</returns>
     /// <exception cref="ArgumentException">
-    /// El operador está vacío o es muy largo, la referencia está vacía, o la fecha y la hora no están en UTC.
+    /// El operador está vacío o es muy largo, la referencia está vacía, la fecha y la hora no están en UTC, o la
+    /// transacción de la pasarela falta, sobra o es muy larga.
     /// </exception>
-    internal static Pago Registrar(Guid cobroId, decimal valor, MedioDePago medio, string operador, Guid referencia, DateTimeOffset fechaHora)
+    internal static Pago Registrar(
+        Guid cobroId,
+        decimal valor,
+        MedioDePago medio,
+        string operador,
+        Guid referencia,
+        DateTimeOffset fechaHora,
+        string? transaccionDeLaPasarela = null)
     {
         if (string.IsNullOrWhiteSpace(operador))
         {
@@ -102,6 +130,38 @@ public sealed class Pago
             throw new ArgumentException("La fecha y la hora deben estar en UTC", nameof(fechaHora));
         }
 
-        return new Pago(cobroId, valor, medio, operadorLimpio, referencia, fechaHora);
+        var transaccion = ValidarTransaccion(medio, transaccionDeLaPasarela);
+
+        return new Pago(cobroId, valor, medio, operadorLimpio, referencia, fechaHora, transaccion);
+    }
+
+    // Con la pasarela, la transacción es la prueba de que el pago se aprobó; con el efectivo no hay transacción.
+    private static string? ValidarTransaccion(MedioDePago medio, string? transaccionDeLaPasarela)
+    {
+        if (medio != MedioDePago.Pasarela)
+        {
+            if (transaccionDeLaPasarela is not null)
+            {
+                throw new ArgumentException("Solo un pago con la pasarela lleva transacción.", nameof(transaccionDeLaPasarela));
+            }
+
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(transaccionDeLaPasarela))
+        {
+            throw new ArgumentException("El pago con la pasarela necesita la transacción.", nameof(transaccionDeLaPasarela));
+        }
+
+        var transaccion = transaccionDeLaPasarela.Trim();
+
+        if (transaccion.Length > LargoMaximoTransaccion)
+        {
+            throw new ArgumentException(
+                $"La transacción no puede tener más de {LargoMaximoTransaccion} caracteres.",
+                nameof(transaccionDeLaPasarela));
+        }
+
+        return transaccion;
     }
 }

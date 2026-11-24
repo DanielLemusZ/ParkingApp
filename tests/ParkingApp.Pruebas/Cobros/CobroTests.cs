@@ -120,6 +120,30 @@ public class CobroTests
     }
 
     [Fact]
+    public void Pagar_con_la_pasarela_guarda_la_transaccion_y_da_el_mismo_pase_vigente()
+    {
+        var cobro = CobroDiurnoDe8000();
+
+        var pago = cobro.Pagar(MedioDePago.Pasarela, "caja", Guid.NewGuid(), LunesALas11EnUtc, "12345-1700000000-00001");
+
+        Assert.Equal(MedioDePago.Pasarela, pago.Medio);
+        Assert.Equal("12345-1700000000-00001", pago.TransaccionDeLaPasarela);
+        Assert.True(cobro.DaPaseVigenteEn(Lunes));
+    }
+
+    [Fact]
+    public void Pago_con_pasarela_sin_transaccion_o_en_efectivo_con_transaccion_es_invalido()
+    {
+        var cobro = CobroDiurnoDe8000();
+
+        Assert.Throws<ArgumentException>(() =>
+            cobro.Pagar(MedioDePago.Pasarela, "caja", Guid.NewGuid(), LunesALas11EnUtc, "  "));
+        Assert.Throws<ArgumentException>(() =>
+            cobro.Pagar(MedioDePago.Efectivo, "caja", Guid.NewGuid(), LunesALas11EnUtc, "12345"));
+        Assert.Equal(EstadoDeCobro.Pendiente, cobro.Estado);
+    }
+
+    [Fact]
     public void El_cobro_por_ingreso_guarda_el_motivo_y_la_hora_del_ingreso()
     {
         var cobro = CobroDiurnoDe8000();

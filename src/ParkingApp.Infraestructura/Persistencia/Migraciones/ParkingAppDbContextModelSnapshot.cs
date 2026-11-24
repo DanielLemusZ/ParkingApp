@@ -363,11 +363,21 @@ namespace ParkingApp.Infraestructura.Persistencia.Migraciones
                         .HasColumnType("timestamptz")
                         .HasColumnName("fecha_hora");
 
+                    b.Property<DateTimeOffset>("FechaHoraDeIngreso")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("fecha_hora_de_ingreso");
+
                     b.Property<string>("Franja")
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
                         .HasColumnName("franja");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("motivo");
 
                     b.Property<string>("Placa")
                         .IsRequired()

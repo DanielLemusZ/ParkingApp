@@ -49,6 +49,30 @@ internal sealed class RepositorioPagos : IRepositorioPagos
         }
     }
 
+    public async Task<bool> AgregarVariosAsync(IReadOnlyList<Pago> pagos, CancellationToken cancelacion = default)
+    {
+        ArgumentNullException.ThrowIfNull(pagos);
+
+        contexto.Pagos.AddRange(pagos);
+
+        try
+        {
+            // Un solo SaveChanges es una sola transacción: se guardan todos los pagos y sus cobros, o ninguno.
+            await contexto.SaveChangesAsync(cancelacion);
+            return true;
+        }
+        catch (DbUpdateException error) when (EsPagoDuplicado(error))
+        {
+            foreach (var pago in pagos)
+            {
+                contexto.Entry(pago).State = EntityState.Detached;
+                DescartarCambiosDelCobro(pago.CobroId);
+            }
+
+            return false;
+        }
+    }
+
     public Task<bool> ExistenDelOperadorAsync(string operador, CancellationToken cancelacion = default)
     {
         return contexto.Pagos

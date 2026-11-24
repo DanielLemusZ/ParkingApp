@@ -23,6 +23,7 @@ public sealed class CajaController : ControllerBase
 {
     private readonly ListarCobrosPendientes listarCobrosPendientes;
     private readonly RegistrarPagoEnEfectivo registrarPagoEnEfectivo;
+    private readonly RegistrarPagoDeLaPlacaEnEfectivo registrarPagoDeLaPlacaEnEfectivo;
     private readonly ListarLecturasPendientes listarLecturasPendientes;
     private readonly ValidarLectura validarLectura;
 
@@ -31,16 +32,19 @@ public sealed class CajaController : ControllerBase
     /// </summary>
     /// <param name="listarCobrosPendientes">Caso de uso que lista los cobros pendientes.</param>
     /// <param name="registrarPagoEnEfectivo">Caso de uso que registra el pago en efectivo.</param>
+    /// <param name="registrarPagoDeLaPlacaEnEfectivo">Caso de uso que paga todo lo pendiente de una placa.</param>
     /// <param name="listarLecturasPendientes">Caso de uso que lista las placas por revisar.</param>
     /// <param name="validarLectura">Caso de uso que valida una lectura.</param>
     public CajaController(
         ListarCobrosPendientes listarCobrosPendientes,
         RegistrarPagoEnEfectivo registrarPagoEnEfectivo,
+        RegistrarPagoDeLaPlacaEnEfectivo registrarPagoDeLaPlacaEnEfectivo,
         ListarLecturasPendientes listarLecturasPendientes,
         ValidarLectura validarLectura)
     {
         this.listarCobrosPendientes = listarCobrosPendientes;
         this.registrarPagoEnEfectivo = registrarPagoEnEfectivo;
+        this.registrarPagoDeLaPlacaEnEfectivo = registrarPagoDeLaPlacaEnEfectivo;
         this.listarLecturasPendientes = listarLecturasPendientes;
         this.validarLectura = validarLectura;
     }
@@ -91,6 +95,45 @@ public sealed class CajaController : ControllerBase
         var operador = OperadorDeLaSesion();
 
         var resultado = await registrarPagoEnEfectivo.EjecutarAsync(cobroId, referencia, operador, cancelacion);
+        return resultado;
+    }
+
+    /// <summary>
+    /// Paga en efectivo, de una vez, todos los cobros pendientes de una placa, de cualquier día operativo (#17). Es
+    /// idempotente: si la misma solicitud llega otra vez con la misma referencia, responde "El pago ya estaba registrado".
+    /// </summary>
+    /// <param name="solicitud">Placa que paga, total que se recibió y referencia única de la solicitud.</param>
+    /// <param name="cancelacion">Se cancela si el cliente cierra la conexión.</param>
+    /// <returns>Si el pago se registró, el motivo y el pago con el total.</returns>
+    [HttpPost("pagos/placa")]
+    [ProducesResponseType<ResultadoDePagoDeLaPlaca>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ResultadoDePagoDeLaPlaca>> RegistrarPagoDeLaPlacaAsync(
+        SolicitudDePagoDeLaPlacaHttp solicitud,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(solicitud);
+
+        // Si faltaba la placa o la referencia, [Required] ya respondió 400 antes de llegar aquí.
+        var referencia = solicitud.Referencia.GetValueOrDefault();
+
+        if (referencia == Guid.Empty)
+        {
+            ModelState.AddModelError(nameof(solicitud.Referencia), "La referencia no puede estar vacía");
+            return ValidationProblem(ModelState);
+        }
+
+        var operador = OperadorDeLaSesion();
+
+        // Si faltaba el total, [Required] ya respondió 400.
+        var totalEsperado = solicitud.Total.GetValueOrDefault();
+
+        var resultado = await registrarPagoDeLaPlacaEnEfectivo.EjecutarAsync(
+            solicitud.Placa,
+            totalEsperado,
+            referencia,
+            operador,
+            cancelacion);
         return resultado;
     }
 
@@ -165,6 +208,32 @@ public sealed class SolicitudDePagoHttp
     /// </summary>
     [Required(ErrorMessage = "El cobro es obligatorio")]
     public Guid? CobroId { get; init; }
+
+    /// <summary>
+    /// Referencia única de la solicitud. El cliente la genera una vez por intento de pago y la repite en los reintentos.
+    /// </summary>
+    [Required(ErrorMessage = "La referencia es obligatoria")]
+    public Guid? Referencia { get; init; }
+}
+
+/// <summary>
+/// Cuerpo de la solicitud que paga todo lo pendiente de una placa. Si falta un campo, la API responde 400 indicando cuál.
+/// </summary>
+public sealed class SolicitudDePagoDeLaPlacaHttp
+{
+    /// <summary>
+    /// Placa del vehículo; los espacios y los guiones se quitan.
+    /// </summary>
+    [Required(ErrorMessage = "La placa es obligatoria")]
+    public string? Placa { get; init; }
+
+    /// <summary>
+    /// Total que se le mostró al conductor y se recibió, en pesos colombianos. Si lo que debe la placa cambió, no se
+    /// registra el pago y la respuesta trae el total nuevo.
+    /// </summary>
+    [Required(ErrorMessage = "El total es obligatorio")]
+    [Range(1, 100_000_000, ErrorMessage = "El total debe ser mayor que cero")]
+    public decimal? Total { get; init; }
 
     /// <summary>
     /// Referencia única de la solicitud. El cliente la genera una vez por intento de pago y la repite en los reintentos.

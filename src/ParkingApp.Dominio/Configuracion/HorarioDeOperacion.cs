@@ -69,4 +69,37 @@ public sealed record HorarioDeOperacion
         // IsBetween incluye el inicio y excluye el final: 06:00 es diurna y 18:00 es nocturna.
         return hora.IsBetween(InicioFranjaDiurna, InicioFranjaNocturna) ? FranjaTarifaria.Diurna : FranjaTarifaria.Nocturna;
     }
+
+    /// <summary>
+    /// Días operativos que un vehículo pasó adentro después del día de su ingreso, hasta hoy (S-05).
+    /// </summary>
+    /// <param name="diaDelIngreso">Día operativo del ingreso, que ya tiene su propio cobro.</param>
+    /// <param name="hoy">Día operativo actual.</param>
+    /// <returns>Los días desde el siguiente al ingreso hasta hoy, incluido; vacío si entró hoy.</returns>
+    public static IReadOnlyList<DateOnly> DiasOperativosSiguientes(DateOnly diaDelIngreso, DateOnly hoy)
+    {
+        var dias = new List<DateOnly>();
+
+        for (var dia = diaDelIngreso.AddDays(1); dia <= hoy; dia = dia.AddDays(1))
+        {
+            dias.Add(dia);
+        }
+
+        return dias;
+    }
+
+    /// <summary>
+    /// Instante en UTC en que empieza un día operativo (06:00 en la hora de la sede).
+    /// </summary>
+    /// <param name="diaOperativo">Día operativo.</param>
+    /// <param name="zonaHoraria">Zona horaria de la sede.</param>
+    /// <returns>Las 06:00 de ese día, en UTC.</returns>
+    /// <exception cref="ArgumentNullException">La zona horaria es nula.</exception>
+    public static DateTimeOffset InicioEnUtc(DateOnly diaOperativo, TimeZoneInfo zonaHoraria)
+    {
+        ArgumentNullException.ThrowIfNull(zonaHoraria);
+
+        var horaLocal = diaOperativo.ToDateTime(InicioDelDiaOperativo, DateTimeKind.Unspecified);
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(horaLocal, zonaHoraria), TimeSpan.Zero);
+    }
 }

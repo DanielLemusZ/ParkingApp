@@ -28,6 +28,19 @@ public interface IRepositorioPagos
     Task<bool> AgregarAsync(Pago pago, CancellationToken cancelacion = default);
 
     /// <summary>
+    /// Guarda varios pagos y, en la misma transacción, sus cobros que pasaron a Pagado: se guardan todos o ninguno.
+    /// Los cobros deben haberse leído con <see cref="Cobros.IRepositorioCobros.ObtenerPendientesDeLaPlacaAsync"/> en la
+    /// misma operación.
+    /// </summary>
+    /// <param name="pagos">Pagos creados por <c>Cobro.Pagar</c>, uno por cobro.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>
+    /// <see langword="true"/> si todos quedaron guardados; <see langword="false"/> si alguna referencia o algún cobro ya
+    /// tenía un pago, por ejemplo por un doble clic. En ese caso no se guarda ninguno.
+    /// </returns>
+    Task<bool> AgregarVariosAsync(IReadOnlyList<Pago> pagos, CancellationToken cancelacion = default);
+
+    /// <summary>
     /// Indica si un operador registró algún pago. Se usa antes de borrar un usuario (#68).
     /// </summary>
     /// <param name="operador">Correo del operador, tal como quedó en los pagos.</param>

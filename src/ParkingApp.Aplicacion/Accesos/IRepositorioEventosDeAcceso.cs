@@ -16,6 +16,14 @@ public interface IRepositorioEventosDeAcceso
     Task AgregarAsync(EventoDeAcceso evento, CancellationToken cancelacion = default);
 
     /// <summary>
+    /// Lista los vehículos que siguen adentro de la sede: su último evento es un ingreso.
+    /// </summary>
+    /// <param name="sedeId">Sede que se consulta.</param>
+    /// <param name="cancelacion">Permite cancelar la operación.</param>
+    /// <returns>Los vehículos adentro, con la hora de su último ingreso.</returns>
+    Task<IReadOnlyList<VehiculoAdentro>> ListarAdentroAsync(Guid sedeId, CancellationToken cancelacion = default);
+
+    /// <summary>
     /// Indica si la placa figura adentro de la sede: su evento más reciente es un ingreso.
     /// </summary>
     /// <param name="placa">Placa del vehículo.</param>

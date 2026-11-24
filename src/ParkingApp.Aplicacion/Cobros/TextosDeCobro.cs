@@ -1,6 +1,7 @@
 using System.Globalization;
 
 using ParkingApp.Dominio.Accesos;
+using ParkingApp.Dominio.Cobros;
 using ParkingApp.Dominio.Configuracion;
 
 namespace ParkingApp.Aplicacion.Cobros;
@@ -80,6 +81,56 @@ public static class TextosDeCobro
     public static string PagoRegistrado(decimal valor)
     {
         return $"Pago registrado: {Pesos(valor)}";
+    }
+
+    /// <summary>
+    /// Respuesta de la caja cuando se pagan todos los cobros de una placa, por ejemplo
+    /// <c>Pago registrado: $29.000 (4 cobros)</c>. Con un solo cobro es igual a <see cref="PagoRegistrado(decimal)"/>.
+    /// </summary>
+    /// <param name="total">Total pagado.</param>
+    /// <param name="cantidadDeCobros">Cuántos cobros se pagaron.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string PagoRegistrado(decimal total, int cantidadDeCobros)
+    {
+        return cantidadDeCobros == 1 ? PagoRegistrado(total) : $"Pago registrado: {Pesos(total)} ({cantidadDeCobros} cobros)";
+    }
+
+    /// <summary>
+    /// Respuesta de la caja cuando la placa no debe nada, por ejemplo <c>La placa ABC123 no tiene cobros pendientes</c>.
+    /// </summary>
+    /// <param name="placa">Placa normalizada.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string SinCobrosPendientes(string placa)
+    {
+        return $"La placa {placa} no tiene cobros pendientes";
+    }
+
+    /// <summary>
+    /// Respuesta de la caja cuando lo que debe la placa cambió desde que el operador la eligió, por ejemplo
+    /// <c>No se registró el pago: el total cambió a $37.000. Revisa el detalle y vuelve a cobrar</c>.
+    /// </summary>
+    /// <param name="totalActual">Lo que debe ahora la placa.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string TotalCambio(decimal totalActual)
+    {
+        return $"No se registró el pago: el total cambió a {Pesos(totalActual)}. Revisa el detalle y vuelve a cobrar";
+    }
+
+    /// <summary>
+    /// Explica por qué existe un cobro, por ejemplo <c>Ingreso (nocturna)</c> o
+    /// <c>Sigue adentro desde 2026-11-19 23:15 (diurna)</c>.
+    /// </summary>
+    /// <param name="motivo">Motivo del cobro.</param>
+    /// <param name="franja">Franja del cobro.</param>
+    /// <param name="horaDeIngreso">Hora en que entró el vehículo, en la hora de la sede.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string Motivo(MotivoDeCobro motivo, FranjaTarifaria franja, DateTimeOffset horaDeIngreso)
+    {
+        var nombreDeFranja = franja == FranjaTarifaria.Diurna ? "diurna" : "nocturna";
+
+        return motivo == MotivoDeCobro.SigueAdentro
+            ? $"Sigue adentro desde {horaDeIngreso.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} ({nombreDeFranja})"
+            : $"Ingreso ({nombreDeFranja})";
     }
 
     /// <summary>

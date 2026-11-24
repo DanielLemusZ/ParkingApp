@@ -1,0 +1,100 @@
+@page "/caja/pasarela/retorno"
+@attribute [Authorize(Roles = Roles.OperadorOAdministrador)]
+@using System.Globalization
+@using ParkingApp.Aplicacion.Pagos
+@inject IServiceScopeFactory FabricaDeAlcances
+
+<PageTitle>Pago con la pasarela</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <MudPaper Class="pa-6 mt-4">
+        <MudText Typo="Typo.h5" GutterBottom="true">Pago con la pasarela</MudText>
+
+        @if (resultado is null)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                <MudText>Consultando la transacción…</MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudAlert Severity="@Severidad(resultado)">
+                @resultado.Motivo
+                @if (resultado.Pago is not null)
+                {
+                    <br />
+                    <small>
+                        @resultado.Pago.Placa ·
+                        @resultado.Pago.FechaHora.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) ·
+                        Transacción @resultado.Pago.TransaccionDeLaPasarela
+                    </small>
+                }
+            </MudAlert>
+
+            <MudStack Row="true" Class="mt-4">
+                @if (resultado.ConsultarDeNuevo)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="consultando" OnClick="ConfirmarAsync">
+                        Consultar de nuevo
+                    </MudButton>
+                }
+                <MudButton Variant="Variant.Outlined" Href="/caja">Volver a la caja</MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private ResultadoDeConfirmacionConPasarela? resultado;
+    private bool consultando;
+
+    // La pasarela vuelve con el identificador de la transacción; Wompi agrega también env=test.
+    [SupplyParameterFromQuery(Name = "id")]
+    private string? Transaccion { get; set; }
+
+    // El usuario de la sesión, que llega en cascada desde AddCascadingAuthenticationState.
+    [CascadingParameter]
+    private Task<AuthenticationState> EstadoDeSesion { get; set; } = default!;
+
+    // Se confirma después del primer render interactivo y no al prerenderizar: así la transacción se consulta una sola
+    // vez al cargar la página.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ConfirmarAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmarAsync()
+    {
+        if (consultando)
+        {
+            return;
+        }
+
+        consultando = true;
+
+        try
+        {
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var confirmar = alcance.ServiceProvider.GetRequiredService<ConfirmarPagoConPasarela>();
+            var sesion = await EstadoDeSesion;
+            var operador = sesion.User.Identity?.Name ?? throw new InvalidOperationException("No hay un usuario con sesión.");
+
+            resultado = await confirmar.EjecutarAsync(Transaccion, operador);
+        }
+        finally
+        {
+            consultando = false;
+        }
+    }
+
+    private static Severity Severidad(ResultadoDeConfirmacionConPasarela resultado)
+    {
+        return resultado.Registrado ? Severity.Success : resultado.ConsultarDeNuevo ? Severity.Info : Severity.Warning;
+    }
+}

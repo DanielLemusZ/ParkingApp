@@ -24,6 +24,8 @@ public sealed class CajaController : ControllerBase
     private readonly ListarCobrosPendientes listarCobrosPendientes;
     private readonly RegistrarPagoEnEfectivo registrarPagoEnEfectivo;
     private readonly RegistrarPagoDeLaPlacaEnEfectivo registrarPagoDeLaPlacaEnEfectivo;
+    private readonly IniciarPagoConPasarela iniciarPagoConPasarela;
+    private readonly ConfirmarPagoConPasarela confirmarPagoConPasarela;
     private readonly ListarLecturasPendientes listarLecturasPendientes;
     private readonly ValidarLectura validarLectura;
 
@@ -33,18 +35,24 @@ public sealed class CajaController : ControllerBase
     /// <param name="listarCobrosPendientes">Caso de uso que lista los cobros pendientes.</param>
     /// <param name="registrarPagoEnEfectivo">Caso de uso que registra el pago en efectivo.</param>
     /// <param name="registrarPagoDeLaPlacaEnEfectivo">Caso de uso que paga todo lo pendiente de una placa.</param>
+    /// <param name="iniciarPagoConPasarela">Caso de uso que prepara el pago con la pasarela.</param>
+    /// <param name="confirmarPagoConPasarela">Caso de uso que confirma una transacción de la pasarela.</param>
     /// <param name="listarLecturasPendientes">Caso de uso que lista las placas por revisar.</param>
     /// <param name="validarLectura">Caso de uso que valida una lectura.</param>
     public CajaController(
         ListarCobrosPendientes listarCobrosPendientes,
         RegistrarPagoEnEfectivo registrarPagoEnEfectivo,
         RegistrarPagoDeLaPlacaEnEfectivo registrarPagoDeLaPlacaEnEfectivo,
+        IniciarPagoConPasarela iniciarPagoConPasarela,
+        ConfirmarPagoConPasarela confirmarPagoConPasarela,
         ListarLecturasPendientes listarLecturasPendientes,
         ValidarLectura validarLectura)
     {
         this.listarCobrosPendientes = listarCobrosPendientes;
         this.registrarPagoEnEfectivo = registrarPagoEnEfectivo;
         this.registrarPagoDeLaPlacaEnEfectivo = registrarPagoDeLaPlacaEnEfectivo;
+        this.iniciarPagoConPasarela = iniciarPagoConPasarela;
+        this.confirmarPagoConPasarela = confirmarPagoConPasarela;
         this.listarLecturasPendientes = listarLecturasPendientes;
         this.validarLectura = validarLectura;
     }
@@ -134,6 +142,60 @@ public sealed class CajaController : ControllerBase
             referencia,
             operador,
             cancelacion);
+        return resultado;
+    }
+
+    /// <summary>
+    /// Prepara el pago con la pasarela de todo lo pendiente de una placa (#18) y devuelve la página donde el conductor
+    /// paga. Al terminar, la pasarela vuelve a <c>/caja/pasarela/retorno</c> con el identificador de la transacción. Si la
+    /// pasarela no está disponible, responde "Pasarela no disponible: cobre en efectivo".
+    /// </summary>
+    /// <param name="solicitud">Placa que paga, total que se le mostró al conductor y referencia única de la solicitud.</param>
+    /// <param name="cancelacion">Se cancela si el cliente cierra la conexión.</param>
+    /// <returns>Si se inició, el motivo y la página de pago.</returns>
+    [HttpPost("pagos/pasarela")]
+    [ProducesResponseType<ResultadoDeInicioConPasarela>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ResultadoDeInicioConPasarela>> IniciarPagoConPasarelaAsync(
+        SolicitudDePagoDeLaPlacaHttp solicitud,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(solicitud);
+
+        var referencia = solicitud.Referencia.GetValueOrDefault();
+
+        if (referencia == Guid.Empty)
+        {
+            ModelState.AddModelError(nameof(solicitud.Referencia), "La referencia no puede estar vacía");
+            return ValidationProblem(ModelState);
+        }
+
+        var retorno = new Uri($"{Request.Scheme}://{Request.Host}{Request.PathBase}/caja/pasarela/retorno");
+
+        var resultado = await iniciarPagoConPasarela.EjecutarAsync(
+            solicitud.Placa,
+            solicitud.Total.GetValueOrDefault(),
+            referencia,
+            retorno,
+            cancelacion);
+        return resultado;
+    }
+
+    /// <summary>
+    /// Confirma una transacción de la pasarela (#18). Si se aprobó, paga todo lo pendiente de la placa con el medio
+    /// Pasarela; si se rechazó, el cobro sigue pendiente. Es idempotente: una segunda confirmación de la misma
+    /// transacción responde "El pago ya estaba registrado".
+    /// </summary>
+    /// <param name="transaccionId">Identificador de la transacción que devolvió la pasarela.</param>
+    /// <param name="cancelacion">Se cancela si el cliente cierra la conexión.</param>
+    /// <returns>Si el pago se registró, si conviene consultar de nuevo, el motivo y el pago.</returns>
+    [HttpPost("pagos/pasarela/{transaccionId}/confirmacion")]
+    [ProducesResponseType<ResultadoDeConfirmacionConPasarela>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<ResultadoDeConfirmacionConPasarela>> ConfirmarPagoConPasarelaAsync(
+        string transaccionId,
+        CancellationToken cancelacion)
+    {
+        var resultado = await confirmarPagoConPasarela.EjecutarAsync(transaccionId, OperadorDeLaSesion(), cancelacion);
         return resultado;
     }
 

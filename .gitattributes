@@ -1,2 +1,3 @@
 # Finales de línea iguales en todos los equipos y en la integración continua (ver .editorconfig).
 * text=auto eol=crlf
+*.onnx binary

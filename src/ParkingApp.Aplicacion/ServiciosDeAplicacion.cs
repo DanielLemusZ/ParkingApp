@@ -36,6 +36,7 @@ public static class ServiciosDeAplicacion
         servicios.AddScoped<RegistrarSalida>();
         servicios.AddScoped<ListarLecturasPendientes>();
         servicios.AddScoped<ValidarLectura>();
+        servicios.AddScoped<LeerPlacaDesdeImagen>();
         servicios.AddScoped<AdministrarTarifas>();
         servicios.AddScoped<IServicioConsultas, ConsultarEventos>();
         servicios.AddScoped<ConfigurarSede>();

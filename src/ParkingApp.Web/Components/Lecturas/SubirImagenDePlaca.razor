@@ -1,0 +1,74 @@
+@using ParkingApp.Aplicacion.Accesos
+@inject IServiceScopeFactory FabricaDeAlcances
+
+@* Simula la cámara del carril: lee la placa de una foto. Si no puede, el operador la escribe a mano en los campos de abajo. *@
+<MudFileUpload @ref="subida" T="IBrowserFile" Accept=".jpg,.jpeg,.png" MaximumFileCount="1" FilesChanged="LeerAsync" Disabled="leyendo" Class="mt-2">
+    <CustomContent>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PhotoCamera" Disabled="leyendo"
+                   OnClick="@context.OpenFilePickerAsync">
+            @(leyendo ? "Leyendo la placa…" : "Subir imagen de la placa")
+        </MudButton>
+    </CustomContent>
+</MudFileUpload>
+
+@if (lectura is not null)
+{
+    @if (lectura.Leida)
+    {
+        <MudAlert Class="mt-2" Severity="Severity.Info" Dense="true">
+            Placa leída: <b>@lectura.Placa</b> (confianza @lectura.Confianza)
+        </MudAlert>
+    }
+    else
+    {
+        <MudAlert Class="mt-2" Severity="Severity.Warning" Dense="true">
+            <b>@LeerPlacaDesdeImagen.Mensaje(lectura.Falla!.Value)</b>
+            <br />
+            <small>Escribe la placa abajo.</small>
+        </MudAlert>
+    }
+}
+
+@code {
+    private MudFileUpload<IBrowserFile>? subida;
+    private bool leyendo;
+    private LecturaDeImagen? lectura;
+
+    /// <summary>
+    /// Recibe cada resultado: la placa leída, o por qué no se pudo leer.
+    /// </summary>
+    [Parameter]
+    public EventCallback<LecturaDeImagen> AlLeer { get; set; }
+
+    private async Task LeerAsync(IBrowserFile? archivo)
+    {
+        if (archivo is null || leyendo)
+        {
+            return;
+        }
+
+        leyendo = true;
+        lectura = null;
+
+        try
+        {
+            // El archivo se lee directo a memoria y no se guarda en ningún lado.
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var leer = alcance.ServiceProvider.GetRequiredService<LeerPlacaDesdeImagen>();
+            await using var contenido = archivo.OpenReadStream(maxAllowedSize: archivo.Size);
+            lectura = await leer.EjecutarAsync(contenido, archivo.Size);
+        }
+        finally
+        {
+            leyendo = false;
+
+            // Se olvida el archivo elegido: así el operador puede volver a subir la misma foto, por ejemplo tras un error.
+            if (subida is not null)
+            {
+                await subida.ClearAsync();
+            }
+        }
+
+        await AlLeer.InvokeAsync(lectura);
+    }
+}

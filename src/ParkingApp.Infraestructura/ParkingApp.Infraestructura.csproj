@@ -17,4 +17,17 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Lector de placas: ONNX Runtime corre los modelos y SkiaSharp abre las imágenes, también en Docker con Linux.
+         Se fija la 1.22.1 porque las versiones nuevas envían datos de uso por internet. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.22.1" />
+    <PackageReference Include="SkiaSharp" Version="4.156.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.156.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Los modelos y sus licencias se copian a la carpeta Modelos de la aplicación. -->
+    <None Include="LecturaDePlacas/Modelos/*.onnx;LecturaDePlacas/Modelos/LICENCIAS.md" CopyToOutputDirectory="PreserveNewest" Link="Modelos/%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

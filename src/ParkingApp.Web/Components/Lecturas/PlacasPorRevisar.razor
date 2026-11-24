@@ -104,6 +104,11 @@
 
     private static string NombreDeMotivo(MotivoDeLecturaPendiente motivo)
     {
-        return motivo == MotivoDeLecturaPendiente.ConfianzaBaja ? "Baja confianza" : "Formato no reconocido";
+        return motivo switch
+        {
+            MotivoDeLecturaPendiente.ConfianzaBaja => "Baja confianza",
+            MotivoDeLecturaPendiente.FormatoNoReconocido => "Formato no reconocido",
+            _ => "No figura adentro",
+        };
     }
 }

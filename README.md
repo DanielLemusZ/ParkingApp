@@ -173,6 +173,31 @@ En cada pago queda el correo del usuario que lo registró en la caja.
 - Un doble clic o un reintento no cobra dos veces: responde *El pago ya estaba registrado*.
 - En la API: `POST api/caja/pagos/placa`, con `placa` y `referencia`. El endpoint `POST api/caja/pagos`, que paga un solo cobro, se mantiene.
 
+**Pago con la pasarela.** En la caja, el operador elige el medio: **Efectivo** o **Pasarela** (tarjeta, Nequi o QR). Con la pasarela, *Cobrar con la pasarela* lleva a la página de pago. Al terminar, la pasarela vuelve a `/caja/pasarela/retorno`, que consulta la transacción:
+
+- **Aprobada:** se pagan todos los cobros de la placa con el medio *Pasarela*, y cada pago guarda la transacción, la fecha y la hora y el operador. Deja el mismo pase vigente que el efectivo.
+- **Rechazada:** el cobro sigue Pendiente y se muestra *Pago rechazado por la pasarela* con el motivo.
+- **En proceso** (por ejemplo, Nequi esperando la aprobación) **o sin respuesta:** el cobro no cambia, y *Consultar de nuevo* vuelve a preguntar.
+- **Idempotente:** si la misma transacción se confirma dos veces, por ejemplo al recargar la página, responde *El pago ya estaba registrado*. La referencia de la transacción es la referencia única del pago.
+- La referencia que va a la pasarela lleva la placa (`ABC123-<referencia>`) y la pasarela la firma junto con el valor, así que no se puede cambiar en el camino. Si la pasarela aprueba un valor distinto de lo que debe la placa, no se registra el pago y se avisa.
+
+Hay dos pasarelas, que se eligen en `.env`:
+
+| `PASARELA_PROVEEDOR` | Qué hace |
+|---|---|
+| `Simulada` (o vacío) | No usa internet. La página de pago es una pantalla de la caja donde el operador elige **Aprobar** o **Rechazar**, con un motivo. Las transacciones viven en memoria: se pierden al reiniciar |
+| `Wompi` | [Sandbox de Wompi](https://docs.wompi.co/en/docs/colombia/metodos-de-pago/): el conductor paga en el Web Checkout de Wompi. No usa *webhook*, así que no necesita una dirección pública; basta con que la caja tenga internet |
+
+**Si Wompi falla.** Una falla técnica (sin internet, demora o error de Wompi) no es un rechazo. Con 3 fallas seguidas, la caja muestra *Pasarela no disponible: cobre en efectivo* y cobra solo en efectivo durante 5 minutos; después vuelve a intentar. Con `PASARELA_RESPALDO_SIMULADO=true` (**solo para la demo**), en lugar de eso cobra con la pasarela simulada. En producción debe quedar en `false`, porque la simulada aprueba pagos sin que entre dinero.
+
+**Configurar Wompi:**
+
+1. Crea una cuenta de comercio en [comercios.wompi.co](https://comercios.wompi.co) y, en *Desarrolladores*, copia la llave pública de pruebas (`pub_test_…`) y el secreto de integridad de pruebas (`test_integrity_…`).
+2. En tu `.env`: `PASARELA_PROVEEDOR=Wompi`, `WOMPI_LLAVE_PUBLICA` y `WOMPI_SECRETO_INTEGRIDAD`. Si falta alguna, la aplicación no arranca y dice cuál.
+3. Paga con los [datos de prueba del sandbox](https://docs.wompi.co/en/docs/colombia/datos-de-prueba-en-sandbox/): por ejemplo, la tarjeta `4242 4242 4242 4242` se aprueba y la `4111 1111 1111 1111` se rechaza.
+
+En la API: `POST api/caja/pagos/pasarela`, con `placa`, `total` y `referencia`, devuelve la `urlDePago`. Después, `POST api/caja/pagos/pasarela/{transaccionId}/confirmacion` registra el pago.
+
 **Probar la API desde Swagger:** inicia sesión en la aplicación y abre `/swagger` en el mismo navegador. Swagger envía la cookie de la sesión, así que cada endpoint responde según tu rol.
 
 ---

@@ -1,0 +1,54 @@
+@* Franja con el resultado de una operación (#71): verde si salió bien, ámbar si queda en espera y rojo si se rechazó.
+   El motivo se muestra completo, sin cortar. *@
+<div class="franja @Clase" role="@(Severidad == Severity.Error ? "alert" : "status")">
+    <MudIcon Icon="@Icono" Size="Size.Small" Class="icono" />
+    <div class="mensaje">
+        @if (!string.IsNullOrWhiteSpace(Titulo))
+        {
+            <b>@Titulo</b>
+            <span> · </span>
+        }
+        <span>@Mensaje</span>
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// <see cref="Severity.Success"/>, <see cref="Severity.Warning"/> o <see cref="Severity.Error"/>.
+    /// </summary>
+    [Parameter]
+    public Severity Severidad { get; set; } = Severity.Success;
+
+    /// <summary>
+    /// Texto corto que va antes del mensaje, por ejemplo "Barrera abierta".
+    /// </summary>
+    [Parameter]
+    public string? Titulo { get; set; }
+
+    /// <summary>
+    /// Motivo o detalle del resultado.
+    /// </summary>
+    [Parameter]
+    public string? Mensaje { get; set; }
+
+    /// <summary>
+    /// Contenido adicional debajo del mensaje, por ejemplo una referencia o un enlace.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string Clase => Severidad switch
+    {
+        Severity.Error => "error",
+        Severity.Warning => "advertencia",
+        _ => "exito",
+    };
+
+    private string Icono => Severidad switch
+    {
+        Severity.Error => Icons.Material.Outlined.ErrorOutline,
+        Severity.Warning => Icons.Material.Outlined.WarningAmber,
+        _ => Icons.Material.Outlined.CheckCircle,
+    };
+}

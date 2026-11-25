@@ -1,0 +1,30 @@
+/* El fondo es el mismo color del borde, muy transparente: así sirve en los dos temas. */
+.franja {
+    --color: var(--mud-palette-success);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--color);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color) 14%, transparent);
+    color: var(--color);
+    font-weight: 500;
+}
+
+    .franja.advertencia {
+        --color: var(--mud-palette-warning);
+    }
+
+    .franja.error {
+        --color: var(--mud-palette-error);
+    }
+
+    .franja ::deep .icono {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+.mensaje {
+    overflow-wrap: anywhere;
+}

@@ -101,7 +101,7 @@ dotnet ef migrations script --idempotent --project src/ParkingApp.Infraestructur
 
 ### Lectura de placas (OCR)
 
-En *Carril*, cada panel tiene **Subir imagen de la placa** (JPG o PNG, hasta 5 MB). La placa se lee en el mismo equipo, sin internet ni cuenta, y se registra el ingreso o la salida. La placa y la confianza se muestran, pero no se escriben: la confianza mínima la configura el Administrador en *Configuración*.
+En *Monitoreo de acceso*, cada panel (Entrada y Salida) tiene **Subir imagen de la placa** (JPG o PNG, hasta 5 MB). La placa se lee en el mismo equipo, sin internet ni cuenta, y se registra el ingreso o la salida. La placa y la confianza se muestran, pero no se escriben: la confianza mínima la configura el Administrador en *Configuración → Umbral de lectura*.
 
 - Si la confianza no alcanza ese umbral, o el formato no se reconoce, aparece **Validar lectura** (ver *Lectura manual*).
 - Si la foto no se puede leer, el motivo aparece en pantalla y la placa se escribe a mano. Queda como lectura manual, con el correo del operador y confianza 0, porque no hubo lectura. En la salida, si la placa escrita no figura adentro, la barrera no abre, para que el operador revise lo que escribió.
@@ -109,6 +109,17 @@ En *Carril*, cada panel tiene **Subir imagen de la placa** (JPG o PNG, hasta 5 M
 - Lee con los modelos de [fast-alpr](https://github.com/ankandrew/fast-alpr): un detector ubica la placa y un OCR la lee, para carros y motos. La confianza es la del carácter más dudoso, de 0 a 100.
 - Los modelos van en `src/ParkingApp.Infraestructura/LecturaDePlacas/Modelos`, junto con [su origen y sus licencias](src/ParkingApp.Infraestructura/LecturaDePlacas/Modelos/LICENCIAS.md). Al compilar se copian a la carpeta `Modelos` de la aplicación.
 - La imagen no se guarda ni sale del equipo.
+
+### Pantallas
+
+Las pantallas siguen los mockups del #71: encabezado con el logo, el correo y el rol, y una pestaña por módulo. El tema oscuro es el de los mockups; el botón del sol, en el encabezado, cambia al claro, y la preferencia queda en una cookie.
+
+| Pestaña | Dirección | Contenido |
+|---|---|---|
+| *Monitoreo de acceso* | `/carril` (también abre en `/`) | Paneles de entrada y salida, con la barrera y el resultado |
+| *Caja* | `/caja` | *Cobrar* (deudas por placa, efectivo o pasarela) y *Lecturas pendientes* |
+| *Historial* | `/historial/ingresos-y-salidas` y `/historial/cobros` | Consultas con filtros por placa, fechas y estado |
+| *Configuración* | `/configuracion/tarifas`, `/franjas`, `/cupos`, `/umbral` y `/usuarios` | Una subpágina por tema, en el submenú lateral |
 
 ### Usuarios y roles
 
@@ -123,8 +134,8 @@ Todas las pantallas y la API piden iniciar sesión, en `/cuenta/iniciar-sesion`.
 
 - La contraseña necesita al menos 8 caracteres, con una mayúscula, una minúscula, un número y un símbolo.
 - La terminal dice qué pasó con cada usuario: *creado*, *ya existía* o *no se creó* y por qué.
-- Si el usuario ya existe, el arranque **no lo cambia**. Cambiar la contraseña en `.env` después no cambia la del usuario: para eso está *Cambiar contraseña*, en el menú de la cuenta.
-- Si un usuario olvidó su contraseña, el Administrador la restablece en *Usuarios*.
+- Si el usuario ya existe, el arranque **no lo cambia**. Cambiar la contraseña en `.env` después no cambia la del usuario: para eso está *Cambiar contraseña*, que se abre con el correo del encabezado.
+- Si un usuario olvidó su contraseña, el Administrador la restablece en *Configuración → Usuarios*.
 - Si se olvidó la contraseña del único Administrador, bórralo y reinicia la aplicación, que lo vuelve a crear con la de `.env`:
 
   ```powershell
@@ -135,23 +146,23 @@ Todas las pantallas y la API piden iniciar sesión, en `/cuenta/iniciar-sesion`.
 
 | Rol | Pantallas | API |
 |---|---|---|
-| `Operador` | Carril y caja | `api/carril` y `api/caja` |
-| `Administrador` | Todo: carril, caja, tarifas, consultas, configuración y usuarios | `api/carril`, `api/caja`, `api/tarifas` y `api/usuarios` |
+| `Operador` | *Monitoreo de acceso* y *Caja* | `api/carril` y `api/caja` |
+| `Administrador` | Todo: además, *Historial* y *Configuración* (tarifas, franjas, cupos, umbral y usuarios) | `api/carril`, `api/caja`, `api/tarifas` y `api/usuarios` |
 
 En cada pago queda el correo del usuario que lo registró en la caja.
 
-- El menú muestra solo las opciones del rol. Si un operador escribe la dirección de otra pantalla, ve *Acceso denegado*.
+- Las pestañas muestran solo las opciones del rol. Si un operador escribe la dirección de otra pantalla, ve *Acceso denegado*.
 - Sin sesión, la API responde **401**; con un rol que no alcanza, **403**.
 - **Bloqueo:** después de 5 contraseñas incorrectas seguidas, la cuenta queda bloqueada 5 minutos y se muestra *Cuenta bloqueada temporalmente*.
 
-**Administrar usuarios.** En *Usuarios*, el Administrador crea usuarios con su rol y una contraseña inicial, les cambia el rol, restablece su contraseña, los desactiva y reactiva, los desbloquea y los borra.
+**Administrar usuarios.** En *Configuración → Usuarios*, el Administrador crea usuarios con su rol y una contraseña inicial, les cambia el rol, restablece su contraseña, los desactiva y reactiva, los desbloquea y los borra.
 
 - El correo no se puede cambiar, porque identifica al operador en los pagos que registró.
 - Un usuario desactivado no puede iniciar sesión. Si tenía una sesión abierta, se cierra en menos de un minuto: la API lo rechaza y la pantalla vuelve al inicio de sesión.
 - Solo se borra un usuario que nunca registró un pago; si registró pagos, hay que desactivarlo.
 - Nadie puede desactivarse, borrarse ni cambiarse el rol a sí mismo, así que siempre queda un Administrador activo.
 
-**Lectura manual.** Si la confianza de una lectura es menor que el umbral de *Configuración*, o si en la entrada la placa no tiene un formato reconocido, la barrera no abre y la lectura se valida con **Validar lectura**. En la salida pasa lo mismo si la placa leída no figura adentro, por ejemplo por una lectura incompleta; al validarla, la placa corregida también debe figurar adentro, o la ventana avisa y la lectura sigue pendiente. Se valida en el mismo carril o en *Placas por revisar*, en la caja. Vale la primera confirmación.
+**Lectura manual.** Si la confianza de una lectura es menor que el umbral de *Configuración → Umbral de lectura*, o si en la entrada la placa no tiene un formato reconocido, la barrera no abre y la lectura se valida con **Validar lectura**. En la salida pasa lo mismo si la placa leída no figura adentro, por ejemplo por una lectura incompleta; al validarla, la placa corregida también debe figurar adentro, o la ventana avisa y la lectura sigue pendiente. Se valida en el mismo carril o en *Lecturas pendientes*, en la caja. Vale la primera confirmación.
 
 - El operador confirma o corrige la placa. En la entrada, si el formato no se reconoce, indica carro o moto. El ingreso o la salida queda como lectura manual, con su correo.
 - Al confirmar, la lectura se cierra aunque la barrera no abra (LLENO o cobro pendiente): después se vuelve a leer la placa en el carril. En la salida conviene cobrar antes de confirmar.

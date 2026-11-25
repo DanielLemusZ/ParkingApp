@@ -50,9 +50,13 @@
     private ResultadoDeConfirmacionConPasarela? resultado;
     private bool consultando;
 
-    // La pasarela vuelve con el identificador de la transacción; Wompi agrega también env=test.
+    // La pasarela simulada vuelve con el identificador de la transacción (id).
     [SupplyParameterFromQuery(Name = "id")]
     private string? Transaccion { get; set; }
+
+    // PayU vuelve con la referencia del pago (referenceCode), con la que se consulta la orden.
+    [SupplyParameterFromQuery(Name = "referenceCode")]
+    private string? ReferenciaDePayU { get; set; }
 
     // El usuario de la sesión, que llega en cascada desde AddCascadingAuthenticationState.
     [CascadingParameter]
@@ -85,7 +89,7 @@
             var sesion = await EstadoDeSesion;
             var operador = sesion.User.Identity?.Name ?? throw new InvalidOperationException("No hay un usuario con sesión.");
 
-            resultado = await confirmar.EjecutarAsync(Transaccion, operador);
+            resultado = await confirmar.EjecutarAsync(Transaccion ?? ReferenciaDePayU, operador);
         }
         finally
         {

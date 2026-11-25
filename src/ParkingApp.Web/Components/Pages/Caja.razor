@@ -180,7 +180,8 @@
 
             if (inicio.Iniciado && inicio.UrlDePago is not null)
             {
-                Navegacion.NavigateTo(inicio.UrlDePago.ToString(), forceLoad: inicio.UrlDePago.IsAbsoluteUri);
+                // Carga completa: la página de pago puede ser de la pasarela o una página estática de la caja.
+                Navegacion.NavigateTo(inicio.UrlDePago.ToString(), forceLoad: true);
                 return;
             }
 

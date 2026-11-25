@@ -1,0 +1,53 @@
+@page "/caja/pasarela/payu"
+@attribute [Authorize(Roles = Roles.OperadorOAdministrador)]
+@attribute [ExcludeFromInteractiveRouting]
+@using ParkingApp.Infraestructura.ServiciosExternos.Pasarela
+@inject AdaptadorPayU PayU
+
+@*
+    Página estática (no interactiva): el WebCheckout de PayU recibe un formulario firmado por POST. Una página estática
+    lo envía con HTML normal, sin depender de la conexión interactiva, que se corta al salir hacia PayU.
+*@
+
+<PageTitle>Pago con PayU</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <MudPaper Class="pa-6 mt-4">
+        <MudText Typo="Typo.h5" GutterBottom="true">Pago con PayU</MudText>
+
+        @if (formulario is null)
+        {
+            <MudAlert Severity="Severity.Warning">El pago no existe o ya se envió. Vuelve a cobrar desde la caja.</MudAlert>
+            <MudButton Class="mt-4" Variant="Variant.Text" Href="/caja">Volver a la caja</MudButton>
+        }
+        else
+        {
+            <MudText Class="mb-4">Abriendo la página de pago de PayU…</MudText>
+
+            <form id="formulario-payu" method="post" action="@formulario.Accion" data-enhance="false">
+                @foreach (var campo in formulario.Campos)
+                {
+                    <input type="hidden" name="@campo.Key" value="@campo.Value" />
+                }
+                <button type="submit" class="mud-button-root mud-button mud-button-filled mud-button-filled-primary mud-button-filled-size-medium">
+                    Ir a PayU
+                </button>
+            </form>
+
+            @* Se envía solo al cargar; si el navegador bloquea el script, queda el botón "Ir a PayU". *@
+            <script>document.getElementById('formulario-payu').submit();</script>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private FormularioDePayU? formulario;
+
+    [SupplyParameterFromQuery(Name = "referencia")]
+    private string? Referencia { get; set; }
+
+    protected override void OnInitialized()
+    {
+        formulario = PayU.Formulario(Referencia);
+    }
+}

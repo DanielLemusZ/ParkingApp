@@ -118,6 +118,7 @@ Las pantallas siguen los mockups del #71: encabezado con el logo, el correo y el
 |---|---|---|
 | *Monitoreo de acceso* | `/carril` (también abre en `/`) | Paneles de entrada y salida, con la barrera y el resultado |
 | *Caja* | `/caja` | *Cobrar* (deudas por placa, efectivo o pasarela) y *Lecturas pendientes* |
+| *Cupos* | `/cupos` | Ocupación de carros y motos (verde hasta 80 %, ámbar por encima y rojo con LLENO), un mapa ilustrativo por conteo, sin sensores, y los vehículos adentro con búsqueda por placa. Solo consulta |
 | *Historial* | `/historial/ingresos-y-salidas` y `/historial/cobros` | Consultas con filtros por placa, fechas y estado |
 | *Configuración* | `/configuracion/tarifas`, `/franjas`, `/cupos`, `/umbral` y `/usuarios` | Una subpágina por tema, en el submenú lateral |
 
@@ -146,7 +147,7 @@ Todas las pantallas y la API piden iniciar sesión, en `/cuenta/iniciar-sesion`.
 
 | Rol | Pantallas | API |
 |---|---|---|
-| `Operador` | *Monitoreo de acceso* y *Caja* | `api/carril` y `api/caja` |
+| `Operador` | *Monitoreo de acceso*, *Caja* y *Cupos* | `api/carril` y `api/caja` |
 | `Administrador` | Todo: además, *Historial* y *Configuración* (tarifas, franjas, cupos, umbral y usuarios) | `api/carril`, `api/caja`, `api/tarifas` y `api/usuarios` |
 
 En cada pago queda el correo del usuario que lo registró en la caja.

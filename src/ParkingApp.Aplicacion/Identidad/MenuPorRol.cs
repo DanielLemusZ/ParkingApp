@@ -1,8 +1,8 @@
 namespace ParkingApp.Aplicacion.Identidad;
 
 /// <summary>
-/// Decide qué pestañas del menú ve cada rol (F-10): el Administrador ve todo; el Operador, solo el carril
-/// (<em>Monitoreo de acceso</em>) y la caja. Las pantallas y la API aplican la misma regla con
+/// Decide qué pestañas del menú ve cada rol (F-10): el Administrador ve todo; el Operador, el carril
+/// (<em>Monitoreo de acceso</em>), la caja y <em>Cupos</em>, que es solo de consulta. Las pantallas y la API aplican la misma regla con
 /// <c>[Authorize(Roles = ...)]</c>; el menú solo evita mostrar opciones que el usuario no puede abrir.
 /// Tarifas, franjas, cupos, umbral y usuarios viven en el submenú de <em>Configuración</em>, y los ingresos, salidas
 /// y cobros en el de <em>Historial</em>, como en los mockups (#71).
@@ -19,6 +19,7 @@ public static class MenuPorRol
     [
         new OpcionDelMenu("Monitoreo de acceso", "/carril", OperadorOAdministrador),
         new OpcionDelMenu("Caja", "/caja", OperadorOAdministrador),
+        new OpcionDelMenu("Cupos", "/cupos", OperadorOAdministrador),
         new OpcionDelMenu("Historial", "/historial", SoloAdministrador),
         new OpcionDelMenu("Configuración", "/configuracion", SoloAdministrador),
     ];

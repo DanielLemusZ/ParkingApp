@@ -4,18 +4,19 @@ namespace ParkingApp.Pruebas.Identidad;
 
 // Criterios 4 y 6 del issue #23, criterio 1 del #68 y criterio 2 del #71: el menú muestra solo las pestañas del rol.
 // Con los mockups (#71), Tarifas y Usuarios pasan al submenú de Configuración, y Consultas se llama Historial.
+// Cupos es solo de consulta: la ven los dos roles.
 public class MenuPorRolTests
 {
-    private static readonly string[] CarrilYCaja = ["/carril", "/caja"];
+    private static readonly string[] PestanasDelOperador = ["/carril", "/caja", "/cupos"];
 
-    private static readonly string[] TodasLasPestanas = ["/carril", "/caja", "/historial", "/configuracion"];
+    private static readonly string[] TodasLasPestanas = ["/carril", "/caja", "/cupos", "/historial", "/configuracion"];
 
     [Fact]
-    public void Operador_ve_solo_monitoreo_de_acceso_y_caja()
+    public void Operador_ve_solo_monitoreo_de_acceso_caja_y_cupos()
     {
         var opciones = MenuPorRol.Para([Roles.Operador]);
 
-        Assert.Equal(CarrilYCaja, opciones.Select(opcion => opcion.Ruta));
+        Assert.Equal(PestanasDelOperador, opciones.Select(opcion => opcion.Ruta));
     }
 
     [Fact]

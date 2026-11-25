@@ -1,5 +1,6 @@
 @page "/cuenta/iniciar-sesion"
 @attribute [ExcludeFromInteractiveRouting]
+@layout LayoutDeCuenta
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
 @using ParkingApp.Infraestructura.Identidad
@@ -13,31 +14,28 @@
 *@
 <PageTitle>Iniciar sesión</PageTitle>
 
-<div class="cuenta">
-    <MudPaper Class="pa-6" Elevation="2">
-        <MudText Typo="Typo.h5" GutterBottom="true">Iniciar sesión</MudText>
+@* Sin "Recordarme": el mockup lo muestra, pero queda fuera del alcance del MVP (#71). *@
+<TarjetaDeCuenta Titulo="Iniciar sesión">
+    @if (!string.IsNullOrEmpty(mensaje))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@mensaje</MudAlert>
+    }
 
-        @if (!string.IsNullOrEmpty(mensaje))
-        {
-            <MudAlert Severity="Severity.Error" Class="mb-4">@mensaje</MudAlert>
-        }
+    @* FormName identifica el formulario cuando llega el POST; method="post" lo envía como un formulario normal. *@
+    <EditForm Model="Entrada" method="post" OnValidSubmit="IniciarSesionAsync" FormName="iniciar-sesion">
+        <DataAnnotationsValidator />
 
-        @* FormName identifica el formulario cuando llega el POST; method="post" lo envía como un formulario normal. *@
-        <EditForm Model="Entrada" method="post" OnValidSubmit="IniciarSesionAsync" FormName="iniciar-sesion">
-            <DataAnnotationsValidator />
+        <label class="cuenta-etiqueta" for="correo">Correo</label>
+        <InputText id="correo" class="cuenta-campo" type="email" autocomplete="username" @bind-Value="Entrada.Correo" />
+        <ValidationMessage For="() => Entrada.Correo" />
 
-            <label class="cuenta-etiqueta" for="correo">Correo</label>
-            <InputText id="correo" class="cuenta-campo" type="email" autocomplete="username" @bind-Value="Entrada.Correo" />
-            <ValidationMessage For="() => Entrada.Correo" />
+        <label class="cuenta-etiqueta" for="contrasena">Contraseña</label>
+        <InputText id="contrasena" class="cuenta-campo" type="password" autocomplete="current-password" @bind-Value="Entrada.Contrasena" />
+        <ValidationMessage For="() => Entrada.Contrasena" />
 
-            <label class="cuenta-etiqueta" for="contrasena">Contraseña</label>
-            <InputText id="contrasena" class="cuenta-campo" type="password" autocomplete="current-password" @bind-Value="Entrada.Contrasena" />
-            <ValidationMessage For="() => Entrada.Contrasena" />
-
-            <button type="submit" class="cuenta-boton">Iniciar sesión</button>
-        </EditForm>
-    </MudPaper>
-</div>
+        <button type="submit" class="cuenta-boton">Iniciar sesión</button>
+    </EditForm>
+</TarjetaDeCuenta>
 
 @code {
     private string? mensaje;

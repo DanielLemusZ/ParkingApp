@@ -10,39 +10,36 @@
 @* Estática por la misma razón que el inicio de sesión: al cambiar la contraseña se renueva la cookie. *@
 <PageTitle>Cambiar contraseña</PageTitle>
 
-<div class="cuenta">
-    <MudPaper Class="pa-6" Elevation="2">
-        <MudText Typo="Typo.h5" GutterBottom="true">Cambiar contraseña</MudText>
+@* Con sesión iniciada se conserva el encabezado; la tarjeta es la misma de Iniciar sesión (#71). *@
+<TarjetaDeCuenta Titulo="Cambiar contraseña">
+    @if (cambiada)
+    {
+        <MudAlert Severity="Severity.Success" Class="mb-4">La contraseña se cambió.</MudAlert>
+    }
 
-        @if (cambiada)
-        {
-            <MudAlert Severity="Severity.Success" Class="mb-4">La contraseña se cambió.</MudAlert>
-        }
+    @foreach (var error in errores)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-2">@error</MudAlert>
+    }
 
-        @foreach (var error in errores)
-        {
-            <MudAlert Severity="Severity.Error" Class="mb-2">@error</MudAlert>
-        }
+    <EditForm Model="Entrada" method="post" OnValidSubmit="CambiarAsync" FormName="cambiar-contrasena">
+        <DataAnnotationsValidator />
 
-        <EditForm Model="Entrada" method="post" OnValidSubmit="CambiarAsync" FormName="cambiar-contrasena">
-            <DataAnnotationsValidator />
+        <label class="cuenta-etiqueta" for="actual">Contraseña actual</label>
+        <InputText id="actual" class="cuenta-campo" type="password" autocomplete="current-password" @bind-Value="Entrada.Actual" />
+        <ValidationMessage For="() => Entrada.Actual" />
 
-            <label class="cuenta-etiqueta" for="actual">Contraseña actual</label>
-            <InputText id="actual" class="cuenta-campo" type="password" autocomplete="current-password" @bind-Value="Entrada.Actual" />
-            <ValidationMessage For="() => Entrada.Actual" />
+        <label class="cuenta-etiqueta" for="nueva">Contraseña nueva</label>
+        <InputText id="nueva" class="cuenta-campo" type="password" autocomplete="new-password" @bind-Value="Entrada.Nueva" />
+        <ValidationMessage For="() => Entrada.Nueva" />
 
-            <label class="cuenta-etiqueta" for="nueva">Contraseña nueva</label>
-            <InputText id="nueva" class="cuenta-campo" type="password" autocomplete="new-password" @bind-Value="Entrada.Nueva" />
-            <ValidationMessage For="() => Entrada.Nueva" />
+        <label class="cuenta-etiqueta" for="confirmacion">Repite la contraseña nueva</label>
+        <InputText id="confirmacion" class="cuenta-campo" type="password" autocomplete="new-password" @bind-Value="Entrada.Confirmacion" />
+        <ValidationMessage For="() => Entrada.Confirmacion" />
 
-            <label class="cuenta-etiqueta" for="confirmacion">Repite la contraseña nueva</label>
-            <InputText id="confirmacion" class="cuenta-campo" type="password" autocomplete="new-password" @bind-Value="Entrada.Confirmacion" />
-            <ValidationMessage For="() => Entrada.Confirmacion" />
-
-            <button type="submit" class="cuenta-boton">Cambiar contraseña</button>
-        </EditForm>
-    </MudPaper>
-</div>
+        <button type="submit" class="cuenta-boton">Cambiar contraseña</button>
+    </EditForm>
+</TarjetaDeCuenta>
 
 @code {
     private bool cambiada;

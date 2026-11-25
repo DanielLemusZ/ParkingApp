@@ -14,11 +14,6 @@ h1:focus {
 
 /* Páginas de cuenta. Son estáticas, así que usan campos HTML normales en lugar de los de MudBlazor,
    que necesitan interactividad. */
-.cuenta {
-    max-width: 420px;
-    margin: 48px auto;
-}
-
 .cuenta-etiqueta {
     display: block;
     margin: 16px 0 4px;
@@ -50,7 +45,6 @@ h1:focus {
     color: var(--mud-palette-primary-text);
     font: inherit;
     font-weight: 500;
-    text-transform: uppercase;
     cursor: pointer;
 }
 

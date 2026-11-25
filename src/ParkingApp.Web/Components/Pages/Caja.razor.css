@@ -1,0 +1,61 @@
+.detalle-cobro {
+    padding: 20px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-background-gray);
+}
+
+.encabezado-cobro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+}
+
+.detalle-cobro ::deep .tabla-cobros {
+    background: transparent;
+}
+
+/* Tarjetas de medio de pago: la elegida va en verde, como en el mockup. */
+.medios {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.medio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 18px 12px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-primary);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+    .medio small {
+        font-weight: 400;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .medio:hover:not(:disabled) {
+        border-color: var(--mud-palette-success);
+    }
+
+    .medio.elegido {
+        border: 2px solid var(--mud-palette-success);
+        background: color-mix(in srgb, var(--mud-palette-success) 14%, transparent);
+        color: var(--mud-palette-success);
+    }
+
+    .medio:disabled {
+        border-style: dashed;
+        opacity: 0.6;
+        cursor: not-allowed;
+    }

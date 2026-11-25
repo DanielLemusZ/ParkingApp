@@ -3,6 +3,7 @@
 @using System.Globalization
 @using ParkingApp.Aplicacion.Cobros
 @using ParkingApp.Aplicacion.Pagos
+@using ParkingApp.Dominio.Accesos
 @using ParkingApp.Dominio.Pagos
 @using ParkingApp.Web.Components.Lecturas
 @inject IServiceScopeFactory FabricaDeAlcances
@@ -11,20 +12,25 @@
 
 <PageTitle>Caja</PageTitle>
 
-<MudText Typo="Typo.h4" GutterBottom="true">Caja</MudText>
-<PlacasPorRevisar AlValidar="CargarAsync" />
-<MudText Class="mb-4">Vehículos con cobros pendientes. Elige uno para cobrar, en efectivo o con la pasarela, todo lo que debe desde que entró.</MudText>
+@* Distribución del mockup de la caja (#71): a la izquierda el panel Cobrar; a la derecha las lecturas pendientes.
+   Solo cambia la presentación: los casos de uso de efectivo y pasarela son los mismos. *@
+<MudText Typo="Typo.h4" Class="mb-4">Caja</MudText>
 
 <MudGrid>
     <MudItem xs="12" md="7">
-        <MudPaper Class="pa-4">
+        <MudPaper Outlined="true" Class="pa-6">
+            <MudText Typo="Typo.h5" Color="Color.Info" Class="mb-4">Cobrar</MudText>
+
             <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-                <MudTextField T="string" Label="Buscar por placa" @bind-Value="busqueda" Immediate="true"
-                              DebounceInterval="300" OnDebounceIntervalElapsed="BuscarAsync"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" />
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="CargarAsync" aria-label="Actualizar" />
+                <MudTextField T="string" Label="Placa" Placeholder="Buscar por placa" @bind-Value="busqueda" Immediate="true"
+                              DebounceInterval="300" OnDebounceIntervalElapsed="BuscarAsync" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                              Clearable="true" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Refresh" OnClick="CargarAsync" aria-label="Actualizar" />
             </MudStack>
-            <MudTable Items="deudas" Dense="true" Hover="true" T="DeudaDeVehiculo"
+
+            @* Vehículos con cobros pendientes: se elige uno para cobrar todo lo que debe desde que entró. *@
+            <MudTable Items="deudas" Dense="true" Hover="true" Elevation="0" T="DeudaDeVehiculo" Class="lista-deudas"
                       OnRowClick="@(fila => Elegir(fila.Item))" RowClassFunc="@ClaseDeFila">
                 <HeaderContent>
                     <MudTh>Placa</MudTh>
@@ -33,92 +39,128 @@
                     <MudTh>Total</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Placa">@context.Placa</MudTd>
+                    <MudTd DataLabel="Placa"><PlacaColombiana Placa="@context.Placa" Compacta="true" /></MudTd>
                     <MudTd DataLabel="Adentro desde">@Hora(context.AdentroDesde)</MudTd>
                     <MudTd DataLabel="Cobros">@context.Cobros.Count</MudTd>
                     <MudTd DataLabel="Total">@TextosDeCobro.Pesos(context.Total)</MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
-                    <MudText>No hay cobros pendientes@(string.IsNullOrWhiteSpace(busqueda) ? string.Empty : " con esa placa").</MudText>
+                    <MudText Typo="Typo.body2" Class="texto-tenue">
+                        No hay cobros pendientes@(string.IsNullOrWhiteSpace(busqueda) ? string.Empty : " con esa placa").
+                    </MudText>
                 </NoRecordsContent>
             </MudTable>
+
+            @if (elegida is null)
+            {
+                <MudText Typo="Typo.body2" Class="texto-tenue mt-4">Elige un vehículo de la lista para cobrar.</MudText>
+            }
+            else
+            {
+                @* Placa, tipo, ingreso y el total a pagar en grande. *@
+                <div class="detalle-cobro mt-4">
+                    <div class="encabezado-cobro">
+                        <PlacaColombiana Placa="@elegida.Placa" />
+                        <div>
+                            @if (TipoDe(elegida.Placa) is { } tipo)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info" Class="ma-0 mb-1"
+                                         Icon="@(tipo == TipoDeVehiculo.Moto ? Icons.Material.Outlined.TwoWheeler : Icons.Material.Outlined.DirectionsCar)">
+                                    @tipo
+                                </MudChip>
+                            }
+                            <MudText Typo="Typo.body2" Class="texto-tenue">Ingreso @Hora(elegida.AdentroDesde)</MudText>
+                        </div>
+                    </div>
+
+                    <MudSimpleTable Dense="true" Elevation="0" Class="my-3 tabla-cobros">
+                        <thead>
+                            <tr>
+                                <th>Día operativo</th>
+                                <th>Motivo</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cobro in elegida.Cobros)
+                            {
+                                <tr>
+                                    <td>@cobro.DiaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td>
+                                    <td>@TextosDeCobro.Motivo(cobro.Motivo, cobro.Franja, cobro.HoraDeIngreso)</td>
+                                    <td>@TextosDeCobro.Pesos(cobro.Valor)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+
+                    <MudText Typo="Typo.body2" Class="texto-tenue">Total a pagar</MudText>
+                    <MudText Typo="Typo.h3">@TextosDeCobro.Pesos(elegida.Total)</MudText>
+                </div>
+
+                @* Medio de pago en tarjetas, como el mockup. La pasarela deja elegir tarjeta, Nequi o QR en su página. *@
+                <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">Medio de pago</MudText>
+                <div class="medios" role="radiogroup" aria-label="Medio de pago">
+                    <button type="button" role="radio" aria-checked="@(medio == MedioDePago.Efectivo)"
+                            class="medio @(medio == MedioDePago.Efectivo ? "elegido" : null)"
+                            @onclick="() => medio = MedioDePago.Efectivo">
+                        <MudIcon Icon="@Icons.Material.Outlined.Payments" />
+                        <span>Efectivo</span>
+                    </button>
+                    <button type="button" role="radio" aria-checked="@(medio == MedioDePago.Pasarela)"
+                            class="medio @(medio == MedioDePago.Pasarela ? "elegido" : null)" disabled="@(!Pasarela.Disponible)"
+                            @onclick="() => medio = MedioDePago.Pasarela">
+                        <MudIcon Icon="@Icons.Material.Outlined.CreditCard" />
+                        <span>Pasarela</span>
+                        <small>Tarjeta, Nequi o QR</small>
+                    </button>
+                </div>
+                @if (!Pasarela.Disponible)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Warning" Class="mt-2">@TextosDeCobro.PasarelaNoDisponible</MudText>
+                }
+
+                <div class="d-flex justify-end mt-4">
+                    @if (medio == MedioDePago.Pasarela && Pasarela.Disponible)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.CreditCard"
+                                   Disabled="pagando" OnClick="CobrarConPasarelaAsync">
+                            @(pagando ? "Abriendo la pasarela…" : "Cobrar con la pasarela")
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.CheckCircle"
+                                   Disabled="pagando" OnClick="PagarAsync">
+                            @(pagando ? "Registrando…" : "Registrar pago")
+                        </MudButton>
+                    }
+                </div>
+            }
+
+            @if (avisoDeLaPasarela is not null)
+            {
+                <FranjaDeResultado Class="mt-4" Severidad="Severity.Warning" Mensaje="@avisoDeLaPasarela" />
+            }
+            @if (resultado is not null)
+            {
+                @* La confirmación lleva la referencia del pago (criterio 4). *@
+                <FranjaDeResultado Class="mt-4" Severidad="@(resultado.Registrado ? Severity.Success : Severity.Warning)"
+                                   Mensaje="@resultado.Motivo">
+                    @if (resultado.Pago is not null)
+                    {
+                        <div class="mt-1">
+                            <small>
+                                @resultado.Pago.Placa · @Hora(resultado.Pago.FechaHora) · Ref. @resultado.Pago.Referencia
+                            </small>
+                        </div>
+                    }
+                </FranjaDeResultado>
+            }
         </MudPaper>
     </MudItem>
 
     <MudItem xs="12" md="5">
-        <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">Pago</MudText>
-            @if (elegida is null)
-            {
-                <MudText>Elige un vehículo de la lista.</MudText>
-            }
-            else
-            {
-                <MudText><b>Placa:</b> @elegida.Placa</MudText>
-                <MudText Class="mb-2"><b>Adentro desde:</b> @Hora(elegida.AdentroDesde)</MudText>
-                <MudSimpleTable Dense="true" Class="mb-2">
-                    <thead>
-                        <tr>
-                            <th>Día operativo</th>
-                            <th>Motivo</th>
-                            <th>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var cobro in elegida.Cobros)
-                        {
-                            <tr>
-                                <td>@cobro.DiaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td>
-                                <td>@TextosDeCobro.Motivo(cobro.Motivo, cobro.Franja, cobro.HoraDeIngreso)</td>
-                                <td>@TextosDeCobro.Pesos(cobro.Valor)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-                <MudText Typo="Typo.h5" Class="my-2">Total: @TextosDeCobro.Pesos(elegida.Total)</MudText>
-                <MudRadioGroup T="MedioDePago" @bind-Value="medio" Class="mb-2">
-                    <MudRadio Value="MedioDePago.Efectivo" Color="Color.Primary">Efectivo</MudRadio>
-                    <MudRadio Value="MedioDePago.Pasarela" Color="Color.Primary" Disabled="!Pasarela.Disponible">
-                        Pasarela (tarjeta, Nequi o QR)
-                    </MudRadio>
-                </MudRadioGroup>
-                @if (!Pasarela.Disponible)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Warning" Class="mb-2">@TextosDeCobro.PasarelaNoDisponible</MudText>
-                }
-                @if (medio == MedioDePago.Pasarela && Pasarela.Disponible)
-                {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CreditCard"
-                               Disabled="pagando" OnClick="CobrarConPasarelaAsync">
-                        @(pagando ? "Abriendo la pasarela…" : $"Cobrar {TextosDeCobro.Pesos(elegida.Total)} con la pasarela")
-                    </MudButton>
-                }
-                else
-                {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Payments"
-                               Disabled="pagando" OnClick="PagarAsync">
-                        @(pagando ? "Registrando…" : $"Registrar pago en efectivo de {TextosDeCobro.Pesos(elegida.Total)}")
-                    </MudButton>
-                }
-            }
-            @if (avisoDeLaPasarela is not null)
-            {
-                <MudAlert Class="mt-4" Severity="Severity.Warning">@avisoDeLaPasarela</MudAlert>
-            }
-            @if (resultado is not null)
-            {
-                <MudAlert Class="mt-4" Severity="@(resultado.Registrado ? Severity.Success : Severity.Warning)">
-                    @resultado.Motivo
-                    @if (resultado.Pago is not null)
-                    {
-                        <br />
-                        <small>
-                            @resultado.Pago.Placa · @Hora(resultado.Pago.FechaHora) · Ref. @resultado.Pago.Referencia
-                        </small>
-                    }
-                </MudAlert>
-            }
-        </MudPaper>
+        <PlacasPorRevisar AlValidar="CargarAsync" />
     </MudItem>
 </MudGrid>
 
@@ -275,6 +317,19 @@
     private string ClaseDeFila(DeudaDeVehiculo deuda, int indice)
     {
         return deuda.Placa == elegida?.Placa ? "mud-selected-item cursor-pointer" : "cursor-pointer";
+    }
+
+    // El tipo sale del formato de la placa (D-20). Una placa escrita a mano con otro formato no se clasifica: sin chip.
+    private static TipoDeVehiculo? TipoDe(string placa)
+    {
+        try
+        {
+            return ClasificadorDeVehiculo.Clasificar(Placa.Crear(placa));
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 
     private static string Hora(DateTimeOffset fechaHora)

@@ -58,3 +58,8 @@ h1:focus {
     color: var(--mud-palette-error);
     font-size: 0.85rem;
 }
+
+/* Texto secundario: el gris del tema, no el color "Secondary" de la paleta. */
+.texto-tenue {
+    color: var(--mud-palette-text-secondary) !important;
+}

@@ -1,6 +1,6 @@
 @* Franja con el resultado de una operación (#71): verde si salió bien, ámbar si queda en espera y rojo si se rechazó.
    El motivo se muestra completo, sin cortar. *@
-<div class="franja @Clase" role="@(Severidad == Severity.Error ? "alert" : "status")">
+<div class="franja @Clase @Class" role="@(Severidad == Severity.Error ? "alert" : "status")">
     <MudIcon Icon="@Icono" Size="Size.Small" Class="icono" />
     <div class="mensaje">
         @if (!string.IsNullOrWhiteSpace(Titulo))
@@ -37,6 +37,12 @@
     /// </summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Clases adicionales, por ejemplo de margen (<c>mt-3</c>).
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
 
     private string Clase => Severidad switch
     {

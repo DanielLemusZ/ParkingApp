@@ -1,0 +1,30 @@
+@* Confianza de la lectura de la placa, junto a la placa amarilla (#71). Una placa escrita a mano no tiene confianza
+   (llega en 0): se muestra como lectura manual. *@
+@if (Confianza <= 0)
+{
+    <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Outlined.Keyboard" Class="ma-0">
+        Lectura manual
+    </MudChip>
+}
+else
+{
+    <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Class="ma-0"
+             Icon="@(PorValidar ? Icons.Material.Outlined.WarningAmber : Icons.Material.Outlined.Verified)"
+             Color="@(PorValidar ? Color.Warning : Color.Success)">
+        Confianza @Confianza %
+    </MudChip>
+}
+
+@code {
+    /// <summary>
+    /// Confianza de 0 a 100 que dio el lector de placas.
+    /// </summary>
+    [Parameter]
+    public int Confianza { get; set; }
+
+    /// <summary>
+    /// Si la lectura no alcanzó el umbral y quedó pendiente de validar.
+    /// </summary>
+    [Parameter]
+    public bool PorValidar { get; set; }
+}

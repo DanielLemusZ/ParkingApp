@@ -3,149 +3,178 @@
 @using System.Globalization
 @using ParkingApp.Aplicacion.Accesos
 @using ParkingApp.Aplicacion.Cobros
+@using ParkingApp.Aplicacion.Configuracion
 @using ParkingApp.Dominio.Accesos
 @using ParkingApp.Web.Components.Lecturas
 @inject IServiceScopeFactory FabricaDeAlcances
 
-<PageTitle>Carril</PageTitle>
+<PageTitle>Monitoreo de acceso</PageTitle>
 
-<MudText Typo="Typo.h4" GutterBottom="true">Carril</MudText>
+@* Distribución del mockup del carril (#71): paneles de entrada y salida, cada uno con su barrera, la placa leída, el
+   simulador y el resultado. Solo cambia la presentación: los casos de uso son los mismos. *@
+<div class="encabezado-pagina">
+    <MudText Typo="Typo.h4">Monitoreo de acceso</MudText>
+    @if (sede is not null)
+    {
+        <MudStack Row="true" Spacing="2">
+            <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Outlined.DirectionsCar"
+                     Color="@ColorDeOcupacion(sede.Ocupacion.Carros, sede.CupoCarros)">
+                Carros @sede.Ocupacion.Carros/@sede.CupoCarros@(sede.Ocupacion.Carros >= sede.CupoCarros ? " · LLENO" : string.Empty)
+            </MudChip>
+            <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Outlined.TwoWheeler"
+                     Color="@ColorDeOcupacion(sede.Ocupacion.Motos, sede.CupoMotos)">
+                Motos @sede.Ocupacion.Motos/@sede.CupoMotos@(sede.Ocupacion.Motos >= sede.CupoMotos ? " · LLENO" : string.Empty)
+            </MudChip>
+        </MudStack>
+    }
+</div>
 
-<MudGrid>
-    <MudItem xs="12" md="6">
-        <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">Placa entrada</MudText>
-
-            <MudSelect T="int" Label="Carril de entrada" @bind-Value="carril">
+<div class="carriles">
+    @* ---------- Entrada ---------- *@
+    <section class="panel">
+        <div class="cabecera-panel">
+            <MudText Typo="Typo.h5" Color="Color.Info">Entrada</MudText>
+            <MudSelect T="int" @bind-Value="carril" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+                       Class="selector-carril" aria-label="Carril de entrada">
                 <MudSelectItem T="int" Value="1">Carril 1</MudSelectItem>
                 <MudSelectItem T="int" Value="2">Carril 2</MudSelectItem>
             </MudSelect>
-            <SubirImagenDePlaca AlLeer="UsarLecturaDeEntradaAsync" />
+            <MudSpacer />
+            <IndicadorDeBarrera Abierta="@(resultado?.AbreBarrera ?? false)" />
+        </div>
 
-            @* La placa y la confianza salen de la imagen; la confianza mínima la configura el Administrador. *@
-            @if (escribirEntrada)
+        <SubirImagenDePlaca Carril="carril" AlLeer="UsarLecturaDeEntradaAsync" />
+
+        @* La placa y la confianza salen de la imagen; la confianza mínima la configura el Administrador. *@
+        <div class="lectura">
+            @if (placa is null)
             {
-                @* No hubo lectura: no hay confianza que mostrar. *@
-                <LecturaManualDelCarril Sentido="TipoDeEvento.Ingreso" Carril="carril" Escribir="true" AlRegistrar="MostrarIngresoManual" />
+                <MudText Typo="Typo.body2" Class="texto-tenue">Sin placa leída.</MudText>
             }
             else
             {
-                <MudTextField T="string" Label="Placa" Value="placa" ReadOnly="true" Disabled="true" />
-                <MudTextField T="string" Label="Confianza de la lectura" Value="@TextoDeConfianza(confianza)" ReadOnly="true" Disabled="true" />
+                <PlacaColombiana Placa="@placa" />
             }
-            <LecturaManualDelCarril Sentido="TipoDeEvento.Ingreso" Carril="carril" Pendiente="resultado?.LecturaPendiente"
-                                    AlRegistrar="MostrarIngresoManual" />
-
-            @if (resultado != null)
+            @if (confianza is not null)
             {
-                @if (resultado.AbreBarrera)
-                {
-                    <MudAlert Class="mt-4" Severity="Severity.Success" Icon="@Icons.Material.Filled.LockOpen">
-                        <b>Barrera abierta</b>: @resultado.Motivo
-                    </MudAlert>
-                }
-                else if (resultado.PendienteDeValidacion)
-                {
-                    <MudAlert Class="mt-4" Severity="Severity.Warning" Icon="@Icons.Material.Filled.Lock">
-                        <b>Barrera cerrada</b>: @resultado.Motivo
-                    </MudAlert>
-                }
-                else
-                {
-                    <MudAlert Class="mt-4" Severity="Severity.Error" Icon="@Icons.Material.Filled.Lock">
-                        <b>Barrera cerrada</b>: @resultado.Motivo
-                    </MudAlert>
-                }
-
-                @if (resultado.Ingreso != null)
-                {
-                    <MudSimpleTable Dense="true" Class="mt-2">
-                        <tbody>
-                            <tr><td>Placa</td><td>@resultado.Ingreso.Placa</td></tr>
-                            <tr><td>Tipo de vehículo</td><td>@resultado.Ingreso.TipoDeVehiculo</td></tr>
-                            <tr><td>Fecha y hora</td><td>@FormatearFecha(resultado.Ingreso.FechaHora)</td></tr>
-                            <tr><td>Carril</td><td>@resultado.Ingreso.Carril</td></tr>
-                            <tr><td>Confianza</td><td>@resultado.Ingreso.Confianza</td></tr>
-                            @if (resultado.Ingreso.Cobro != null)
-                            {
-                                <tr><td>Cobro</td><td><b>@TextosDeCobro.Pesos(resultado.Ingreso.Cobro.Valor)</b> (@resultado.Ingreso.Cobro.Estado)</td></tr>
-                                <tr><td>Franja</td><td>@resultado.Ingreso.Cobro.Franja</td></tr>
-                                <tr><td>Día operativo</td><td>@resultado.Ingreso.Cobro.DiaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</td></tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
-                }
+                <ChipDeConfianza Confianza="confianza.Value" PorValidar="@(resultado?.PendienteDeValidacion == true)" />
             }
-        </MudPaper>
-    </MudItem>
+        </div>
 
-    <MudItem xs="12" md="6">
-        <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">Placa salida</MudText>
+        <LecturaManualDelCarril Sentido="TipoDeEvento.Ingreso" Carril="carril" Pendiente="resultado?.LecturaPendiente"
+                                AlRegistrar="MostrarIngresoManual" />
 
-            <MudSelect T="int" Label="Carril de salida" @bind-Value="carrilSalida">
+        <MudExpansionPanels Outlined="true" Elevation="0" Class="mt-4">
+            <MudExpansionPanel @bind-Expanded="simuladorEntradaAbierto">
+                <TitleContent>
+                    <div class="titulo-simulador">
+                        <MudIcon Icon="@Icons.Material.Outlined.Keyboard" Size="Size.Small" />
+                        <span>Ingreso manual (simulador)</span>
+                    </div>
+                </TitleContent>
+                <ChildContent>
+                    @if (escribirEntrada)
+                    {
+                        @* No hubo lectura: no hay confianza que mostrar. *@
+                        <LecturaManualDelCarril Sentido="TipoDeEvento.Ingreso" Carril="carril" Escribir="true" AlRegistrar="MostrarIngresoManual" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="texto-tenue">
+                            Se habilita cuando la foto de la placa no se puede leer.
+                        </MudText>
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        @if (resultado != null)
+        {
+            <FranjaDeResultado Class="mt-4" Severidad="@SeveridadDe(resultado.AbreBarrera, resultado.PendienteDeValidacion)"
+                               Titulo="@(resultado.AbreBarrera ? "Barrera abierta" : "Barrera cerrada")" Mensaje="@resultado.Motivo" />
+
+            @if (resultado.Ingreso != null)
+            {
+                <MudText Typo="Typo.body2" Class="texto-tenue mt-2">@DetalleDe(resultado.Ingreso)</MudText>
+            }
+        }
+    </section>
+
+    @* ---------- Salida ---------- *@
+    <section class="panel">
+        <div class="cabecera-panel">
+            <MudText Typo="Typo.h5" Color="Color.Info">Salida</MudText>
+            <MudSelect T="int" @bind-Value="carrilSalida" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+                       Class="selector-carril" aria-label="Carril de salida">
                 <MudSelectItem T="int" Value="1">Carril 1</MudSelectItem>
                 <MudSelectItem T="int" Value="2">Carril 2</MudSelectItem>
             </MudSelect>
-            <SubirImagenDePlaca AlLeer="UsarLecturaDeSalidaAsync" />
+            <MudSpacer />
+            <IndicadorDeBarrera Abierta="@(resultadoSalida?.AbreBarrera ?? false)" />
+        </div>
 
-            @* La placa y la confianza salen de la imagen; la confianza mínima la configura el Administrador. *@
-            @if (escribirSalida)
+        <SubirImagenDePlaca Carril="carrilSalida" AlLeer="UsarLecturaDeSalidaAsync" />
+
+        <div class="lectura">
+            @if (placaSalida is null)
             {
-                @* No hubo lectura: no hay confianza que mostrar. *@
-                <LecturaManualDelCarril Sentido="TipoDeEvento.Salida" Carril="carrilSalida" Escribir="true" AlRegistrar="MostrarSalidaManual" />
+                <MudText Typo="Typo.body2" Class="texto-tenue">Sin placa leída.</MudText>
             }
             else
             {
-                <MudTextField T="string" Label="Placa" Value="placaSalida" ReadOnly="true" Disabled="true" />
-                <MudTextField T="string" Label="Confianza de la lectura" Value="@TextoDeConfianza(confianzaSalida)" ReadOnly="true" Disabled="true" />
+                <PlacaColombiana Placa="@placaSalida" />
             }
-            <LecturaManualDelCarril Sentido="TipoDeEvento.Salida" Carril="carrilSalida" Pendiente="resultadoSalida?.LecturaPendiente"
-                                    AlRegistrar="MostrarSalidaManual" />
-
-            @if (resultadoSalida != null)
+            @if (confianzaSalida is not null)
             {
-                @if (resultadoSalida.AbreBarrera)
-                {
-                    <MudAlert Class="mt-4" Severity="Severity.Success" Icon="@Icons.Material.Filled.LockOpen">
-                        <b>Barrera abierta</b>: @resultadoSalida.Motivo
-                    </MudAlert>
-                }
-                else if (resultadoSalida.PendienteDeValidacion)
-                {
-                    <MudAlert Class="mt-4" Severity="Severity.Warning" Icon="@Icons.Material.Filled.Lock">
-                        <b>Barrera cerrada</b>: @resultadoSalida.Motivo
-                    </MudAlert>
-                }
-                else
-                {
-                    <MudAlert Class="mt-4" Severity="Severity.Error" Icon="@Icons.Material.Filled.Lock">
-                        <b>Barrera cerrada</b>: @resultadoSalida.Motivo
-                    </MudAlert>
-                }
-
-                @if (resultadoSalida.Salida != null)
-                {
-                    <MudSimpleTable Dense="true" Class="mt-2">
-                        <tbody>
-                            <tr><td>Placa</td><td>@resultadoSalida.Salida.Placa</td></tr>
-                            <tr><td>Tipo de vehículo</td><td>@resultadoSalida.Salida.TipoDeVehiculo</td></tr>
-                            <tr><td>Fecha y hora</td><td>@FormatearFecha(resultadoSalida.Salida.FechaHora)</td></tr>
-                            <tr><td>Carril</td><td>@resultadoSalida.Salida.Carril</td></tr>
-                            <tr><td>Confianza</td><td>@resultadoSalida.Salida.Confianza</td></tr>
-                        </tbody>
-                    </MudSimpleTable>
-                }
+                <ChipDeConfianza Confianza="confianzaSalida.Value" PorValidar="@(resultadoSalida?.PendienteDeValidacion == true)" />
             }
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+        </div>
+
+        <LecturaManualDelCarril Sentido="TipoDeEvento.Salida" Carril="carrilSalida" Pendiente="resultadoSalida?.LecturaPendiente"
+                                AlRegistrar="MostrarSalidaManual" />
+
+        <MudExpansionPanels Outlined="true" Elevation="0" Class="mt-4">
+            <MudExpansionPanel @bind-Expanded="simuladorSalidaAbierto">
+                <TitleContent>
+                    <div class="titulo-simulador">
+                        <MudIcon Icon="@Icons.Material.Outlined.Keyboard" Size="Size.Small" />
+                        <span>Ingreso manual (simulador)</span>
+                    </div>
+                </TitleContent>
+                <ChildContent>
+                    @if (escribirSalida)
+                    {
+                        <LecturaManualDelCarril Sentido="TipoDeEvento.Salida" Carril="carrilSalida" Escribir="true" AlRegistrar="MostrarSalidaManual" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="texto-tenue">
+                            Se habilita cuando la foto de la placa no se puede leer.
+                        </MudText>
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        @if (resultadoSalida != null)
+        {
+            <FranjaDeResultado Class="mt-4" Severidad="@SeveridadDe(resultadoSalida.AbreBarrera, resultadoSalida.PendienteDeValidacion)"
+                               Titulo="@(resultadoSalida.AbreBarrera ? "Barrera abierta" : "Barrera cerrada")" Mensaje="@resultadoSalida.Motivo" />
+
+            @if (resultadoSalida.Salida != null)
+            {
+                <MudText Typo="Typo.body2" Class="texto-tenue mt-2">@DetalleDe(resultadoSalida.Salida)</MudText>
+            }
+        }
+    </section>
+</div>
 
 @code {
     private int carril = 1;
     private string? placa;
     private int? confianza;
     private bool escribirEntrada;
+    private bool simuladorEntradaAbierto;
     private bool registrando;
     private ResultadoDeIngreso? resultado;
 
@@ -153,8 +182,24 @@
     private string? placaSalida;
     private int? confianzaSalida;
     private bool escribirSalida;
+    private bool simuladorSalidaAbierto;
     private bool registrandoSalida;
     private ResultadoDeSalida? resultadoSalida;
+
+    // Cupos y ocupación de la sede (#19), para los chips del encabezado.
+    private DatosDeConfiguracionSede? sede;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarOcupacionAsync();
+    }
+
+    private async Task CargarOcupacionAsync()
+    {
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var configurarSede = alcance.ServiceProvider.GetRequiredService<ConfigurarSede>();
+        sede = await configurarSede.ConsultarAsync();
+    }
 
     private async Task RegistrarIngresoAsync()
     {
@@ -178,6 +223,8 @@
         {
             registrando = false;
         }
+
+        await CargarOcupacionAsync();
     }
 
     private async Task RegistrarSalidaAsync()
@@ -199,14 +246,17 @@
         {
             registrandoSalida = false;
         }
+
+        await CargarOcupacionAsync();
     }
 
-    // Con la placa leída se registra el ingreso, como lo haría la cámara. Si la foto no se pudo leer, se habilita
-    // escribir la placa; si la lectura no alcanza el umbral, el registro la deja pendiente para validarla.
+    // Con la placa leída se registra el ingreso, como lo haría la cámara. Si la foto no se pudo leer, se abre el
+    // simulador para escribir la placa; si la lectura no alcanza el umbral, el registro la deja pendiente para validarla.
     private async Task UsarLecturaDeEntradaAsync(LecturaDeImagen lectura)
     {
         resultado = null;
         escribirEntrada = !lectura.Leida;
+        simuladorEntradaAbierto = escribirEntrada;
         placa = lectura.Leida ? lectura.Placa : null;
         confianza = lectura.Leida ? lectura.Confianza : null;
 
@@ -220,6 +270,7 @@
     {
         resultadoSalida = null;
         escribirSalida = !lectura.Leida;
+        simuladorSalidaAbierto = escribirSalida;
         placaSalida = lectura.Leida ? lectura.Placa : null;
         confianzaSalida = lectura.Leida ? lectura.Confianza : null;
 
@@ -230,9 +281,10 @@
     }
 
     // La placa validada o escrita a mano ya siguió el flujo del carril: solo se muestra el resultado.
-    private void MostrarIngresoManual(ResultadoDeValidarLectura validada)
+    private async Task MostrarIngresoManual(ResultadoDeValidarLectura validada)
     {
         escribirEntrada = false;
+        simuladorEntradaAbierto = false;
         resultado = new ResultadoDeIngreso(validada.AbreBarrera, validada.Motivo, validada.Ingreso);
 
         if (validada.Ingreso is not null)
@@ -240,11 +292,14 @@
             placa = validada.Ingreso.Placa;
             confianza = validada.Ingreso.Confianza;
         }
+
+        await CargarOcupacionAsync();
     }
 
-    private void MostrarSalidaManual(ResultadoDeValidarLectura validada)
+    private async Task MostrarSalidaManual(ResultadoDeValidarLectura validada)
     {
         escribirSalida = false;
+        simuladorSalidaAbierto = false;
         resultadoSalida = new ResultadoDeSalida(validada.AbreBarrera, validada.Motivo, validada.Salida);
 
         if (validada.Salida is not null)
@@ -252,11 +307,42 @@
             placaSalida = validada.Salida.Placa;
             confianzaSalida = validada.Salida.Confianza;
         }
+
+        await CargarOcupacionAsync();
     }
 
-    private static string TextoDeConfianza(int? valor)
+    // Verde si abre; ámbar si la lectura quedó por validar; rojo si se rechazó.
+    private static Severity SeveridadDe(bool abreBarrera, bool pendienteDeValidacion)
     {
-        return valor is null ? string.Empty : $"{valor} %";
+        if (abreBarrera)
+        {
+            return Severity.Success;
+        }
+
+        return pendienteDeValidacion ? Severity.Warning : Severity.Error;
+    }
+
+    private static Color ColorDeOcupacion(int ocupacion, int cupo)
+    {
+        return ocupacion >= cupo ? Color.Error : Color.Default;
+    }
+
+    private static string DetalleDe(IngresoRegistrado ingreso)
+    {
+        var detalle = $"{ingreso.TipoDeVehiculo} · {FormatearFecha(ingreso.FechaHora)} · Carril {ingreso.Carril}";
+
+        if (ingreso.Cobro is not null)
+        {
+            detalle += $" · Cobro {ingreso.Cobro.Franja.ToString().ToLowerInvariant()} {TextosDeCobro.Pesos(ingreso.Cobro.Valor)}"
+                + $" ({ingreso.Cobro.Estado}) · Día operativo {ingreso.Cobro.DiaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}";
+        }
+
+        return detalle;
+    }
+
+    private static string DetalleDe(SalidaRegistrada salida)
+    {
+        return $"{salida.TipoDeVehiculo} · {FormatearFecha(salida.FechaHora)} · Carril {salida.Carril}";
     }
 
     private static string FormatearFecha(DateTimeOffset fechaHora)

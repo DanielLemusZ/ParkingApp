@@ -18,10 +18,16 @@ public enum ProveedorDePasarela
     /// Sandbox de Wompi, con llaves de prueba.
     /// </summary>
     Wompi,
+
+    /// <summary>
+    /// Sandbox de PayU Latam, con las credenciales de prueba públicas de su documentación.
+    /// </summary>
+    PayU,
 }
 
 /// <summary>
-/// Configuración de la pasarela de pagos, leída de las variables <c>PASARELA_*</c> y <c>WOMPI_*</c> de <c>.env</c>.
+/// Configuración de la pasarela de pagos, leída de las variables <c>PASARELA_*</c>, <c>WOMPI_*</c> y <c>PAYU_*</c> de
+/// <c>.env</c>.
 /// </summary>
 public sealed class OpcionesDePasarela
 {
@@ -49,6 +55,11 @@ public sealed class OpcionesDePasarela
     /// Secreto de integridad del comercio, con el que se firma cada pago. Nunca se sube al repositorio.
     /// </summary>
     public string SecretoIntegridad { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Credenciales y direcciones de PayU Latam.
+    /// </summary>
+    public OpcionesDePayU PayU { get; init; } = new OpcionesDePayU();
 
     /// <summary>
     /// Si Wompi falla, cobra con la pasarela simulada. Solo para la demo: en producción el simulado aprobaría pagos
@@ -83,7 +94,7 @@ public sealed class OpcionesDePasarela
                 ? ProveedorDePasarela.Simulada
                 : Enum.TryParse<ProveedorDePasarela>(proveedor, ignoreCase: true, out var leido)
                     ? leido
-                    : throw new InvalidOperationException($"PASARELA_PROVEEDOR debe ser Simulada o Wompi, no '{proveedor}'."),
+                    : throw new InvalidOperationException($"PASARELA_PROVEEDOR debe ser Simulada, Wompi o PayU, no '{proveedor}'."),
             UrlApi = LeerUrl(configuracion, "WOMPI_URL_API") ?? new Uri("https://sandbox.wompi.co/v1/"),
             UrlCheckout = LeerUrl(configuracion, "WOMPI_URL_CHECKOUT") ?? new Uri("https://checkout.wompi.co/p/"),
             LlavePublica = configuracion["WOMPI_LLAVE_PUBLICA"]?.Trim() ?? string.Empty,
@@ -91,7 +102,27 @@ public sealed class OpcionesDePasarela
             RespaldoSimulado = bool.TryParse(configuracion["PASARELA_RESPALDO_SIMULADO"], out var respaldo) && respaldo,
             FallasAntesDeSoloEfectivo = LeerEnteroPositivo(configuracion, "PASARELA_FALLAS_ANTES_DE_SOLO_EFECTIVO", 3),
             MinutosSinPasarela = LeerEnteroPositivo(configuracion, "PASARELA_MINUTOS_SIN_PASARELA", 5),
+            PayU = new OpcionesDePayU
+            {
+                UrlCheckout = LeerUrlExacta(configuracion, "PAYU_URL_CHECKOUT") ?? new OpcionesDePayU().UrlCheckout,
+                UrlConsultas = LeerUrlExacta(configuracion, "PAYU_URL_CONSULTAS") ?? new OpcionesDePayU().UrlConsultas,
+                MerchantId = configuracion["PAYU_MERCHANT_ID"]?.Trim() ?? string.Empty,
+                AccountId = configuracion["PAYU_ACCOUNT_ID"]?.Trim() ?? string.Empty,
+                ApiKey = configuracion["PAYU_API_KEY"]?.Trim() ?? string.Empty,
+                ApiLogin = configuracion["PAYU_API_LOGIN"]?.Trim() ?? string.Empty,
+                CorreoDelComprador = configuracion["PAYU_CORREO_COMPRADOR"]?.Trim() is { Length: > 0 } correo
+                    ? correo
+                    : new OpcionesDePayU().CorreoDelComprador,
+            },
         };
+
+        if (opciones.Proveedor == ProveedorDePasarela.PayU &&
+            (opciones.PayU.MerchantId.Length == 0 || opciones.PayU.AccountId.Length == 0 ||
+                opciones.PayU.ApiKey.Length == 0 || opciones.PayU.ApiLogin.Length == 0))
+        {
+            throw new InvalidOperationException(
+                "Con PASARELA_PROVEEDOR=PayU faltan PAYU_MERCHANT_ID, PAYU_ACCOUNT_ID, PAYU_API_KEY o PAYU_API_LOGIN en el .env.");
+        }
 
         if (opciones.Proveedor == ProveedorDePasarela.Wompi &&
             (opciones.LlavePublica.Length == 0 || opciones.SecretoIntegridad.Length == 0))
@@ -114,6 +145,21 @@ public sealed class OpcionesDePasarela
         }
 
         return Uri.TryCreate(valor.EndsWith('/') ? valor : valor + "/", UriKind.Absolute, out var url)
+            ? url
+            : throw new InvalidOperationException($"{variable} no es una dirección válida.");
+    }
+
+    // Las direcciones de PayU apuntan a una página o un servicio concretos: se usan tal cual, sin agregar "/".
+    private static Uri? LeerUrlExacta(IConfiguration configuracion, string variable)
+    {
+        var valor = configuracion[variable]?.Trim();
+
+        if (string.IsNullOrEmpty(valor))
+        {
+            return null;
+        }
+
+        return Uri.TryCreate(valor, UriKind.Absolute, out var url)
             ? url
             : throw new InvalidOperationException($"{variable} no es una dirección válida.");
     }

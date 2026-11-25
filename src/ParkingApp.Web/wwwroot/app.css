@@ -28,14 +28,16 @@ h1:focus {
 .cuenta-campo {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #bdbdbd;
+    border: 1px solid var(--mud-palette-lines-inputs);
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
     border-radius: 4px;
     font: inherit;
 }
 
     .cuenta-campo:focus {
-        outline: 2px solid #594ae2;
-        border-color: #594ae2;
+        outline: 2px solid var(--mud-palette-primary);
+        border-color: var(--mud-palette-primary);
     }
 
 .cuenta-boton {
@@ -44,8 +46,8 @@ h1:focus {
     padding: 10px;
     border: none;
     border-radius: 4px;
-    background: #594ae2;
-    color: white;
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
     font: inherit;
     font-weight: 500;
     text-transform: uppercase;
@@ -53,6 +55,6 @@ h1:focus {
 }
 
 .validation-message {
-    color: #d32f2f;
+    color: var(--mud-palette-error);
     font-size: 0.85rem;
 }

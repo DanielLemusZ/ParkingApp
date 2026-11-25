@@ -1,20 +1,31 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
-    <Found Context="routeData">
-        @* AuthorizeRouteView revisa el [Authorize] de la página antes de mostrarla. *@
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
-            <NotAuthorized>
-                @if (context.User.Identity?.IsAuthenticated != true)
-                {
-                    @* Sin sesión: al inicio de sesión, recordando a dónde quería ir. *@
-                    <RedirigirAInicioDeSesion />
-                }
-                else
-                {
-                    @* Con sesión, pero sin el rol de la página. *@
-                    <AccesoDenegadoMensaje />
-                }
-            </NotAuthorized>
-        </AuthorizeRouteView>
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-</Router>
+﻿@* El tema elegido llega desde App (que lo leyó de la cookie) y baja en cascada hasta el layout. *@
+<CascadingValue Value="ModoOscuro" Name="ModoOscuro">
+    <Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+        <Found Context="routeData">
+            @* AuthorizeRouteView revisa el [Authorize] de la página antes de mostrarla. *@
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        @* Sin sesión: al inicio de sesión, recordando a dónde quería ir. *@
+                        <RedirigirAInicioDeSesion />
+                    }
+                    else
+                    {
+                        @* Con sesión, pero sin el rol de la página. *@
+                        <AccesoDenegadoMensaje />
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+    </Router>
+</CascadingValue>
+
+@code {
+    /// <summary>
+    /// Si se muestra el tema oscuro (el de los mockups) o el claro.
+    /// </summary>
+    [Parameter]
+    public bool ModoOscuro { get; set; } = true;
+}

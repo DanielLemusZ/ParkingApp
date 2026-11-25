@@ -8,6 +8,7 @@ using ParkingApp.Aplicacion;
 using ParkingApp.Infraestructura.Identidad;
 using ParkingApp.Infraestructura.Persistencia;
 using ParkingApp.Infraestructura.ServiciosExternos;
+using ParkingApp.Web.Apariencia;
 using ParkingApp.Web.Components;
 using ParkingApp.Web.Cuenta;
 using ParkingApp.Web.Tareas;
@@ -70,6 +71,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapControllers();
 app.MapearEndpointsDeCuenta();
+app.MapearPreferenciaDeTema();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

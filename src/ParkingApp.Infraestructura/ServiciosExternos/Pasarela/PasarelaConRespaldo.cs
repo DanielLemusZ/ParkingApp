@@ -27,7 +27,7 @@ public sealed partial class PasarelaConRespaldo : IPasarelaDePagos
     /// <summary>
     /// Crea la pasarela con respaldo.
     /// </summary>
-    /// <param name="principal">Pasarela real, por ejemplo Wompi.</param>
+    /// <param name="principal">Pasarela real, por ejemplo PayU.</param>
     /// <param name="simulada">Pasarela simulada, para el respaldo de la demo y sus transacciones.</param>
     /// <param name="opciones">Cuántas fallas se toleran, cuánto se espera y si hay respaldo simulado.</param>
     /// <param name="reloj">Reloj del sistema; en las pruebas, uno falso.</param>

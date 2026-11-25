@@ -25,7 +25,7 @@ internal sealed class FabricaDeClientesDePrueba : IHttpClientFactory
 
     public HttpClient CreateClient(string name)
     {
-        return new HttpClient(new Manejador(responder, solicitudes)) { BaseAddress = new Uri("https://sandbox.wompi.test/v1/") };
+        return new HttpClient(new Manejador(responder, solicitudes)) { BaseAddress = new Uri("https://pasarela.test/") };
     }
 
     private sealed class Manejador : HttpMessageHandler

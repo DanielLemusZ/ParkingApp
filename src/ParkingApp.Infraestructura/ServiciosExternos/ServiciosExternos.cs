@@ -11,7 +11,7 @@ namespace ParkingApp.Infraestructura.ServiciosExternos;
 
 /// <summary>
 /// Registro de los adaptadores de servicios externos. La facturación es simulada y el lector de placas corre en el
-/// mismo equipo. La pasarela de pagos es la simulada, o el sandbox de PayU o de Wompi si así se configura en <c>.env</c>.
+/// mismo equipo. La pasarela de pagos es la simulada, o el sandbox de PayU si así se configura en <c>.env</c>.
 /// </summary>
 public static class ServiciosExternos
 {
@@ -40,15 +40,9 @@ public static class ServiciosExternos
         servicios.AddSingleton(opciones.PayU);
         servicios.AddSingleton<AdaptadorPasarelaSimulada>();
 
-        // Los adaptadores se registran siempre, porque sus pantallas (la pasarela simulada y el formulario de PayU)
+        // Los dos adaptadores se registran siempre, porque sus pantallas (la pasarela simulada y el formulario de PayU)
         // existen siempre; solo el proveedor elegido atiende la caja.
-        servicios.AddHttpClient(AdaptadorWompi.NombreDelCliente, cliente =>
-        {
-            cliente.BaseAddress = opciones.UrlApi;
-            cliente.Timeout = TimeSpan.FromSeconds(10);
-        });
         servicios.AddHttpClient(AdaptadorPayU.NombreDelCliente, cliente => cliente.Timeout = TimeSpan.FromSeconds(15));
-        servicios.AddSingleton<AdaptadorWompi>();
         servicios.AddSingleton<AdaptadorPayU>();
 
         if (opciones.Proveedor == ProveedorDePasarela.Simulada)
@@ -58,9 +52,7 @@ public static class ServiciosExternos
         }
 
         servicios.AddSingleton<IPasarelaDePagos>(proveedor => new PasarelaConRespaldo(
-            opciones.Proveedor == ProveedorDePasarela.PayU
-                ? proveedor.GetRequiredService<AdaptadorPayU>()
-                : proveedor.GetRequiredService<AdaptadorWompi>(),
+            proveedor.GetRequiredService<AdaptadorPayU>(),
             proveedor.GetRequiredService<AdaptadorPasarelaSimulada>(),
             opciones,
             proveedor.GetRequiredService<TimeProvider>(),

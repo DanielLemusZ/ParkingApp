@@ -2,7 +2,7 @@ namespace ParkingApp.Aplicacion.Pagos;
 
 /// <summary>
 /// Puerto de la pasarela de pagos (tarjeta, Nequi o QR). La caja depende de esta interfaz y no de un proveedor:
-/// el adaptador simulado, el sandbox de Wompi o una pasarela real se cambian sin tocar los casos de uso.
+/// el adaptador simulado, el sandbox de PayU o una pasarela real se cambian sin tocar los casos de uso.
 /// </summary>
 public interface IPasarelaDePagos
 {

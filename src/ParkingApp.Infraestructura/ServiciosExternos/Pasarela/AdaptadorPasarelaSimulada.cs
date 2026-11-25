@@ -12,7 +12,7 @@ namespace ParkingApp.Infraestructura.ServiciosExternos.Pasarela;
 public sealed class AdaptadorPasarelaSimulada : IPasarelaDePagos
 {
     /// <summary>
-    /// Prefijo de las transacciones simuladas, para distinguirlas de las de Wompi.
+    /// Prefijo de las transacciones simuladas, para distinguirlas de las de PayU.
     /// </summary>
     public const string Prefijo = "SIM-";
 

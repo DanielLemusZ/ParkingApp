@@ -1,9 +1,11 @@
 namespace ParkingApp.Aplicacion.Identidad;
 
 /// <summary>
-/// Decide qué opciones del menú ve cada rol (F-10): el Administrador ve todo; el Operador, solo el carril y la caja.
-/// Las pantallas y la API aplican la misma regla con <c>[Authorize(Roles = ...)]</c>; el menú solo evita mostrar
-/// opciones que el usuario no puede abrir.
+/// Decide qué pestañas del menú ve cada rol (F-10): el Administrador ve todo; el Operador, solo el carril
+/// (<em>Monitoreo de acceso</em>) y la caja. Las pantallas y la API aplican la misma regla con
+/// <c>[Authorize(Roles = ...)]</c>; el menú solo evita mostrar opciones que el usuario no puede abrir.
+/// Tarifas, franjas, cupos, umbral y usuarios viven en el submenú de <em>Configuración</em>, y los ingresos, salidas
+/// y cobros en el de <em>Historial</em>, como en los mockups (#71).
 /// </summary>
 public static class MenuPorRol
 {
@@ -11,16 +13,14 @@ public static class MenuPorRol
     private static readonly IReadOnlyList<string> SoloAdministrador = [Roles.Administrador];
 
     /// <summary>
-    /// Todas las opciones del menú, en el orden en que se muestran.
+    /// Todas las pestañas del menú, en el orden en que se muestran.
     /// </summary>
     public static IReadOnlyList<OpcionDelMenu> Opciones { get; } =
     [
-        new OpcionDelMenu("Carril", "/carril", OperadorOAdministrador),
+        new OpcionDelMenu("Monitoreo de acceso", "/carril", OperadorOAdministrador),
         new OpcionDelMenu("Caja", "/caja", OperadorOAdministrador),
-        new OpcionDelMenu("Tarifas", "/tarifas", SoloAdministrador),
-        new OpcionDelMenu("Consultas", "/consultas", SoloAdministrador),
+        new OpcionDelMenu("Historial", "/historial", SoloAdministrador),
         new OpcionDelMenu("Configuración", "/configuracion", SoloAdministrador),
-        new OpcionDelMenu("Usuarios", "/usuarios", SoloAdministrador),
     ];
 
     /// <summary>

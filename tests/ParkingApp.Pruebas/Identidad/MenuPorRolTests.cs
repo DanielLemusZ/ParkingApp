@@ -2,16 +2,16 @@ using ParkingApp.Aplicacion.Identidad;
 
 namespace ParkingApp.Pruebas.Identidad;
 
-// Criterios 4 y 6 del issue #23 y criterio 1 del #68: el menú muestra solo las opciones del rol, y Usuarios es solo
-// del Administrador.
+// Criterios 4 y 6 del issue #23, criterio 1 del #68 y criterio 2 del #71: el menú muestra solo las pestañas del rol.
+// Con los mockups (#71), Tarifas y Usuarios pasan al submenú de Configuración, y Consultas se llama Historial.
 public class MenuPorRolTests
 {
     private static readonly string[] CarrilYCaja = ["/carril", "/caja"];
 
-    private static readonly string[] TodasLasPantallas = ["/carril", "/caja", "/tarifas", "/consultas", "/configuracion", "/usuarios"];
+    private static readonly string[] TodasLasPestanas = ["/carril", "/caja", "/historial", "/configuracion"];
 
     [Fact]
-    public void Operador_ve_en_el_menu_solo_el_carril_y_la_caja()
+    public void Operador_ve_solo_monitoreo_de_acceso_y_caja()
     {
         var opciones = MenuPorRol.Para([Roles.Operador]);
 
@@ -19,11 +19,11 @@ public class MenuPorRolTests
     }
 
     [Fact]
-    public void Administrador_ve_en_el_menu_todas_las_opciones()
+    public void Administrador_ve_ademas_las_pestanas_de_historial_y_configuracion()
     {
         var opciones = MenuPorRol.Para([Roles.Administrador]);
 
-        Assert.Equal(TodasLasPantallas, opciones.Select(opcion => opcion.Ruta));
+        Assert.Equal(TodasLasPestanas, opciones.Select(opcion => opcion.Ruta));
     }
 
     [Fact]
@@ -31,7 +31,15 @@ public class MenuPorRolTests
     {
         var opciones = MenuPorRol.Para([Roles.Operador, Roles.Administrador]);
 
-        Assert.Equal(TodasLasPantallas, opciones.Select(opcion => opcion.Ruta));
+        Assert.Equal(TodasLasPestanas, opciones.Select(opcion => opcion.Ruta));
+    }
+
+    [Fact]
+    public void Pestana_del_carril_se_llama_monitoreo_de_acceso()
+    {
+        var carril = Assert.Single(MenuPorRol.Opciones, opcion => opcion.Ruta == "/carril");
+
+        Assert.Equal("Monitoreo de acceso", carril.Texto);
     }
 
     [Theory]

@@ -32,6 +32,31 @@ public static class TextosDeCobro
     /// </summary>
     public const string CobroNoPendiente = "El cobro no está pendiente";
 
+    /// <summary>
+    /// Respuesta de la caja cuando la pasarela rechaza el pago: el cobro sigue pendiente.
+    /// </summary>
+    public const string PagoRechazadoPorLaPasarela = "Pago rechazado por la pasarela";
+
+    /// <summary>
+    /// Respuesta de la caja cuando la pasarela falló varias veces seguidas o no respondió al iniciar el pago.
+    /// </summary>
+    public const string PasarelaNoDisponible = "Pasarela no disponible: cobre en efectivo";
+
+    /// <summary>
+    /// Respuesta de la caja cuando la pasarela no respondió al consultar una transacción.
+    /// </summary>
+    public const string PasarelaSinRespuesta = "La pasarela no respondió. Consulte el pago de nuevo en unos segundos";
+
+    /// <summary>
+    /// Respuesta de la caja cuando el pago sigue en proceso, por ejemplo mientras se aprueba en Nequi.
+    /// </summary>
+    public const string PagoEnProceso = "El pago sigue en proceso en la pasarela. Consulte de nuevo en unos segundos";
+
+    /// <summary>
+    /// Respuesta de la caja cuando la transacción no la inició esta caja.
+    /// </summary>
+    public const string TransaccionDesconocida = "La transacción no corresponde a un pago de esta caja";
+
     // Pesos colombianos sin decimales y con punto de miles, igual en cualquier equipo.
     private static readonly NumberFormatInfo FormatoDePesos = new NumberFormatInfo
     {
@@ -114,6 +139,39 @@ public static class TextosDeCobro
     public static string TotalCambio(decimal totalActual)
     {
         return $"No se registró el pago: el total cambió a {Pesos(totalActual)}. Revisa el detalle y vuelve a cobrar";
+    }
+
+    /// <summary>
+    /// Respuesta de la caja cuando la pasarela rechaza el pago, por ejemplo
+    /// <c>Pago rechazado por la pasarela: fondos insuficientes</c>.
+    /// </summary>
+    /// <param name="motivo">Motivo que dio la pasarela, si lo dio.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string PagoRechazado(string? motivo)
+    {
+        return string.IsNullOrWhiteSpace(motivo) ? PagoRechazadoPorLaPasarela : $"{PagoRechazadoPorLaPasarela}: {motivo.Trim()}";
+    }
+
+    /// <summary>
+    /// Respuesta de la caja cuando la pasarela quedó lista, por ejemplo <c>Pago de $8.000 enviado a la pasarela</c>.
+    /// </summary>
+    /// <param name="total">Total que se cobra.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string PagoEnLaPasarela(decimal total)
+    {
+        return $"Pago de {Pesos(total)} enviado a la pasarela";
+    }
+
+    /// <summary>
+    /// Respuesta de la caja cuando la pasarela aprobó un valor distinto de lo pendiente, por ejemplo porque a las 06:00
+    /// apareció el cobro del día nuevo mientras el conductor pagaba.
+    /// </summary>
+    /// <param name="pagado">Valor que aprobó la pasarela.</param>
+    /// <param name="pendiente">Lo que debe ahora la placa.</param>
+    /// <returns>El texto que se muestra en la caja.</returns>
+    public static string ValorPagadoNoCoincide(decimal pagado, decimal pendiente)
+    {
+        return $"No se registró el pago: la pasarela aprobó {Pesos(pagado)} y la placa debe {Pesos(pendiente)}. Revíselo con el administrador";
     }
 
     /// <summary>

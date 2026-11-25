@@ -174,12 +174,16 @@ public sealed class Cobro
     /// <param name="operador">Operador que registra el pago.</param>
     /// <param name="referencia">Referencia única de la solicitud de pago.</param>
     /// <param name="fechaHora">Fecha y hora del pago, en UTC.</param>
+    /// <param name="transaccionDeLaPasarela">
+    /// Transacción que devolvió la pasarela de pagos. Es obligatoria con la pasarela y debe faltar con el efectivo.
+    /// </param>
     /// <returns>El pago registrado.</returns>
     /// <exception cref="InvalidOperationException">El cobro no está pendiente.</exception>
     /// <exception cref="ArgumentException">
-    /// El operador está vacío o es muy largo, la referencia está vacía, o la fecha y la hora no están en UTC.
+    /// El operador está vacío o es muy largo, la referencia está vacía, la fecha y la hora no están en UTC, o la
+    /// transacción de la pasarela no corresponde al medio de pago.
     /// </exception>
-    public Pago Pagar(MedioDePago medio, string operador, Guid referencia, DateTimeOffset fechaHora)
+    public Pago Pagar(MedioDePago medio, string operador, Guid referencia, DateTimeOffset fechaHora, string? transaccionDeLaPasarela = null)
     {
         if (Estado != EstadoDeCobro.Pendiente)
         {
@@ -187,7 +191,7 @@ public sealed class Cobro
         }
 
         // Se crea el pago antes de cambiar el estado: si un dato es inválido, el cobro sigue pendiente.
-        var pago = Pago.Registrar(Id, Valor, medio, operador, referencia, fechaHora);
+        var pago = Pago.Registrar(Id, Valor, medio, operador, referencia, fechaHora, transaccionDeLaPasarela);
         Estado = EstadoDeCobro.Pagado;
 
         return pago;

@@ -173,6 +173,33 @@ En cada pago queda el correo del usuario que lo registró en la caja.
 - Un doble clic o un reintento no cobra dos veces: responde *El pago ya estaba registrado*.
 - En la API: `POST api/caja/pagos/placa`, con `placa` y `referencia`. El endpoint `POST api/caja/pagos`, que paga un solo cobro, se mantiene.
 
+**Pago con la pasarela.** En la caja, el operador elige el medio: **Efectivo** o **Pasarela** (tarjeta, Nequi o QR). Con la pasarela, *Cobrar con la pasarela* lleva a la página de pago. Al terminar, la pasarela vuelve a `/caja/pasarela/retorno`, que consulta la transacción:
+
+- **Aprobada:** se pagan todos los cobros de la placa con el medio *Pasarela*, y cada pago guarda la transacción, la fecha y la hora y el operador. Deja el mismo pase vigente que el efectivo.
+- **Rechazada:** el cobro sigue Pendiente y se muestra *Pago rechazado por la pasarela* con el motivo.
+- **En proceso** (por ejemplo, Nequi esperando la aprobación) **o sin respuesta:** el cobro no cambia, y *Consultar de nuevo* vuelve a preguntar.
+- **Idempotente:** si la misma transacción se confirma dos veces, por ejemplo al recargar la página, responde *El pago ya estaba registrado*. La referencia de la transacción es la referencia única del pago.
+- La referencia que va a la pasarela lleva la placa (`ABC123-<referencia>`) y la pasarela la firma junto con el valor, así que no se puede cambiar en el camino. Si la pasarela aprueba un valor distinto de lo que debe la placa, no se registra el pago y se avisa.
+
+Hay dos pasarelas, que se eligen en `.env`. Ninguna usa *webhook*, así que no necesitan una dirección pública; con PayU basta con que la caja tenga internet:
+
+| `PASARELA_PROVEEDOR` | Qué hace |
+|---|---|
+| `Simulada` (o vacío) | No usa internet. La página de pago es una pantalla de la caja donde el operador elige **Aprobar** o **Rechazar**, con un motivo. Las transacciones viven en memoria: se pierden al reiniciar |
+| `PayU` | [Sandbox de PayU Latam](https://developers.payulatam.com/latam/en/docs/getting-started/test-your-solution.html), **sin registro**: usa las credenciales de prueba públicas de su documentación. La caja pasa por `/caja/pasarela/payu`, que envía el formulario firmado (SHA-256) al WebCheckout; al volver, consulta la orden por su referencia en la API de consultas |
+
+**Configurar PayU** (recomendado para la demo):
+
+1. En tu `.env`: `PASARELA_PROVEEDOR=PayU` y las variables `PAYU_*` de `.env.example`, que ya traen las credenciales públicas del sandbox para Colombia.
+2. En la caja, *Cobrar con la pasarela* abre el checkout de PayU ("Transacción en modo de pruebas"). Paga con una [tarjeta de prueba](https://developers.payulatam.com/latam/en/docs/getting-started/test-your-solution.html), por ejemplo VISA `4097440000000004`:
+   - **aprobado:** nombre del titular `APPROVED`, CVV `777` y un mes de vencimiento menor que 6 con año futuro (por ejemplo 05/27);
+   - **rechazado:** nombre del titular `REJECTED`, CVV `666` y un mes mayor que 6 (por ejemplo 07/27).
+3. PayU muestra el resultado; con *Regresar al sitio de la tienda* vuelve a la caja, que registra el pago.
+
+**Si PayU falla.** Una falla técnica (sin internet, demora o error de PayU) no es un rechazo. Con 3 fallas seguidas, la caja muestra *Pasarela no disponible: cobre en efectivo* y cobra solo en efectivo durante 5 minutos; después vuelve a intentar. Con `PASARELA_RESPALDO_SIMULADO=true` (**solo para la demo**), en lugar de eso cobra con la pasarela simulada. En producción debe quedar en `false`, porque la simulada aprueba pagos sin que entre dinero.
+
+En la API: `POST api/caja/pagos/pasarela`, con `placa`, `total` y `referencia`, devuelve la `urlDePago`. Después, `POST api/caja/pagos/pasarela/{transaccionId}/confirmacion` registra el pago.
+
 **Probar la API desde Swagger:** inicia sesión en la aplicación y abre `/swagger` en el mismo navegador. Swagger envía la cookie de la sesión, así que cada endpoint responde según tu rol.
 
 ---

@@ -45,6 +45,8 @@ public static class ServiciosDeAplicacion
         servicios.AddScoped<ListarCobrosPendientes>();
         servicios.AddScoped<RegistrarPagoEnEfectivo>();
         servicios.AddScoped<RegistrarPagoDeLaPlacaEnEfectivo>();
+        servicios.AddScoped<IniciarPagoConPasarela>();
+        servicios.AddScoped<ConfirmarPagoConPasarela>();
         servicios.AddScoped<GenerarCobrosDelDiaNuevo>();
 
         return servicios;

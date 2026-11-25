@@ -32,6 +32,10 @@ internal sealed class PagoConfiguracion : IEntityTypeConfiguration<Pago>
         builder.Property(pago => pago.Medio).HasConversion<string>().HasMaxLength(20);
         builder.Property(pago => pago.Operador).HasMaxLength(Pago.LargoMaximoOperador);
 
+        // Sin índice único: al pagar todo lo pendiente de una placa, sus pagos comparten la transacción. Una confirmación
+        // repetida la frena el índice único de la referencia, que es la misma que viaja a la pasarela.
+        builder.Property(pago => pago.TransaccionDeLaPasarela).HasMaxLength(Pago.LargoMaximoTransaccion);
+
         // Un cobro pagado no se puede borrar.
         builder.HasOne<Cobro>().WithMany().HasForeignKey(pago => pago.CobroId).OnDelete(DeleteBehavior.Restrict);
 

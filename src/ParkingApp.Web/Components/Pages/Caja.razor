@@ -3,14 +3,17 @@
 @using System.Globalization
 @using ParkingApp.Aplicacion.Cobros
 @using ParkingApp.Aplicacion.Pagos
+@using ParkingApp.Dominio.Pagos
 @using ParkingApp.Web.Components.Lecturas
 @inject IServiceScopeFactory FabricaDeAlcances
+@inject IPasarelaDePagos Pasarela
+@inject NavigationManager Navegacion
 
 <PageTitle>Caja</PageTitle>
 
 <MudText Typo="Typo.h4" GutterBottom="true">Caja</MudText>
 <PlacasPorRevisar AlValidar="CargarAsync" />
-<MudText Class="mb-4">Vehículos con cobros pendientes. Elige uno para pagar en efectivo todo lo que debe desde que entró.</MudText>
+<MudText Class="mb-4">Vehículos con cobros pendientes. Elige uno para cobrar, en efectivo o con la pasarela, todo lo que debe desde que entró.</MudText>
 
 <MudGrid>
     <MudItem xs="12" md="7">
@@ -44,7 +47,7 @@
 
     <MudItem xs="12" md="5">
         <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" GutterBottom="true">Pago en efectivo</MudText>
+            <MudText Typo="Typo.h6" GutterBottom="true">Pago</MudText>
             @if (elegida is null)
             {
                 <MudText>Elige un vehículo de la lista.</MudText>
@@ -73,10 +76,34 @@
                     </tbody>
                 </MudSimpleTable>
                 <MudText Typo="Typo.h5" Class="my-2">Total: @TextosDeCobro.Pesos(elegida.Total)</MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Payments"
-                           Disabled="pagando" OnClick="PagarAsync">
-                    @(pagando ? "Registrando…" : $"Registrar pago de {TextosDeCobro.Pesos(elegida.Total)}")
-                </MudButton>
+                <MudRadioGroup T="MedioDePago" @bind-Value="medio" Class="mb-2">
+                    <MudRadio Value="MedioDePago.Efectivo" Color="Color.Primary">Efectivo</MudRadio>
+                    <MudRadio Value="MedioDePago.Pasarela" Color="Color.Primary" Disabled="!Pasarela.Disponible">
+                        Pasarela (tarjeta, Nequi o QR)
+                    </MudRadio>
+                </MudRadioGroup>
+                @if (!Pasarela.Disponible)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Warning" Class="mb-2">@TextosDeCobro.PasarelaNoDisponible</MudText>
+                }
+                @if (medio == MedioDePago.Pasarela && Pasarela.Disponible)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CreditCard"
+                               Disabled="pagando" OnClick="CobrarConPasarelaAsync">
+                        @(pagando ? "Abriendo la pasarela…" : $"Cobrar {TextosDeCobro.Pesos(elegida.Total)} con la pasarela")
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Payments"
+                               Disabled="pagando" OnClick="PagarAsync">
+                        @(pagando ? "Registrando…" : $"Registrar pago en efectivo de {TextosDeCobro.Pesos(elegida.Total)}")
+                    </MudButton>
+                }
+            }
+            @if (avisoDeLaPasarela is not null)
+            {
+                <MudAlert Class="mt-4" Severity="Severity.Warning">@avisoDeLaPasarela</MudAlert>
             }
             @if (resultado is not null)
             {
@@ -100,7 +127,9 @@
     private string? busqueda;
     private DeudaDeVehiculo? elegida;
     private ResultadoDePagoDeLaPlaca? resultado;
+    private string? avisoDeLaPasarela;
     private bool pagando;
+    private MedioDePago medio = MedioDePago.Efectivo;
 
     // Se genera al elegir el vehículo, no al pagar: un doble clic o un reintento mandan la misma referencia,
     // y la caja registra un solo pago.
@@ -125,6 +154,46 @@
         elegida = deuda;
         referencia = Guid.NewGuid();
         resultado = null;
+        avisoDeLaPasarela = null;
+    }
+
+    // Prepara el pago y lleva al conductor a la página de la pasarela. Al terminar, la pasarela vuelve a
+    // /caja/pasarela/retorno, que confirma la transacción y registra el pago.
+    private async Task CobrarConPasarelaAsync()
+    {
+        if (elegida is null || pagando)
+        {
+            return;
+        }
+
+        pagando = true;
+        resultado = null;
+        avisoDeLaPasarela = null;
+
+        try
+        {
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var iniciar = alcance.ServiceProvider.GetRequiredService<IniciarPagoConPasarela>();
+            var retorno = new Uri(Navegacion.ToAbsoluteUri("caja/pasarela/retorno").ToString());
+
+            var inicio = await iniciar.EjecutarAsync(elegida.Placa, elegida.Total, referencia, retorno);
+
+            if (inicio.Iniciado && inicio.UrlDePago is not null)
+            {
+                // Carga completa: la página de pago puede ser de la pasarela o una página estática de la caja.
+                Navegacion.NavigateTo(inicio.UrlDePago.ToString(), forceLoad: true);
+                return;
+            }
+
+            // Sin pasarela, la caja vuelve al efectivo; si cambió el total, se recarga el detalle.
+            avisoDeLaPasarela = inicio.Motivo;
+            medio = MedioDePago.Efectivo;
+            await CargarAsync();
+        }
+        finally
+        {
+            pagando = false;
+        }
     }
 
     private async Task PagarAsync()

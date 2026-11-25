@@ -1,0 +1,71 @@
+@page "/caja/pasarela/simulada"
+@attribute [Authorize(Roles = Roles.OperadorOAdministrador)]
+@using ParkingApp.Aplicacion.Cobros
+@using ParkingApp.Aplicacion.Pagos
+@using ParkingApp.Infraestructura.ServiciosExternos.Pasarela
+@inject AdaptadorPasarelaSimulada Simulada
+@inject NavigationManager Navegacion
+
+<PageTitle>Pasarela simulada</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <MudPaper Class="pa-6 mt-4">
+        <MudText Typo="Typo.h5" GutterBottom="true">Pasarela de pagos simulada</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            Hace las veces del banco en la demo: no usa internet. Elige si el pago se aprueba o se rechaza.
+        </MudText>
+
+        @if (solicitud is null)
+        {
+            <MudAlert Severity="Severity.Warning">La transacción no existe o ya se resolvió.</MudAlert>
+            <MudButton Class="mt-4" Variant="Variant.Text" Href="/caja">Volver a la caja</MudButton>
+        }
+        else
+        {
+            <MudText><b>Concepto:</b> @solicitud.Concepto</MudText>
+            <MudText Typo="Typo.h4" Class="my-3">@TextosDeCobro.Pesos(solicitud.Valor)</MudText>
+            <MudText Typo="Typo.caption" Class="mb-4 d-block">Transacción @Transaccion</MudText>
+
+            <MudTextField T="string" Label="Motivo del rechazo" @bind-Value="motivoDelRechazo" Class="mb-4" />
+
+            <MudStack Row="true">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.CheckCircle"
+                           OnClick="() => Resolver(true)">
+                    Aprobar pago
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.Cancel"
+                           OnClick="() => Resolver(false)">
+                    Rechazar pago
+                </MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private SolicitudDePagoEnPasarela? solicitud;
+    private string motivoDelRechazo = "Fondos insuficientes";
+
+    [SupplyParameterFromQuery(Name = "transaccion")]
+    private string? Transaccion { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        solicitud = Simulada.BuscarPendiente(Transaccion);
+    }
+
+    private void Resolver(bool aprobar)
+    {
+        if (Transaccion is null)
+        {
+            return;
+        }
+
+        var retorno = Simulada.Resolver(Transaccion, aprobar, motivoDelRechazo);
+
+        if (retorno is not null)
+        {
+            Navegacion.NavigateTo(retorno.ToString());
+        }
+    }
+}

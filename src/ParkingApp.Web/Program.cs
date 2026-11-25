@@ -24,7 +24,7 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AgregarAplicacion();
 builder.Services.AgregarBaseDeDatos(builder.Configuration, builder.Environment.IsDevelopment());
-builder.Services.AgregarServiciosExternos();
+builder.Services.AgregarServiciosExternos(builder.Configuration);
 builder.Services.AgregarIdentidad();
 
 // Cobro del día nuevo: corre al arrancar y cada día a las 06:00 de la sede.

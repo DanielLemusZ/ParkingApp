@@ -181,20 +181,22 @@ En cada pago queda el correo del usuario que lo registró en la caja.
 - **Idempotente:** si la misma transacción se confirma dos veces, por ejemplo al recargar la página, responde *El pago ya estaba registrado*. La referencia de la transacción es la referencia única del pago.
 - La referencia que va a la pasarela lleva la placa (`ABC123-<referencia>`) y la pasarela la firma junto con el valor, así que no se puede cambiar en el camino. Si la pasarela aprueba un valor distinto de lo que debe la placa, no se registra el pago y se avisa.
 
-Hay dos pasarelas, que se eligen en `.env`:
+Hay dos pasarelas, que se eligen en `.env`. Ninguna usa *webhook*, así que no necesitan una dirección pública; con PayU basta con que la caja tenga internet:
 
 | `PASARELA_PROVEEDOR` | Qué hace |
 |---|---|
 | `Simulada` (o vacío) | No usa internet. La página de pago es una pantalla de la caja donde el operador elige **Aprobar** o **Rechazar**, con un motivo. Las transacciones viven en memoria: se pierden al reiniciar |
-| `Wompi` | [Sandbox de Wompi](https://docs.wompi.co/en/docs/colombia/metodos-de-pago/): el conductor paga en el Web Checkout de Wompi. No usa *webhook*, así que no necesita una dirección pública; basta con que la caja tenga internet |
+| `PayU` | [Sandbox de PayU Latam](https://developers.payulatam.com/latam/en/docs/getting-started/test-your-solution.html), **sin registro**: usa las credenciales de prueba públicas de su documentación. La caja pasa por `/caja/pasarela/payu`, que envía el formulario firmado (SHA-256) al WebCheckout; al volver, consulta la orden por su referencia en la API de consultas |
 
-**Si Wompi falla.** Una falla técnica (sin internet, demora o error de Wompi) no es un rechazo. Con 3 fallas seguidas, la caja muestra *Pasarela no disponible: cobre en efectivo* y cobra solo en efectivo durante 5 minutos; después vuelve a intentar. Con `PASARELA_RESPALDO_SIMULADO=true` (**solo para la demo**), en lugar de eso cobra con la pasarela simulada. En producción debe quedar en `false`, porque la simulada aprueba pagos sin que entre dinero.
+**Configurar PayU** (recomendado para la demo):
 
-**Configurar Wompi:**
+1. En tu `.env`: `PASARELA_PROVEEDOR=PayU` y las variables `PAYU_*` de `.env.example`, que ya traen las credenciales públicas del sandbox para Colombia.
+2. En la caja, *Cobrar con la pasarela* abre el checkout de PayU ("Transacción en modo de pruebas"). Paga con una [tarjeta de prueba](https://developers.payulatam.com/latam/en/docs/getting-started/test-your-solution.html), por ejemplo VISA `4097440000000004`:
+   - **aprobado:** nombre del titular `APPROVED`, CVV `777` y un mes de vencimiento menor que 6 con año futuro (por ejemplo 05/27);
+   - **rechazado:** nombre del titular `REJECTED`, CVV `666` y un mes mayor que 6 (por ejemplo 07/27).
+3. PayU muestra el resultado; con *Regresar al sitio de la tienda* vuelve a la caja, que registra el pago.
 
-1. Crea una cuenta de comercio en [comercios.wompi.co](https://comercios.wompi.co) y, en *Desarrolladores*, copia la llave pública de pruebas (`pub_test_…`) y el secreto de integridad de pruebas (`test_integrity_…`).
-2. En tu `.env`: `PASARELA_PROVEEDOR=Wompi`, `WOMPI_LLAVE_PUBLICA` y `WOMPI_SECRETO_INTEGRIDAD`. Si falta alguna, la aplicación no arranca y dice cuál.
-3. Paga con los [datos de prueba del sandbox](https://docs.wompi.co/en/docs/colombia/datos-de-prueba-en-sandbox/): por ejemplo, la tarjeta `4242 4242 4242 4242` se aprueba y la `4111 1111 1111 1111` se rechaza.
+**Si PayU falla.** Una falla técnica (sin internet, demora o error de PayU) no es un rechazo. Con 3 fallas seguidas, la caja muestra *Pasarela no disponible: cobre en efectivo* y cobra solo en efectivo durante 5 minutos; después vuelve a intentar. Con `PASARELA_RESPALDO_SIMULADO=true` (**solo para la demo**), en lugar de eso cobra con la pasarela simulada. En producción debe quedar en `false`, porque la simulada aprueba pagos sin que entre dinero.
 
 En la API: `POST api/caja/pagos/pasarela`, con `placa`, `total` y `referencia`, devuelve la `urlDePago`. Después, `POST api/caja/pagos/pasarela/{transaccionId}/confirmacion` registra el pago.
 

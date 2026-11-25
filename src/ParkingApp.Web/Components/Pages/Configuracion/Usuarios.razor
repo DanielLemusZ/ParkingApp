@@ -1,15 +1,16 @@
-@page "/usuarios"
+@page "/configuracion/usuarios"
 @attribute [Authorize(Roles = Roles.Administrador)]
+@layout LayoutDeConfiguracion
 @inject IServiceScopeFactory FabricaDeAlcances
 
 <PageTitle>Usuarios</PageTitle>
 
-<MudText Typo="Typo.h4" GutterBottom="true">Usuarios</MudText>
-<MudText Class="mb-4">Crea usuarios y administra su rol, su contraseña y su acceso. Elige uno de la lista para ver sus acciones.</MudText>
+<MudText Typo="Typo.h4" Class="mb-1">Usuarios</MudText>
+<MudText Typo="Typo.body2" Class="texto-tenue mb-4">Crea usuarios y administra su rol, su contraseña y su acceso. Elige uno de la lista para ver sus acciones.</MudText>
 
 <MudGrid>
     <MudItem xs="12" md="7">
-        <MudPaper Class="pa-4">
+        <MudPaper Outlined="true" Class="pa-6">
             <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
                 <MudTextField T="string" Label="Buscar por correo" @bind-Value="busqueda" Immediate="true"
                               DebounceInterval="300" OnDebounceIntervalElapsed="BuscarAsync"
@@ -41,7 +42,7 @@
     </MudItem>
 
     <MudItem xs="12" md="5">
-        <MudPaper Class="pa-4">
+        <MudPaper Outlined="true" Class="pa-6">
             @if (elegido is null)
             {
                 <MudText Typo="Typo.h6" GutterBottom="true">Nuevo usuario</MudText>

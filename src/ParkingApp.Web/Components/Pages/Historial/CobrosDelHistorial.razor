@@ -1,0 +1,68 @@
+@page "/historial/cobros"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@layout LayoutDeHistorial
+@using System.Globalization
+@using ParkingApp.Aplicacion.Cobros
+@using ParkingApp.Aplicacion.Reportes
+@inject IServicioConsultas ServicioConsultas
+
+<PageTitle>Cobros</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Cobros</MudText>
+
+<FiltrosDeHistorial Filtros="filtros" ConEstado="true" AlFiltrar="BuscarAsync" MensajeError="@mensajeError" />
+
+<MudPaper Outlined="true">
+    <MudDataGrid Items="@cobros" Dense="true" Hover="true" Elevation="0">
+        <Columns>
+            <TemplateColumn Title="Placa">
+                <CellTemplate><PlacaColombiana Placa="@context.Item.Placa" Compacta="true" /></CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Día operativo">
+                <CellTemplate>
+                    @context.Item.DiaOperativo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Franja" Title="Franja" />
+            <TemplateColumn Title="Valor">
+                <CellTemplate>@TextosDeCobro.Pesos(context.Item.Valor)</CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Estado">
+                <CellTemplate><ChipDeEstado Estado="@context.Item.Estado.ToString()" /></CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body2" Class="texto-tenue">No hay resultados.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="CobroConsultaDto" RowsPerPageString="Filas por página:" InfoFormat="{first_item}-{last_item} de {all_items}" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private readonly FiltrosConsultaDto filtros = new();
+    private List<CobroConsultaDto> cobros = [];
+    private string? mensajeError;
+
+    protected override Task OnInitializedAsync()
+    {
+        return BuscarAsync();
+    }
+
+    private async Task BuscarAsync()
+    {
+        mensajeError = null;
+
+        try
+        {
+            cobros = await ServicioConsultas.ConsultarCobrosAsync(filtros);
+        }
+        catch (ArgumentException ex)
+        {
+            // La fecha inicial es posterior a la final: se muestra el mensaje y se vacía la tabla.
+            mensajeError = ex.Message;
+            cobros.Clear();
+        }
+    }
+}

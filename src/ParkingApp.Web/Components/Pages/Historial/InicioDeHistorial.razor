@@ -1,0 +1,11 @@
+@page "/historial"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@inject NavigationManager Navegacion
+
+@* La pestaña Historial abre su primera subpágina. *@
+@code {
+    protected override void OnInitialized()
+    {
+        Navegacion.NavigateTo("/historial/ingresos-y-salidas", replace: true);
+    }
+}

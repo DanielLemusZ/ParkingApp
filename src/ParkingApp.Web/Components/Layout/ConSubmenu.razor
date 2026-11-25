@@ -1,0 +1,35 @@
+@* Submenú lateral de los mockups (#71): a la izquierda las opciones, con la activa en verde; a la derecha la subpágina. *@
+<div class="con-submenu">
+    <nav class="submenu" aria-label="@Titulo">
+        @foreach (var opcion in Opciones)
+        {
+            <NavLink href="@opcion.Ruta" Match="NavLinkMatch.All" class="opcion" ActiveClass="activa">
+                <MudIcon Icon="@opcion.Icono" Size="Size.Small" />
+                <span>@opcion.Texto</span>
+            </NavLink>
+        }
+    </nav>
+    <section class="subpagina">
+        @ChildContent
+    </section>
+</div>
+
+@code {
+    /// <summary>
+    /// Nombre del submenú, para los lectores de pantalla.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Opciones en el orden en que se muestran.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<OpcionDeSubmenu> Opciones { get; set; } = [];
+
+    /// <summary>
+    /// La subpágina elegida.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

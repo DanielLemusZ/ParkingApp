@@ -1,0 +1,70 @@
+@page "/historial/ingresos-y-salidas"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@layout LayoutDeHistorial
+@using System.Globalization
+@using ParkingApp.Aplicacion.Reportes
+@inject IServicioConsultas ServicioConsultas
+
+<PageTitle>Ingresos y salidas</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Ingresos y salidas</MudText>
+
+<FiltrosDeHistorial Filtros="filtros" AlFiltrar="BuscarAsync" MensajeError="@mensajeError" />
+
+<MudPaper Outlined="true">
+    <MudDataGrid Items="@accesos" Dense="true" Hover="true" Elevation="0">
+        <Columns>
+            <TemplateColumn Title="Placa">
+                <CellTemplate><PlacaColombiana Placa="@context.Item.Placa" Compacta="true" /></CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.TipoVehiculo" Title="Tipo de vehículo" />
+            <TemplateColumn Title="Evento">
+                <CellTemplate><ChipDeEstado Estado="@context.Item.TipoEvento" /></CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Fecha y hora">
+                <CellTemplate>
+                    @context.Item.FechaHora.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.Carril" Title="Carril" />
+            <TemplateColumn Title="Lectura manual">
+                <CellTemplate>
+                    @(context.Item.EsLecturaManual ? $"Sí ({context.Item.ValidadoPor})" : "No")
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body2" Class="texto-tenue">No hay resultados.</MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="EventoAccesoDto" RowsPerPageString="Filas por página:" InfoFormat="{first_item}-{last_item} de {all_items}" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    private readonly FiltrosConsultaDto filtros = new();
+    private List<EventoAccesoDto> accesos = [];
+    private string? mensajeError;
+
+    protected override Task OnInitializedAsync()
+    {
+        return BuscarAsync();
+    }
+
+    private async Task BuscarAsync()
+    {
+        mensajeError = null;
+
+        try
+        {
+            accesos = await ServicioConsultas.ConsultarAccesosAsync(filtros);
+        }
+        catch (ArgumentException ex)
+        {
+            // La fecha inicial es posterior a la final: se muestra el mensaje y se vacía la tabla.
+            mensajeError = ex.Message;
+            accesos.Clear();
+        }
+    }
+}

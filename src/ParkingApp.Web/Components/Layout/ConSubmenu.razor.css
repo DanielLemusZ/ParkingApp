@@ -1,0 +1,53 @@
+.con-submenu {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    position: sticky;
+    top: 136px;
+}
+
+    .submenu ::deep .opcion {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        color: var(--mud-palette-text-primary);
+        text-decoration: none;
+    }
+
+        .submenu ::deep .opcion:hover {
+            background: var(--mud-palette-background-gray);
+        }
+
+        /* La opción activa va en verde, con borde, como en el mockup. */
+        .submenu ::deep .opcion.activa {
+            border-color: var(--mud-palette-success);
+            background: color-mix(in srgb, var(--mud-palette-success) 14%, transparent);
+            color: var(--mud-palette-success);
+        }
+
+/* En pantallas angostas, el submenú va arriba y en fila. */
+@media (max-width: 960px) {
+    .con-submenu {
+        grid-template-columns: 1fr;
+    }
+
+    .submenu {
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}

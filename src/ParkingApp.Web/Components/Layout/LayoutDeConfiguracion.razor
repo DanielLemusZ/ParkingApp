@@ -1,0 +1,18 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+
+@* Configuración (antes Tarifas, Configuración y Usuarios, #71). Usuarios no tiene mockup y sigue el mismo estilo. *@
+<ConSubmenu Titulo="Configuración" Opciones="Opciones">
+    @Body
+</ConSubmenu>
+
+@code {
+    private static readonly IReadOnlyList<OpcionDeSubmenu> Opciones =
+    [
+        new OpcionDeSubmenu("Tarifas", "/configuracion/tarifas", Icons.Material.Outlined.Sell),
+        new OpcionDeSubmenu("Franjas horarias", "/configuracion/franjas", Icons.Material.Outlined.Schedule),
+        new OpcionDeSubmenu("Cupos", "/configuracion/cupos", Icons.Material.Outlined.LocalParking),
+        new OpcionDeSubmenu("Umbral de lectura", "/configuracion/umbral", Icons.Material.Outlined.Tune),
+        new OpcionDeSubmenu("Usuarios", "/configuracion/usuarios", Icons.Material.Outlined.ManageAccounts),
+    ];
+}

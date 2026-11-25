@@ -1,0 +1,27 @@
+@page "/configuracion/franjas"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@layout LayoutDeConfiguracion
+@inherits PaginaDeConfiguracionDeSede
+
+<PageTitle>Franjas horarias</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Franjas horarias</MudText>
+<MudText Typo="Typo.body2" Class="texto-tenue mb-4">Hora en que empieza cada franja. El día operativo empieza con la diurna.</MudText>
+
+<MudPaper Outlined="true" Class="pa-6">
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6">
+            <MudTimePicker Label="Inicio de franja diurna" @bind-Time="InicioDiurno" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTimePicker Label="Inicio de franja nocturna" @bind-Time="InicioNocturno" Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+    <div class="d-flex justify-end mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="Guardando" OnClick="GuardarAsync">Guardar</MudButton>
+    </div>
+    @if (!string.IsNullOrEmpty(Mensaje))
+    {
+        <FranjaDeResultado Class="mt-4" Severidad="@(Guardado ? Severity.Success : Severity.Error)" Mensaje="@Mensaje" />
+    }
+</MudPaper>

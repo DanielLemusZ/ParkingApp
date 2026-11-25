@@ -1,0 +1,27 @@
+@page "/configuracion/umbral"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@layout LayoutDeConfiguracion
+@inherits PaginaDeConfiguracionDeSede
+
+<PageTitle>Umbral de lectura</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Umbral de lectura</MudText>
+<MudText Typo="Typo.body2" Class="texto-tenue mb-4">
+    Confianza mínima de una lectura de placa. Por debajo, la lectura pasa a la caja para validarla.
+</MudText>
+
+<MudPaper Outlined="true" Class="pa-6">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
+        <MudSlider T="int" @bind-Value="Umbral" Min="0" Max="100" Step="1" Color="Color.Primary" Class="flex-grow-1"
+                   aria-label="Umbral mínimo de confianza" />
+        <MudNumericField T="int" Label="Umbral (0 a 100)" Min="0" Max="100" @bind-Value="Umbral" Variant="Variant.Outlined"
+                         Style="max-width: 160px" />
+    </MudStack>
+    <div class="d-flex justify-end mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="Guardando" OnClick="GuardarAsync">Guardar</MudButton>
+    </div>
+    @if (!string.IsNullOrEmpty(Mensaje))
+    {
+        <FranjaDeResultado Class="mt-4" Severidad="@(Guardado ? Severity.Success : Severity.Error)" Mensaje="@Mensaje" />
+    }
+</MudPaper>

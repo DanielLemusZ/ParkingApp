@@ -1,0 +1,170 @@
+@page "/configuracion/tarifas"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@layout LayoutDeConfiguracion
+@using System.Globalization
+@using ParkingApp.Aplicacion.Tarifas
+@using ParkingApp.Dominio.Accesos
+@using ParkingApp.Dominio.Configuracion
+@inject IServiceScopeFactory FabricaDeAlcances
+
+<PageTitle>Tarifas</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Tarifas</MudText>
+<MudText Typo="Typo.body2" Class="texto-tenue mb-4">
+    Valores por tipo de vehículo y franja. Cada cambio crea una versión nueva y conserva la anterior.
+</MudText>
+
+@* Tabla de los mockups (#71): una fila por vehículo y una columna por franja. *@
+<MudPaper Outlined="true" Class="mb-6">
+    <MudSimpleTable Dense="true" Elevation="0">
+        <thead>
+            <tr>
+                <th>Tipo de vehículo</th>
+                <th>Diurna</th>
+                <th>Nocturna</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (tarifas.Count == 0)
+            {
+                <tr><td colspan="3" class="texto-tenue">Aún no hay tarifas configuradas.</td></tr>
+            }
+            @foreach (var tipo in tarifas.Select(tarifa => tarifa.TipoDeVehiculo).Distinct().Order())
+            {
+                <tr>
+                    <td>@NombreVehiculo(tipo)</td>
+                    <td>@ValorDe(tipo, FranjaTarifaria.Diurna)</td>
+                    <td>@ValorDe(tipo, FranjaTarifaria.Nocturna)</td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
+</MudPaper>
+
+<MudPaper Outlined="true" Class="pa-6">
+    <MudText Typo="Typo.h6" Class="mb-4">Nueva versión de tarifa</MudText>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="TipoDeVehiculo" Label="Tipo de vehículo" @bind-Value="tipoDeVehiculo" Variant="Variant.Outlined">
+                <MudSelectItem Value="TipoDeVehiculo.Carro">Carro</MudSelectItem>
+                <MudSelectItem Value="TipoDeVehiculo.Moto">Moto</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="FranjaTarifaria" Label="Franja" @bind-Value="franja" Variant="Variant.Outlined">
+                <MudSelectItem Value="FranjaTarifaria.Diurna">Diurna</MudSelectItem>
+                <MudSelectItem Value="FranjaTarifaria.Nocturna">Nocturna</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            @* El error del valor (por ejemplo, una nocturna mayor que la diurna, RN-02) se muestra junto al campo. *@
+            <MudNumericField T="decimal" Label="Valor en pesos" Min="0" @bind-Value="valor" @bind-Value:after="BorrarError"
+                             Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentText="$"
+                             Error="@(!string.IsNullOrEmpty(error))" ErrorText="@error" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudDatePicker Label="Vigente desde" @bind-Date="VigenteDesde" Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+    <div class="d-flex justify-end mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="guardando" OnClick="GuardarAsync">Guardar</MudButton>
+    </div>
+    @if (!string.IsNullOrEmpty(confirmacion))
+    {
+        <FranjaDeResultado Class="mt-4" Mensaje="@confirmacion" />
+    }
+</MudPaper>
+
+@code {
+    private IReadOnlyList<Tarifa> tarifas = Array.Empty<Tarifa>();
+    private TipoDeVehiculo tipoDeVehiculo = TipoDeVehiculo.Carro;
+    private FranjaTarifaria franja = FranjaTarifaria.Diurna;
+    private decimal valor;
+    private DateOnly vigenteDesde;
+    private string? error;
+    private string? confirmacion;
+    private bool guardando;
+
+    // MudDatePicker trabaja con DateTime?; la tarifa, con DateOnly.
+    private DateTime? VigenteDesde
+    {
+        get => vigenteDesde.ToDateTime(TimeOnly.MinValue);
+        set
+        {
+            if (value is not null)
+            {
+                vigenteDesde = DateOnly.FromDateTime(value.Value);
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var administrarTarifas = alcance.ServiceProvider.GetRequiredService<AdministrarTarifas>();
+        vigenteDesde = administrarTarifas.FechaActualSede();
+        tarifas = await administrarTarifas.ConsultarVigentesAsync(vigenteDesde);
+    }
+
+    private async Task GuardarAsync()
+    {
+        guardando = true;
+        error = null;
+        confirmacion = null;
+
+        try
+        {
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            var administrarTarifas = alcance.ServiceProvider.GetRequiredService<AdministrarTarifas>();
+            var resultado = await administrarTarifas.CambiarAsync(tipoDeVehiculo, franja, valor, vigenteDesde);
+
+            if (resultado.Guardado)
+            {
+                confirmacion = "La tarifa se guardó y su versión anterior quedó conservada.";
+                await CargarTarifasAsync();
+            }
+            else
+            {
+                error = resultado.Motivo;
+            }
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private async Task CargarTarifasAsync()
+    {
+        await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+        var administrarTarifas = alcance.ServiceProvider.GetRequiredService<AdministrarTarifas>();
+        tarifas = await administrarTarifas.ConsultarVigentesAsync(administrarTarifas.FechaActualSede());
+    }
+
+    // Al corregir el valor, el error anterior ya no aplica.
+    private void BorrarError()
+    {
+        error = null;
+    }
+
+    private string ValorDe(TipoDeVehiculo tipo, FranjaTarifaria franjaBuscada)
+    {
+        var tarifa = tarifas.FirstOrDefault(t => t.TipoDeVehiculo == tipo && t.Franja == franjaBuscada);
+        return tarifa is null ? "—" : FormatearValor(tarifa.Valor);
+    }
+
+    private static string NombreVehiculo(TipoDeVehiculo tipo)
+    {
+        return tipo switch
+        {
+            TipoDeVehiculo.Carro => "Carro",
+            TipoDeVehiculo.Moto => "Moto",
+            _ => "No clasificado",
+        };
+    }
+
+    private static string FormatearValor(decimal monto)
+    {
+        return $"${monto.ToString("N0", CultureInfo.GetCultureInfo("es-CO"))}";
+    }
+}

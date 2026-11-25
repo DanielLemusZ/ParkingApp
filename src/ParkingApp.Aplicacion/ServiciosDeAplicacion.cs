@@ -40,6 +40,7 @@ public static class ServiciosDeAplicacion
         servicios.AddScoped<AdministrarTarifas>();
         servicios.AddScoped<IServicioConsultas, ConsultarEventos>();
         servicios.AddScoped<ConfigurarSede>();
+        servicios.AddScoped<ConsultarCupos>();
         servicios.AddScoped<CrearUsuariosIniciales>();
         servicios.AddScoped<AdministrarUsuarios>();
         servicios.AddScoped<ListarCobrosPendientes>();

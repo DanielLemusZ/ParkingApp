@@ -1,0 +1,16 @@
+@inherits LayoutComponentBase
+
+@* Layout de Iniciar sesión (#71): sin encabezado ni pestañas, porque todavía no hay sesión; solo la tarjeta centrada. *@
+<MudThemeProvider Theme="TemaParkingApp.Tema" IsDarkMode="ModoOscuro" />
+
+<main class="pantalla-de-cuenta">
+    @Body
+</main>
+
+@code {
+    /// <summary>
+    /// Tema elegido, leído de la cookie en <c>App.razor</c>.
+    /// </summary>
+    [CascadingParameter(Name = "ModoOscuro")]
+    public bool ModoOscuro { get; set; } = true;
+}

@@ -1,0 +1,233 @@
+@page "/cupos"
+@attribute [Authorize(Roles = Roles.OperadorOAdministrador)]
+@using System.Globalization
+@using ParkingApp.Aplicacion.Accesos
+@using ParkingApp.Aplicacion.Configuracion
+@using ParkingApp.Dominio.Accesos
+@inject IServiceScopeFactory FabricaDeAlcances
+
+@* Página Cupos del mockup (#71): ocupación por tipo, mapa esquemático y vehículos adentro. Solo consulta, con los
+   datos que la aplicación ya genera: los cupos de Configuración y la ocupación por conteo (la misma de "LLENO"). *@
+<PageTitle>Cupos</PageTitle>
+
+@* El div da al CSS de la página (::deep) un ancestro propio; los componentes de MudBlazor no lo llevan. *@
+<div class="pagina-cupos">
+<div class="d-flex align-center flex-wrap gap-2 mb-4">
+    <MudText Typo="Typo.h4">Cupos</MudText>
+    <MudSpacer />
+    <MudText Typo="Typo.caption" Class="texto-tenue">
+        Ocupación actual por conteo · Ámbar &gt; @EstadoDeCupo.PorcentajeAlto % · Rojo 100 % LLENO
+    </MudText>
+    <MudTooltip Text="Actualizar">
+        <MudIconButton Icon="@Icons.Material.Outlined.Refresh" Size="Size.Small" Disabled="cargando"
+                       OnClick="CargarAsync" aria-label="Actualizar" />
+    </MudTooltip>
+</div>
+
+@if (panorama is null)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="8">
+            <MudGrid Spacing="4">
+                <MudItem xs="12" sm="6">
+                    @TarjetaDeTipo("Carros", "ocupados", Icons.Material.Outlined.DirectionsCar, panorama.Carros)
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    @TarjetaDeTipo("Motos", "ocupadas", Icons.Material.Outlined.TwoWheeler, panorama.Motos)
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudPaper Outlined="true" Class="pa-6">
+                        <div class="d-flex align-start flex-wrap gap-2 mb-4">
+                            <div>
+                                <MudText Typo="Typo.h6">Mapa esquemático</MudText>
+                                <MudText Typo="Typo.body2" Class="texto-tenue">
+                                    Representación ilustrativa de la ocupación actual (sin sensores por puesto).
+                                </MudText>
+                            </div>
+                            <MudSpacer />
+                            <div class="leyenda">
+                                <span><MudIcon Icon="@Icons.Material.Outlined.DirectionsCar" Size="Size.Small" Color="Color.Error" /> Ocupado</span>
+                                <span><span class="muestra-libre"></span> Libre</span>
+                            </div>
+                        </div>
+
+                        <div class="mapa">
+                            @ZonaDelMapa($"Zona de carros ({panorama.Carros.Cupo} cupos)", panorama.Carros, Icons.Material.Outlined.DirectionsCar, "carros")
+                            @ZonaDelMapa($"Zona de motos ({panorama.Motos.Cupo} cupos)", panorama.Motos, Icons.Material.Outlined.TwoWheeler, "motos")
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Outlined="true" Class="pa-6">
+                <div class="d-flex align-center mb-4">
+                    <MudText Typo="Typo.h6">Vehículos adentro</MudText>
+                    <MudSpacer />
+                    <MudChip T="string" Size="Size.Small" Class="ma-0">@panorama.Adentro.Count</MudChip>
+                </div>
+
+                <MudTextField T="string" @bind-Value="busqueda" Immediate="true" Placeholder="Buscar placa"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Class="mb-3" />
+
+                @if (panorama.Adentro.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="texto-tenue">No hay vehículos adentro.</MudText>
+                }
+                else if (!Filtrados.Any())
+                {
+                    <MudText Typo="Typo.body2" Class="texto-tenue">No hay vehículos adentro con esa placa.</MudText>
+                }
+                else
+                {
+                    <ul class="adentro">
+                        @foreach (var vehiculo in Filtrados)
+                        {
+                            <li>
+                                <PlacaColombiana Placa="@vehiculo.Placa.Valor" Compacta="true" />
+                                <span>@NombreDe(vehiculo.TipoDeVehiculo)</span>
+                                <span class="texto-tenue">@HoraLocal(vehiculo.FechaHoraDeIngreso)</span>
+                                <MudSpacer />
+                                <MudIcon Icon="@IconoDe(vehiculo.TipoDeVehiculo)" Size="Size.Small" Color="Color.Info" />
+                            </li>
+                        }
+                    </ul>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+</div>
+
+@code {
+    private PanoramaDeCupos? panorama;
+    private TimeZoneInfo zonaHoraria = TimeZoneInfo.Utc;
+    private string? busqueda;
+    private bool cargando;
+
+    protected override Task OnInitializedAsync()
+    {
+        return CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+
+        try
+        {
+            await using var alcance = FabricaDeAlcances.CreateAsyncScope();
+            zonaHoraria = alcance.ServiceProvider.GetRequiredService<ISedeActual>().ZonaHoraria;
+            panorama = await alcance.ServiceProvider.GetRequiredService<ConsultarCupos>().ConsultarAsync();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    // La búsqueda ignora mayúsculas, espacios y guiones: "dkr 534" encuentra DKR534.
+    private IEnumerable<VehiculoAdentro> Filtrados
+    {
+        get
+        {
+            var texto = new string((busqueda ?? string.Empty).Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+            return panorama!.Adentro.Where(vehiculo => vehiculo.Placa.Valor.Contains(texto, StringComparison.Ordinal));
+        }
+    }
+
+    private RenderFragment TarjetaDeTipo(string nombre, string ocupados, string icono, EstadoDeCupo estado) => __builder =>
+    {
+        <MudPaper Outlined="true" Class="pa-6 tarjeta-de-tipo">
+            <div class="datos">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@icono" Color="Color.Info" />
+                    <MudText Typo="Typo.subtitle1"><b>@nombre: @estado.Ocupados de @estado.Cupo @ocupados</b></MudText>
+                </div>
+                <div class="d-flex align-center gap-2 mt-3">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="ColorDe(estado.Nivel)" Class="ma-0">
+                        @(estado.Nivel == NivelDeOcupacion.Lleno ? "LLENO" : $"{estado.Libres} libres")
+                    </MudChip>
+                    @if (estado.Excedente > 0)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error">@estado.Excedente por encima del cupo</MudText>
+                    }
+                </div>
+            </div>
+            <div class="anillo">
+                @* Dos anillos superpuestos: la pista gris completa y, encima, el porcentaje ocupado en su color. *@
+                <MudProgressCircular Value="100" Class="pista" StrokeWidth="5" Style="width: 88px; height: 88px;" />
+                <MudProgressCircular Value="@estado.Porcentaje" Color="ColorDe(estado.Nivel)" StrokeWidth="5"
+                                     Style="width: 88px; height: 88px;" />
+                <span class="porcentaje">@estado.Porcentaje %</span>
+            </div>
+        </MudPaper>
+    };
+
+    // Una casilla por cupo; las primeras, tantas como vehículos adentro, se ven ocupadas.
+    private RenderFragment ZonaDelMapa(string titulo, EstadoDeCupo estado, string icono, string clase) => __builder =>
+    {
+        <MudText Typo="Typo.body2" Class="mb-2">@titulo</MudText>
+        @if (estado.Cupo == 0)
+        {
+            <MudText Typo="Typo.caption" Class="texto-tenue mb-4 d-block">Sin cupos configurados.</MudText>
+        }
+        else
+        {
+            <div class="zona @clase" role="img" aria-label="@($"{titulo}: {Math.Min(estado.Ocupados, estado.Cupo)} ocupados")">
+                @for (var puesto = 0; puesto < estado.Cupo; puesto++)
+                {
+                    <span class="puesto">
+                        @if (puesto < estado.Ocupados)
+                        {
+                            <MudIcon Icon="@icono" Size="Size.Small" Color="Color.Error" />
+                        }
+                    </span>
+                }
+            </div>
+        }
+    };
+
+    private static Color ColorDe(NivelDeOcupacion nivel)
+    {
+        return nivel switch
+        {
+            NivelDeOcupacion.Lleno => Color.Error,
+            NivelDeOcupacion.Alto => Color.Warning,
+            _ => Color.Success,
+        };
+    }
+
+    private string HoraLocal(DateTimeOffset fechaHora)
+    {
+        var local = TimeZoneInfo.ConvertTime(fechaHora, zonaHoraria);
+        var hoy = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zonaHoraria).Date;
+
+        // Si entró otro día, se muestra la fecha para que no parezca de hoy.
+        return local.Date == hoy
+            ? local.ToString("HH:mm", CultureInfo.InvariantCulture)
+            : local.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+    }
+
+    private static string NombreDe(TipoDeVehiculo tipo)
+    {
+        return tipo switch
+        {
+            TipoDeVehiculo.Carro => "Carro",
+            TipoDeVehiculo.Moto => "Moto",
+            _ => "No clasificado",
+        };
+    }
+
+    private static string IconoDe(TipoDeVehiculo tipo)
+    {
+        return tipo == TipoDeVehiculo.Moto ? Icons.Material.Outlined.TwoWheeler : Icons.Material.Outlined.DirectionsCar;
+    }
+}

@@ -1,0 +1,62 @@
+@using ParkingApp.Aplicacion.Reportes
+@using ParkingApp.Dominio.Cobros
+
+@* Filtros del historial: placa y rango de fechas; en Cobros, también el estado. *@
+<MudPaper Outlined="true" Class="pa-4 mb-4">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="@(ConEstado ? 3 : 4)">
+            <MudTextField @bind-Value="Filtros.Placa" Label="Placa" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="@(ConEstado ? 3 : 4)">
+            <MudDatePicker @bind-Date="Filtros.FechaInicio" Label="Fecha inicial" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="@(ConEstado ? 3 : 4)">
+            <MudDatePicker @bind-Date="Filtros.FechaFin" Label="Fecha final" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        @if (ConEstado)
+        {
+            <MudItem xs="12" sm="3">
+                <MudSelect T="EstadoDeCobro?" @bind-Value="Filtros.EstadoCobro" Label="Estado del cobro" Variant="Variant.Outlined"
+                           Margin="Margin.Dense" Clearable="true">
+                    <MudSelectItem T="EstadoDeCobro?" Value="@(EstadoDeCobro.Pendiente)">Pendiente</MudSelectItem>
+                    <MudSelectItem T="EstadoDeCobro?" Value="@(EstadoDeCobro.Pagado)">Pagado</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        }
+        <MudItem xs="12" Class="d-flex align-center gap-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FilterAlt" OnClick="AlFiltrar">
+                Filtrar
+            </MudButton>
+            @if (!string.IsNullOrEmpty(MensajeError))
+            {
+                <MudText Color="Color.Error">@MensajeError</MudText>
+            }
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Filtros que edita el usuario; la página los usa al consultar.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public FiltrosConsultaDto Filtros { get; set; } = new();
+
+    /// <summary>
+    /// Si se muestra el filtro por estado del cobro.
+    /// </summary>
+    [Parameter]
+    public bool ConEstado { get; set; }
+
+    /// <summary>
+    /// Se llama al pulsar Filtrar.
+    /// </summary>
+    [Parameter]
+    public EventCallback AlFiltrar { get; set; }
+
+    /// <summary>
+    /// Error de la consulta, por ejemplo una fecha inicial posterior a la final.
+    /// </summary>
+    [Parameter]
+    public string? MensajeError { get; set; }
+}

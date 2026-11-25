@@ -1,0 +1,27 @@
+@* Tarjeta centrada de las páginas de cuenta, como en los mockups (#71): logo, nombre de la app y de la universidad. *@
+<div class="tarjeta-de-cuenta">
+    <MudPaper Class="pa-8" Outlined="true">
+        <div class="marca">
+            <img src="logo.svg" alt="" width="56" height="56" />
+            <MudText Typo="Typo.h5" Class="mt-3">ParkingApp</MudText>
+            <MudText Typo="Typo.body2" Class="texto-tenue">Universidad Autónoma de Manizales</MudText>
+        </div>
+
+        <MudText Typo="Typo.h6" Class="mt-6 mb-2">@Titulo</MudText>
+        @ChildContent
+    </MudPaper>
+</div>
+
+@code {
+    /// <summary>
+    /// Nombre de la página, por ejemplo "Iniciar sesión".
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string Titulo { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Formulario o mensaje de la página.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

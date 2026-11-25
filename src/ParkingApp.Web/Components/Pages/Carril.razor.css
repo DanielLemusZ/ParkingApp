@@ -1,0 +1,68 @@
+.encabezado-pagina {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* Dos paneles lado a lado, separados por una línea, como en el mockup; en pantallas angostas van uno debajo del otro. */
+.carriles {
+    display: grid;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    grid-template-columns: 1fr 1fr;
+}
+
+.panel {
+    padding: 24px;
+    min-width: 0;
+}
+
+    .panel + .panel {
+        border-left: 1px solid var(--mud-palette-lines-default);
+    }
+
+@media (max-width: 960px) {
+    .carriles {
+        grid-template-columns: 1fr;
+    }
+
+    .panel + .panel {
+        border-left: none;
+        border-top: 1px solid var(--mud-palette-lines-default);
+    }
+}
+
+.cabecera-panel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+    .cabecera-panel ::deep .selector-carril {
+        flex: 0 0 130px;
+        margin: 0;
+    }
+
+.lectura {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 16px 20px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 8px;
+    background: var(--mud-palette-background-gray);
+}
+
+.titulo-simulador {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}

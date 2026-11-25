@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+
+@* Historial (antes Consultas, #71): ingresos y salidas, y cobros. *@
+<ConSubmenu Titulo="Historial" Opciones="Opciones">
+    @Body
+</ConSubmenu>
+
+@code {
+    private static readonly IReadOnlyList<OpcionDeSubmenu> Opciones =
+    [
+        new OpcionDeSubmenu("Ingresos y salidas", "/historial/ingresos-y-salidas", Icons.Material.Outlined.SwapHoriz),
+        new OpcionDeSubmenu("Cobros", "/historial/cobros", Icons.Material.Outlined.ReceiptLong),
+    ];
+}

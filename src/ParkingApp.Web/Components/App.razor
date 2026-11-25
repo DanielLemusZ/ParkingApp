@@ -1,10 +1,13 @@
+@using ParkingApp.Web.Apariencia
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-tema="@(modoOscuro ? PreferenciaDeTema.Oscuro : PreferenciaDeTema.Claro)">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="@(modoOscuro ? "dark" : "light")" />
     <base href="/" />
+    <link rel="icon" type="image/svg+xml" href="@Assets["logo.svg"]" />
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
@@ -14,7 +17,7 @@
 </head>
 
 <body>
-    <Routes @rendermode="ModoDeLaPagina" />
+    <Routes @rendermode="ModoDeLaPagina" ModoOscuro="modoOscuro" />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
@@ -30,4 +33,13 @@
     private HttpContext HttpContext { get; set; } = default!;
 
     private IComponentRenderMode? ModoDeLaPagina => HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+
+    // El tema se lee aquí, en la solicitud HTTP, porque el circuito interactivo no tiene acceso a las cookies.
+    // Se pasa a Routes como parámetro, que sí viaja al circuito.
+    private bool modoOscuro;
+
+    protected override void OnInitialized()
+    {
+        modoOscuro = PreferenciaDeTema.EsOscuro(HttpContext.Request);
+    }
 }

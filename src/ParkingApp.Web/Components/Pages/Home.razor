@@ -1,7 +1,11 @@
 @page "/"
 @attribute [Authorize]
+@inject NavigationManager Navegacion
 
-<PageTitle>ParkingApp</PageTitle>
-
-<MudText Typo="Typo.h4" GutterBottom="true">ParkingApp</MudText>
-<MudText>Sistema de parqueadero con reconocimiento de placas.</MudText>
+@* El inicio abre la primera pestaña, Monitoreo de acceso, que tienen los dos roles (#71). *@
+@code {
+    protected override void OnInitialized()
+    {
+        Navegacion.NavigateTo("/carril", replace: true);
+    }
+}

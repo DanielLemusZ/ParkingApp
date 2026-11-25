@@ -4,52 +4,67 @@
 @inject IServiceScopeFactory FabricaDeAlcances
 @inject IDialogService Dialogos
 
-<MudPaper Class="pa-4 mb-4">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
-        <MudText Typo="Typo.h6">Placas por revisar (@lecturas.Count)</MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="CargarAsync" aria-label="Actualizar placas por revisar" />
+@* Lecturas pendientes de la caja, como en el mockup (#71): una tarjeta por lectura con su motivo y Validar lectura. *@
+<MudPaper Outlined="true" Class="pa-6">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudText Typo="Typo.h6">Lecturas pendientes</MudText>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                     Color="@(lecturas.Count > 0 ? Color.Warning : Color.Default)" Class="ma-0">
+                @lecturas.Count
+            </MudChip>
+        </MudStack>
+        <MudIconButton Icon="@Icons.Material.Outlined.Refresh" OnClick="CargarAsync" aria-label="Actualizar lecturas pendientes" />
     </MudStack>
 
-    <MudTable Items="lecturas" Dense="true" Hover="true" T="LecturaPorRevisar">
-        <HeaderContent>
-            <MudTh>Fecha y hora</MudTh>
-            <MudTh>Carril</MudTh>
-            <MudTh>Placa leída</MudTh>
-            <MudTh>Confianza</MudTh>
-            <MudTh>Motivo</MudTh>
-            <MudTh></MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Fecha y hora">@context.FechaHora.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)</MudTd>
-            <MudTd DataLabel="Carril">@NombreDeCarril(context.Tipo, context.Carril)</MudTd>
-            <MudTd DataLabel="Placa leída">@context.Placa</MudTd>
-            <MudTd DataLabel="Confianza">@context.Confianza</MudTd>
-            <MudTd DataLabel="Motivo">
-                <MudChip T="string" Size="Size.Small" Color="Color.Warning">@NombreDeMotivo(context.Motivo)</MudChip>
-            </MudTd>
-            <MudTd>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                           OnClick="@(() => RevisarAsync(context))">
+    @if (lecturas.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="texto-tenue">No hay lecturas por validar.</MudText>
+    }
+
+    <MudStack Spacing="3">
+        @foreach (var lectura in lecturas)
+        {
+            <div class="lectura-pendiente">
+                <div class="datos">
+                    @if (string.IsNullOrWhiteSpace(lectura.Placa))
+                    {
+                        <MudText Typo="Typo.subtitle1">Placa no reconocida</MudText>
+                    }
+                    else
+                    {
+                        <PlacaColombiana Placa="@lectura.Placa" Compacta="true" />
+                    }
+                    <MudText Typo="Typo.body2">
+                        @NombreDeCarril(lectura.Tipo, lectura.Carril) · @lectura.FechaHora.ToString("HH:mm", CultureInfo.InvariantCulture)
+                        @if (lectura.Confianza > 0)
+                        {
+                            <span> · Confianza @lectura.Confianza %</span>
+                        }
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0"
+                             Color="@(lectura.Motivo == MotivoDeLecturaPendiente.ConfianzaBaja ? Color.Warning : Color.Error)"
+                             Icon="@(lectura.Motivo == MotivoDeLecturaPendiente.ConfianzaBaja ? Icons.Material.Outlined.WarningAmber : Icons.Material.Outlined.ErrorOutline)">
+                        @NombreDeMotivo(lectura.Motivo)
+                    </MudChip>
+                </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => RevisarAsync(lectura))">
                     Validar lectura
                 </MudButton>
-            </MudTd>
-        </RowTemplate>
-        <NoRecordsContent>
-            <MudText>No hay placas por revisar.</MudText>
-        </NoRecordsContent>
-    </MudTable>
+            </div>
+        }
+    </MudStack>
 
     @if (resultado is not null)
     {
-        <MudAlert Class="mt-4" Severity="@(resultado.AbreBarrera ? Severity.Success : Severity.Error)"
-                  Icon="@(resultado.AbreBarrera ? Icons.Material.Filled.LockOpen : Icons.Material.Filled.Lock)">
-            <b>@(resultado.AbreBarrera ? "Barrera abierta" : "Barrera cerrada")</b>: @resultado.Motivo
+        <FranjaDeResultado Class="mt-4" Severidad="@(resultado.AbreBarrera ? Severity.Success : Severity.Error)"
+                           Titulo="@(resultado.AbreBarrera ? "Barrera abierta" : "Barrera cerrada")" Mensaje="@resultado.Motivo">
             @if (!resultado.AbreBarrera)
             {
-                <br />
-                <small>La lectura ya quedó validada. Cuando se resuelva, vuelve a leer la placa en el carril.</small>
+                <div><small>La lectura ya quedó validada. Cuando se resuelva, vuelve a leer la placa en el carril.</small></div>
             }
-        </MudAlert>
+        </FranjaDeResultado>
     }
 </MudPaper>
 

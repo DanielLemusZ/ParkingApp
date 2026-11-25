@@ -1,38 +1,46 @@
 @using ParkingApp.Aplicacion.Accesos
 @inject IServiceScopeFactory FabricaDeAlcances
 
-@* Simula la cámara del carril: lee la placa de una foto. Si no puede, el operador la escribe a mano en los campos de abajo. *@
-<MudFileUpload @ref="subida" T="IBrowserFile" Accept=".jpg,.jpeg,.png" MaximumFileCount="1" FilesChanged="LeerAsync" Disabled="leyendo" Class="mt-2">
+@* Simula la cámara del carril: lee la placa de una foto. Si no puede, el operador la escribe a mano en el simulador. *@
+<MudFileUpload @ref="subida" T="IBrowserFile" Accept=".jpg,.jpeg,.png" MaximumFileCount="1" FilesChanged="LeerAsync" Disabled="leyendo"
+               Class="ma-0">
     <CustomContent>
-        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PhotoCamera" Disabled="leyendo"
-                   OnClick="@context.OpenFilePickerAsync">
-            @(leyendo ? "Leyendo la placa…" : "Subir imagen de la placa")
-        </MudButton>
+        @* Recuadro punteado de los mockups (#71): todo el recuadro abre el selector de archivos. *@
+        <button type="button" class="subir-imagen" disabled="@leyendo" @onclick="@context.OpenFilePickerAsync">
+            <span class="icono-camara">
+                @if (leyendo)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Outlined.PhotoCamera" />
+                }
+            </span>
+            <span class="textos">
+                <span class="titulo">@(leyendo ? "Leyendo la placa…" : "Subir imagen de la placa")</span>
+                <span class="detalle">JPG o PNG · Cámara LPR Carril @Carril</span>
+            </span>
+        </button>
     </CustomContent>
 </MudFileUpload>
 
-@if (lectura is not null)
+@if (lectura is { Leida: false })
 {
-    @if (lectura.Leida)
-    {
-        <MudAlert Class="mt-2" Severity="Severity.Info" Dense="true">
-            Placa leída: <b>@lectura.Placa</b> (confianza @lectura.Confianza)
-        </MudAlert>
-    }
-    else
-    {
-        <MudAlert Class="mt-2" Severity="Severity.Warning" Dense="true">
-            <b>@LeerPlacaDesdeImagen.Mensaje(lectura.Falla!.Value)</b>
-            <br />
-            <small>Escribe la placa abajo.</small>
-        </MudAlert>
-    }
+    <FranjaDeResultado Class="mt-3" Severidad="Severity.Warning" Titulo="@LeerPlacaDesdeImagen.Mensaje(lectura.Falla!.Value)"
+                       Mensaje="Escribe la placa en el ingreso manual." />
 }
 
 @code {
     private MudFileUpload<IBrowserFile>? subida;
     private bool leyendo;
     private LecturaDeImagen? lectura;
+
+    /// <summary>
+    /// Número del carril, para el texto de la cámara.
+    /// </summary>
+    [Parameter]
+    public int Carril { get; set; } = 1;
 
     /// <summary>
     /// Recibe cada resultado: la placa leída, o por qué no se pudo leer.

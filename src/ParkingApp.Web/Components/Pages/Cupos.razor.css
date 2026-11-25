@@ -1,0 +1,118 @@
+/* Tarjetas de carros y motos: datos a la izquierda y el anillo con el porcentaje a la derecha. */
+::deep .tarjeta-de-tipo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 100%;
+}
+
+::deep .tarjeta-de-tipo .datos {
+    flex: 1;
+}
+
+/* Los dos anillos y el texto ocupan la misma celda, uno encima del otro. */
+::deep .anillo {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+::deep .anillo > * {
+    grid-area: 1 / 1;
+}
+
+::deep .anillo .pista {
+    color: var(--mud-palette-lines-default);
+}
+
+::deep .anillo .porcentaje {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+::deep .leyenda {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+::deep .leyenda > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+::deep .muestra-libre {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #FFD100;
+    border-radius: 3px;
+}
+
+/* Mapa: casillas con las líneas amarillas de un parqueadero. 15 carros y 30 motos por fila, como en el mockup. */
+::deep .mapa {
+    padding: 16px 20px;
+    border-radius: 8px;
+    background: var(--mud-palette-background);
+}
+
+::deep .zona {
+    display: grid;
+    border-left: 2px solid #FFD100;
+    margin-bottom: 20px;
+}
+
+::deep .zona.carros {
+    grid-template-columns: repeat(15, minmax(0, 1fr));
+}
+
+::deep .zona.motos {
+    grid-template-columns: repeat(30, minmax(0, 1fr));
+    margin-bottom: 0;
+}
+
+::deep .puesto {
+    display: grid;
+    place-items: center;
+    border-right: 2px solid #FFD100;
+    border-top: 2px solid #FFD100;
+    border-bottom: 2px solid #FFD100;
+    margin-bottom: 8px;
+    background: var(--mud-palette-surface);
+}
+
+::deep .zona.carros .puesto {
+    height: 44px;
+}
+
+::deep .zona.motos .puesto {
+    height: 34px;
+}
+
+::deep .zona.motos .puesto .mud-icon-root {
+    font-size: 1rem;
+}
+
+/* Lista de vehículos adentro. */
+::deep .adentro {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 520px;
+    overflow-y: auto;
+}
+
+::deep .adentro li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    font-size: 0.875rem;
+}
+
+::deep .adentro li:last-child {
+    border-bottom: none;
+}

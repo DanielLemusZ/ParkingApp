@@ -1,0 +1,11 @@
+@page "/configuracion"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@inject NavigationManager Navegacion
+
+@* La pestaña Configuración abre su primera subpágina. *@
+@code {
+    protected override void OnInitialized()
+    {
+        Navegacion.NavigateTo("/configuracion/tarifas", replace: true);
+    }
+}

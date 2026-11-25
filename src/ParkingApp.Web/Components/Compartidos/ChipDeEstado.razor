@@ -1,0 +1,32 @@
+@* Estados como chips de color, como en los mockups (#71): Ingreso verde, Salida azul, Pendiente ámbar y Pagado verde. *@
+<MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="ColorDe(Estado)" Class="ma-0">
+    @(Texto ?? Estado)
+</MudChip>
+
+@code {
+    /// <summary>
+    /// Estado que se muestra: <c>Ingreso</c>, <c>Salida</c>, <c>Pendiente</c> o <c>Pagado</c>. Otro valor sale en gris.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string? Estado { get; set; }
+
+    /// <summary>
+    /// Texto distinto al del estado, si hace falta (por ejemplo, "Rechazado: LLENO").
+    /// </summary>
+    [Parameter]
+    public string? Texto { get; set; }
+
+    private static Color ColorDe(string? estado)
+    {
+        return estado switch
+        {
+            "Ingreso" => Color.Success,
+            "Salida" => Color.Info,
+            "Pendiente" => Color.Warning,
+            "Pagado" => Color.Success,
+            "Disponible" => Color.Success,
+            "LLENO" => Color.Error,
+            _ => Color.Default,
+        };
+    }
+}

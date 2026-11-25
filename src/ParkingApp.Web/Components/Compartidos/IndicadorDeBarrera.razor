@@ -1,0 +1,16 @@
+@* Semáforo de la barrera de los mockups (#71): verde si está abierta, rojo si está cerrada. *@
+<div class="indicador @(Abierta ? "abierta" : "cerrada")" role="status">
+    <span class="semaforo" aria-hidden="true">
+        <span class="luz roja"></span>
+        <span class="luz verde"></span>
+    </span>
+    <span class="texto">@(Abierta ? "Barrera abierta" : "Barrera cerrada")</span>
+</div>
+
+@code {
+    /// <summary>
+    /// Si la barrera quedó abierta.
+    /// </summary>
+    [Parameter]
+    public bool Abierta { get; set; }
+}

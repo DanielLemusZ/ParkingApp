@@ -1,0 +1,47 @@
+@page "/configuracion/cupos"
+@attribute [Authorize(Roles = Roles.Administrador)]
+@layout LayoutDeConfiguracion
+@inherits PaginaDeConfiguracionDeSede
+
+<PageTitle>Cupos</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Cupos</MudText>
+<MudText Typo="Typo.body2" Class="texto-tenue mb-4">Cuántos vehículos de cada tipo caben. Al llegar al cupo, el carril no deja entrar (LLENO).</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="7">
+        <MudPaper Outlined="true" Class="pa-6">
+            <MudNumericField T="int" Label="Cupo de carros" Min="0" @bind-Value="CupoCarros" Variant="Variant.Outlined" Class="mb-4" />
+            <MudNumericField T="int" Label="Cupo de motos" Min="0" @bind-Value="CupoMotos" Variant="Variant.Outlined" />
+            <div class="d-flex justify-end mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="Guardando" OnClick="GuardarAsync">Guardar</MudButton>
+            </div>
+            @if (!string.IsNullOrEmpty(Mensaje))
+            {
+                <FranjaDeResultado Class="mt-4" Severidad="@SeveridadDelMensaje" Mensaje="@Mensaje" />
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="5">
+        <MudPaper Outlined="true" Class="pa-6">
+            <MudText Typo="Typo.h6" Color="Color.Info" Class="mb-3">Ocupación registrada</MudText>
+            <MudStack Spacing="2">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText>Carros: @OcupacionCarros / @CupoCarros</MudText>
+                    <ChipDeEstado Estado="@(OcupacionCarros >= CupoCarros ? "LLENO" : "Disponible")" />
+                </MudStack>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText>Motos: @OcupacionMotos / @CupoMotos</MudText>
+                    <ChipDeEstado Estado="@(OcupacionMotos >= CupoMotos ? "LLENO" : "Disponible")" />
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    // Guardado con cupo alcanzado: se guarda, pero con advertencia.
+    private Severity SeveridadDelMensaje => !Guardado
+        ? Severity.Error
+        : Mensaje.Contains("Advertencia", StringComparison.Ordinal) ? Severity.Warning : Severity.Success;
+}

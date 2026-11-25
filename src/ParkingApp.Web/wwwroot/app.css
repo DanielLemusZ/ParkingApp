@@ -14,11 +14,6 @@ h1:focus {
 
 /* Páginas de cuenta. Son estáticas, así que usan campos HTML normales en lugar de los de MudBlazor,
    que necesitan interactividad. */
-.cuenta {
-    max-width: 420px;
-    margin: 48px auto;
-}
-
 .cuenta-etiqueta {
     display: block;
     margin: 16px 0 4px;
@@ -28,14 +23,16 @@ h1:focus {
 .cuenta-campo {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #bdbdbd;
+    border: 1px solid var(--mud-palette-lines-inputs);
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
     border-radius: 4px;
     font: inherit;
 }
 
     .cuenta-campo:focus {
-        outline: 2px solid #594ae2;
-        border-color: #594ae2;
+        outline: 2px solid var(--mud-palette-primary);
+        border-color: var(--mud-palette-primary);
     }
 
 .cuenta-boton {
@@ -44,15 +41,19 @@ h1:focus {
     padding: 10px;
     border: none;
     border-radius: 4px;
-    background: #594ae2;
-    color: white;
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
     font: inherit;
     font-weight: 500;
-    text-transform: uppercase;
     cursor: pointer;
 }
 
 .validation-message {
-    color: #d32f2f;
+    color: var(--mud-palette-error);
     font-size: 0.85rem;
+}
+
+/* Texto secundario: el gris del tema, no el color "Secondary" de la paleta. */
+.texto-tenue {
+    color: var(--mud-palette-text-secondary) !important;
 }

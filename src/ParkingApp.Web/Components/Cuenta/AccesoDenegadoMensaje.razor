@@ -1,5 +1,9 @@
-@* Se muestra cuando el usuario tiene sesión, pero su rol no puede abrir la pantalla (criterio 5). *@
-<MudAlert Severity="Severity.Error" Class="mt-4">
-    <b>Acceso denegado.</b> Tu rol no permite abrir esta pantalla.
-</MudAlert>
-<MudButton Href="/" Variant="Variant.Text" Class="mt-2">Volver al inicio</MudButton>
+@* Se muestra cuando el usuario tiene sesión, pero su rol no puede abrir la pantalla (criterio 5). Diseño de #71. *@
+<TarjetaDeCuenta Titulo="Acceso denegado">
+    <FranjaDeResultado Severidad="Severity.Error" Titulo="Tu rol no permite abrir esta pantalla."
+                       Mensaje="Si necesitas entrar, habla con el administrador." />
+    <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="mt-6"
+               StartIcon="@Icons.Material.Outlined.Home">
+        Volver al inicio
+    </MudButton>
+</TarjetaDeCuenta>

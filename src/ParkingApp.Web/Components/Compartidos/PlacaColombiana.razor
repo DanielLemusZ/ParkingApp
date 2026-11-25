@@ -1,0 +1,40 @@
+@* Placa dibujada como la placa amarilla colombiana de los mockups (#71). La usan el carril, la caja y el historial. *@
+<span class="placa @(Compacta ? "compacta" : null)" role="img" aria-label="@($"Placa {Placa}")">
+    <span class="numero">@ConEspacio(Placa)</span>
+    @if (!Compacta && !string.IsNullOrWhiteSpace(Ciudad))
+    {
+        <span class="ciudad">@Ciudad</span>
+    }
+</span>
+
+@code {
+    /// <summary>
+    /// Placa normalizada, por ejemplo <c>DKR534</c> o <c>ABC12D</c>.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string? Placa { get; set; }
+
+    /// <summary>
+    /// Municipio que se escribe debajo del número. El sistema no lo conoce, así que solo se muestra si se pasa.
+    /// </summary>
+    [Parameter]
+    public string? Ciudad { get; set; }
+
+    /// <summary>
+    /// Versión pequeña, para tablas y listas.
+    /// </summary>
+    [Parameter]
+    public bool Compacta { get; set; }
+
+    // "DKR534" se lee como en la placa física: "DKR 534".
+    private static string ConEspacio(string? placa)
+    {
+        if (string.IsNullOrWhiteSpace(placa))
+        {
+            return "———";
+        }
+
+        var limpia = placa.Trim().ToUpperInvariant();
+        return limpia.Length == 6 ? $"{limpia[..3]} {limpia[3..]}" : limpia;
+    }
+}

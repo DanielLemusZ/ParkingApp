@@ -1,0 +1,49 @@
+.subir-imagen {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 18px 20px;
+    justify-content: flex-start;
+    border: 1px dashed color-mix(in srgb, var(--mud-palette-text-secondary) 45%, transparent);
+    border-radius: 8px;
+    background: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+    .subir-imagen:hover:not(:disabled) {
+        border-color: var(--mud-palette-primary);
+    }
+
+    .subir-imagen:disabled {
+        cursor: progress;
+    }
+
+.icono-camara {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-secondary);
+}
+
+.textos {
+    display: flex;
+    flex-direction: column;
+}
+
+.titulo {
+    font-weight: 500;
+}
+
+.detalle {
+    font-size: 0.85rem;
+    color: var(--mud-palette-text-secondary);
+}

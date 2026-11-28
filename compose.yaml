@@ -13,11 +13,38 @@ services:
     volumes:
       # Desde PostgreSQL 18, los datos van en /var/lib/postgresql (no en /var/lib/postgresql/data).
       - datos-postgres:/var/lib/postgresql
+      # Cuando la base se crea desde cero, PostgreSQL ejecuta el script de la entrega: tablas y datos semilla.
+      # En una base que ya tiene datos no se ejecuta.
+      - ./instalacion/script-creacion-bd.sql:/docker-entrypoint-initdb.d/script-creacion-bd.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      # Por TCP: mientras ejecuta el script, PostgreSQL solo escucha por socket local, así que no se marca listo antes.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  aplicacion:
+    # La imagen se construye en este equipo desde el código (Dockerfile). La primera vez tarda unos minutos.
+    build: .
+    image: parkingapp:1.0.0
+    # La aplicación lee las mismas variables de .env: base de datos, usuarios iniciales y pasarela de pagos.
+    env_file: .env
+    environment:
+      # Dentro de Docker, la aplicación llega a PostgreSQL por la red interna de Compose.
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      # La conexión local no usa Kerberos: así Npgsql no busca esa librería, que la imagen no trae.
+      PGGSSENCMODE: disable
+    ports:
+      # Solo se publica en este equipo, no en la red.
+      - "127.0.0.1:${APP_PORT:?Falta APP_PORT en .env (copia .env.example como .env)}:8080"
+    volumes:
+      # Claves de las cookies de sesión: así, reiniciar el contenedor no cierra las sesiones.
+      - claves-aplicacion:/home/app/.aspnet/DataProtection-Keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   datos-postgres:
+  claves-aplicacion:

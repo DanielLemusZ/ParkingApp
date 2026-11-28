@@ -1,0 +1,9 @@
+# La imagen solo necesita el código de src y la configuración común de la solución. Todo lo demás queda fuera,
+# también el .env, así que la imagen no lleva secretos.
+*
+!Directory.Build.props
+!global.json
+!.editorconfig
+!src/
+**/bin/
+**/obj/

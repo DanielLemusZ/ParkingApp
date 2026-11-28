@@ -39,6 +39,36 @@ Proyecto del curso Ingeniería de Software II. Grupo **ParkingApp**.
 
 ## Cómo ejecutar
 
+### Instalar y ejecutar con Docker (recomendado)
+
+Así se instala el MVP en un equipo nuevo. No necesita .NET: la aplicación y PostgreSQL corren en dos contenedores.
+
+**Requisito:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) abierto (en Windows, con WSL 2).
+
+1. **Configurar:** copia `.env.example` como `.env` y cambia las contraseñas: la de la base de datos y las de los usuarios iniciales (ver [Usuarios y roles](#usuarios-y-roles)). Si en tu equipo ya usas el puerto 8080 o el 5432, cambia `APP_PORT` o `POSTGRES_PORT`.
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+2. **Crear el acceso directo** (una sola vez): doble clic en `instalacion/crear-acceso-directo.cmd`. Queda *ParkingApp* en el escritorio, con el icono del MVP. Si mueves la carpeta del proyecto, vuelve a crearlo.
+3. **Abrir el MVP:** doble clic en *ParkingApp*. La ventana revisa que Docker esté abierto y que exista `.env`, levanta los contenedores y abre la aplicación en el navegador. **La primera vez tarda unos minutos**, porque descarga .NET y PostgreSQL y compila la aplicación; las siguientes, unos segundos.
+
+   Sin el acceso directo, el comando equivalente es:
+
+   ```powershell
+   docker compose up -d --build --wait
+   ```
+
+4. **Entrar:** la aplicación queda en <http://localhost:8080> (el puerto de `APP_PORT`), y Swagger en <http://localhost:8080/swagger>, después de iniciar sesión. Los usuarios son los de `ADMIN_CORREO` y `OPERADOR_CORREO` de tu `.env`, con sus contraseñas; con `.env.example`, `admin@parkingapp.local` y `operador@parkingapp.local`.
+5. **Detener:** `docker compose stop` o `docker compose down`. Los dos conservan los datos. **Recrear desde cero:** `docker compose down -v` borra los datos; al volver a levantar, la base se crea de nuevo.
+
+**Cómo se crean las tablas:** cuando la base se crea desde cero, PostgreSQL ejecuta el script de la entrega, `instalacion/script-creacion-bd.sql`, con las tablas y los datos semilla (la sede, sus franjas y cupos, las tarifas y los roles). Al arrancar, la aplicación crea los usuarios iniciales con los datos de `.env`.
+
+**Si algo falta:** sin Docker o con Docker Desktop cerrado, el acceso directo dice qué hacer. Sin `.env`, o si le falta una variable, Compose no arranca y dice cuál falta.
+
+### Para desarrollar (con el SDK de .NET)
+
 **Requisitos:** el SDK de .NET 10 o uno posterior. Para correr las pruebas desde un editor: Visual Studio 2026, VS Code con C# Dev Kit o Rider.
 
 ```powershell
@@ -67,24 +97,24 @@ dotnet run --project src/ParkingApp.Web    # levanta la aplicación
    Copy-Item .env.example .env
    ```
 
-2. **Levantar, revisar y conectarse:**
+2. **Levantar, revisar y conectarse.** Para desarrollar basta con PostgreSQL: con `postgres` al final, Compose no construye la aplicación.
 
    ```powershell
-   docker compose up -d       # levanta PostgreSQL en segundo plano
-   docker compose ps          # debe decir "healthy"
+   docker compose up -d postgres   # levanta PostgreSQL en segundo plano
+   docker compose ps               # debe decir "healthy"
    docker compose exec postgres psql -U parkingapp -d parkingapp -c "select version();"
    ```
 
    El último comando usa el usuario y la base de `.env.example`. Si los cambiaste, usa los tuyos.
 
-3. **Crear o actualizar las tablas** (la primera vez y cada vez que lleguen migraciones nuevas):
+3. **Crear o actualizar las tablas** (cada vez que lleguen migraciones nuevas). Si la base se creó desde cero, el script de `instalacion` ya creó las tablas, y este comando solo aplica lo que falte:
 
    ```powershell
    dotnet ef database update --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web
    ```
 
 4. **Detener:** `docker compose stop` o `docker compose down`. Los dos conservan los datos.
-5. **Recrear desde cero:** `docker compose down -v` borra el volumen **y todos los datos**. Después, `docker compose up -d` y el paso 3.
+5. **Recrear desde cero:** `docker compose down -v` borra el volumen **y todos los datos**. Después, `docker compose up -d postgres`, que vuelve a crear las tablas con el script.
 
 **Si falta una variable en `.env`**, Compose y la aplicación no arrancan y dicen cuál falta. La aplicación lee el mismo `.env`. `POSTGRES_HOST` es opcional: si no está, usa `localhost`. Con Docker en Windows conviene `127.0.0.1`, como en `.env.example`: con `localhost` se intenta primero IPv6, y cada conexión nueva a PostgreSQL espera varios segundos.
 
@@ -93,11 +123,13 @@ dotnet run --project src/ParkingApp.Web    # levanta la aplicación
 ```powershell
 # Crear una migración después de agregar o cambiar una entidad:
 dotnet ef migrations add <Nombre> --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web --output-dir Persistencia/Migraciones
-# Generar el script SQL completo, que se puede ejecutar varias veces sin duplicar nada (no lo subas al repositorio):
-dotnet ef migrations script --idempotent --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web --output script.sql
+# Después de crear una migración, regenerar el script de la entrega (el que PostgreSQL ejecuta al crear la base):
+dotnet ef migrations script --project src/ParkingApp.Infraestructura --startup-project src/ParkingApp.Web --output instalacion/script-creacion-bd.sql
 ```
 
-**Sin Docker:** instala PostgreSQL 18.7 nativo, con el mismo puerto, usuario, contraseña y base de tu `.env`.
+El script de `instalacion` es para una base vacía: si ya tiene las tablas, falla. Para una base existente se usa `dotnet ef database update`.
+
+**Sin Docker:** instala PostgreSQL 18.7 nativo, con el mismo puerto, usuario, contraseña y base de tu `.env`. Crea las tablas con `dotnet ef database update` (paso 3), o ejecutando `instalacion/script-creacion-bd.sql` en la base vacía con psql o pgAdmin. Después, `dotnet run --project src/ParkingApp.Web` levanta la aplicación en <http://localhost:5288>.
 
 ### Lectura de placas (OCR)
 
